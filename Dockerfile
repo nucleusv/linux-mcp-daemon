@@ -14,12 +14,17 @@ COPY . .
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o mcpd ./cmd/mcpd
 
-# Final stage
-# Use alpine instead of scratch to have some basic tools like sh if we need to exec in,
-# but it still keeps it very small.
-FROM alpine:latest
+# Use ubuntu instead of alpine for a full environment
+FROM ubuntu:24.04
 
 WORKDIR /root/
+
+# Install some basic tools and certificates
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    sudo \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/mcpd .
