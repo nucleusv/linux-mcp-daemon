@@ -1,0 +1,39 @@
+.TH LINUXCTL 1 "September 2026" "linux-mcp-daemon" "User Commands"
+.SH NAME
+linuxctl \- Command line interface for the Linux MCP Daemon
+.SH SYNOPSIS
+.B linuxctl
+[\fIOPTIONS\fR] \fICOMMAND\fR
+.SH DESCRIPTION
+.B linuxctl
+is the client utility for interacting with the Linux Model Context Protocol (MCP) Daemon (mcpd). It allows users and AI agents to send commands to the daemon running in the background.
+.SH OPTIONS
+.TP
+.BR \-server \ \fIURL\fR
+The URL of the mcpd server to connect to. Defaults to http://localhost:9090.
+.TP
+.BR \-token \ \fITOKEN\fR
+Bearer token for authentication. If not provided via this flag, the client will look for the \fBMCP_TOKEN\fR environment variable.
+.SH COMMANDS
+.TP
+.B ping
+Pings the mcpd daemon to verify connectivity and authentication. Returns a success message if the daemon is reachable and the token is valid.
+.SH ENVIRONMENT
+.TP
+.B MCP_TOKEN
+The bearer token used for authenticating with the daemon. Can be used instead of the \fB\-token\fR flag.
+.SH EXAMPLES
+.PP
+Ping the daemon using the default server and a specific token:
+.IP
+.B linuxctl \-token "my-test-token-123" ping
+.PP
+Ping the daemon using an environment variable:
+.IP
+.B export MCP_TOKEN="my-test-token-123"
+.br
+.B linuxctl ping
+.SH AUTHOR
+Antigravity
+.SH SEE ALSO
+.BR mcpd (8)

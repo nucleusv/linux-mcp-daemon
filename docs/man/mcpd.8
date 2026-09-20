@@ -1,0 +1,29 @@
+.TH MCPD 8 "September 2026" "linux-mcp-daemon" "System Administration Commands"
+.SH NAME
+mcpd \- Linux Model Context Protocol Daemon
+.SH SYNOPSIS
+.B mcpd
+.SH DESCRIPTION
+.B mcpd
+is a background daemon designed to securely bridge AI agents directly with the Linux operating system using the Model Context Protocol (MCP). It allows AI agents to introspect and interact with the host system via raw syscalls and the Virtual File System (/proc, /sys).
+.PP
+The daemon listens on a configurable port (default 9090) for HTTP Server-Sent Events (SSE) and JSON-RPC messages. It enforces rate limiting and requires Bearer token authentication.
+.SH CONFIGURATION
+.B mcpd
+reads its primary configuration from \fBconfigs/daemon.yaml\fR upon startup. The configuration file defines the server port, rate limits, and allowed users with their authentication tokens.
+.PP
+Sudo rules and privilege separation policies are defined in \fBconfigs/mcp-sudo.yaml\fR.
+.SH FILES
+.TP
+.I configs/daemon.yaml
+The primary configuration file defining users, tokens, and rate limits.
+.TP
+.I configs/mcp-sudo.yaml
+Rules defining which users are allowed to execute which tools with root privileges.
+.SH SECURITY
+.B mcpd
+runs as the root user in order to bind to network interfaces and inspect the system. However, it spawns unprivileged ephemeral worker processes to handle non-administrative tasks, enforcing strict privilege separation. Directory traversal attacks and other malicious inputs are actively filtered.
+.SH AUTHOR
+Antigravity
+.SH SEE ALSO
+.BR linuxctl (1)
