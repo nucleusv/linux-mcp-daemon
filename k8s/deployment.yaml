@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linux-mcp-daemon
+  labels:
+    app: linux-mcp-daemon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: linux-mcp-daemon
+  template:
+    metadata:
+      labels:
+        app: linux-mcp-daemon
+    spec:
+      # Use host network and PID namespaces to allow introspecting the host VM
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: daemon
+        image: linux-mcp-daemon:local
+        imagePullPolicy: IfNotPresent # Prevents K8s from trying to pull from Docker Hub
+        securityContext:
+          privileged: true # Required to perform root-level operations via mcp-sudo
+        ports:
+        - containerPort: 9090
+          name: http
+        volumeMounts:
+        - name: host-proc
+          mountPath: /host/proc
+          readOnly: true
+        - name: host-sys
+          mountPath: /host/sys
+          readOnly: true
+      volumes:
+      - name: host-proc
+        hostPath:
+          path: /proc
+      - name: host-sys
+        hostPath:
+          path: /sys

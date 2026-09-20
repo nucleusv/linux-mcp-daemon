@@ -1,0 +1,5 @@
+rules:
+  - user: "admin"
+    tools:
+      - name: "manage_sysctl"
+        run_as: "root"

@@ -1,0 +1,10 @@
+#!/bin/bash
+# scripts/build.sh
+set -e
+
+# Change to the root directory of the project
+cd "$(dirname "$0")/.."
+
+echo "Building Docker image 'linux-mcp-daemon:local'..."
+docker build -t linux-mcp-daemon:local .
+echo "Build complete."
