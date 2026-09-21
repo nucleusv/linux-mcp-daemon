@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/user"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -25,7 +26,9 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 	targetUID := uint32(uid)
 
 	if privileged {
-		if sudoCfg != nil && sudoCfg.CanRunAsRoot(username, toolName) {
+		if strings.HasPrefix(toolName, "read_") {
+			targetUID = 0 // Internal resource workers (caller already verified)
+		} else if sudoCfg != nil && sudoCfg.CanRunAsRoot(username, toolName) {
 			targetUID = 0 // Elevate to root
 		} else {
 			return "", fmt.Errorf("Permission denied. Hint: You are not authorized to use 'privileged: true' for this tool in mcp-sudo.yaml")

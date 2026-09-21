@@ -1,20 +1,22 @@
 users:
   admin:
     privileged:
-      manage_sysctl:
-        allowed: true
+      tools:
+        manage_sysctl:
+          allowed: true
   testuser:
     privileged:
-      get_list_of_files:
-        allowed: true
-        paths:
-          - /var/log
-          - /etc
-      get_free:
-        allowed: true
-      get_usage:
-        allowed: true
-      delete_process:
-        allowed: true
-      get_connections:
-        allowed: true
+      tools:
+        get_list_of_files:
+          allowed: true
+          paths:
+            - /var/log
+            - /etc
+        get_free:
+          allowed: true
+        get_usage:
+          allowed: true
+        delete_process:
+          allowed: true
+        get_connections:
+          allowed: true

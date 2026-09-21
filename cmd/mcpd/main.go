@@ -29,6 +29,10 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/read/file"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/interfaces"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/get/processes"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/usb"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/pci"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/dmi"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/kernel/modules"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 	"gopkg.in/yaml.v3"
 )
@@ -159,6 +163,14 @@ func main() {
 			result, err = os_release.GetOSRelease(toolArgs)
 		} else if toolName == "read_file" {
 			result, err = file.ReadFile(toolArgs)
+		} else if toolName == "read_usb" {
+			result, err = usb.ReadUSB(toolArgs)
+		} else if toolName == "read_pci" {
+			result, err = pci.ReadPCI(toolArgs)
+		} else if toolName == "read_dmi" {
+			result, err = dmi.ReadDMI(toolArgs)
+		} else if toolName == "read_modules" {
+			result, err = modules.ReadModules(toolArgs)
 		} else {
 			log.Fatalf("Unknown tool: %s", toolName)
 		}
@@ -370,6 +382,30 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"description": "/etc/os-release information",
 					"mimeType": "text/plain",
 				},
+				map[string]interface{}{
+					"uri": "devices://usb",
+					"name": "USB Devices",
+					"description": "Connected USB devices (lsusb equivalent)",
+					"mimeType": "application/json",
+				},
+				map[string]interface{}{
+					"uri": "devices://pci",
+					"name": "PCI Devices",
+					"description": "Connected PCI devices (lspci equivalent)",
+					"mimeType": "application/json",
+				},
+				map[string]interface{}{
+					"uri": "devices://dmi",
+					"name": "DMI Hardware Info",
+					"description": "Desktop Management Interface info (lshw/hwinfo equivalent)",
+					"mimeType": "application/json",
+				},
+				map[string]interface{}{
+					"uri": "kernel://modules",
+					"name": "Kernel Modules",
+					"description": "Loaded kernel drivers (lsmod equivalent)",
+					"mimeType": "application/json",
+				},
 			},
 			"resourceTemplates": []interface{}{
 				map[string]interface{}{
@@ -399,7 +435,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				path := strings.TrimPrefix(params.URI, "file://")
 				
 				// Check mcp-sudo.yaml to see if this user is allowed to read THIS file as root
-				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI)
+				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, "file://", path)
 				
 				// We map it to a "read_file" internal tool for the spawner
 				argsJSON, _ := json.Marshal(map[string]interface{}{
@@ -407,6 +443,18 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				})
 				
 				content, readErr = worker.SpawnWorker(session.User, "read_file", argsJSON, isPrivileged, sudoConfig, 30)
+			} else if params.URI == "devices://usb" {
+				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
+				content, readErr = worker.SpawnWorker(session.User, "read_usb", []byte("{}"), isPrivileged, sudoConfig, 30)
+			} else if params.URI == "devices://pci" {
+				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
+				content, readErr = worker.SpawnWorker(session.User, "read_pci", []byte("{}"), isPrivileged, sudoConfig, 30)
+			} else if params.URI == "devices://dmi" {
+				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
+				content, readErr = worker.SpawnWorker(session.User, "read_dmi", []byte("{}"), isPrivileged, sudoConfig, 30)
+			} else if params.URI == "kernel://modules" {
+				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
+				content, readErr = worker.SpawnWorker(session.User, "read_modules", []byte("{}"), isPrivileged, sudoConfig, 30)
 			} else {
 				readErr = fmt.Errorf("unsupported resource URI scheme: %s", params.URI)
 			}
