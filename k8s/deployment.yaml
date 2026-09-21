@@ -6,6 +6,8 @@ metadata:
     app: linux-mcp-daemon
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: linux-mcp-daemon
