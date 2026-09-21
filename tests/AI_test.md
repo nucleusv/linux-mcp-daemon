@@ -69,6 +69,12 @@ Antigravity IDE uses the exact same universal `mcpServers` format:
   }
 }
 ```
+
+### Claude Code CLI
+If you are using the terminal-based **Claude Code**, you can dynamically add the remote server using the `mcp add` command:
+```bash
+claude mcp add linux-remote npx -y @modelcontextprotocol/client-sse --url http://<LINUX_HOST_IP>:9090/sse --header "Authorization: Bearer my-test-token-123"
+```
 ## AI Task Challenges
 
 Your goal is to complete the following tasks using the MCP Daemon. Do not use standard linux shell utilities (like `ls`, `ps`, `cat`) directly. You MUST retrieve all information exclusively through the MCP daemon tools and resources.
