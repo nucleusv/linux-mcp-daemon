@@ -195,7 +195,11 @@ func main() {
 				fmt.Printf("  %-20s - %s\n", res["uri"], res["description"])
 			}
 			
-			resTemplates, ok := resResult["resourceTemplates"].([]interface{})
+			resTemplatesResp := callMethod(authToken, "2", "resources/templates/list", nil)
+			var templatesResult map[string]interface{}
+			json.Unmarshal(resTemplatesResp.Result, &templatesResult)
+
+			resTemplates, ok := templatesResult["resourceTemplates"].([]interface{})
 			if ok && len(resTemplates) > 0 {
 				fmt.Println("\nAvailable resource templates:")
 				for _, r := range resTemplates {

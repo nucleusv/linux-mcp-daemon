@@ -466,6 +466,9 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"mimeType":    "application/json",
 				},
 			},
+		}
+	} else if req.Method == "resources/templates/list" {
+		resp.Result = map[string]interface{}{
 			"resourceTemplates": []interface{}{
 				map[string]interface{}{
 					"uriTemplate": "file:///{path}",
