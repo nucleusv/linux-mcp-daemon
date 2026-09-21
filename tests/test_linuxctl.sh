@@ -27,8 +27,8 @@ if echo "$OUTPUT" | grep -q "Successfully connected to mcpd daemon!"; then
     echo "Running 'linuxctl get disks disk-usage --path /var/log --privileged true'..."
     ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get disks disk-usage --path /var/log --privileged true | grep "Total size" > /dev/null
 
-    echo "Running 'linuxctl get disks disk-space --path / --privileged true'..."
-    ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get disks disk-space --path / --privileged true | grep "Filesystem" > /dev/null
+    echo "Running 'linuxctl get disks disk-free --path / --privileged true'..."
+    ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get disks disk-free --path / --privileged true | grep "Filesystem" > /dev/null
 
     echo "✅ SUCCESS: linuxctl successfully dynamically executed all tools over SSE."
     # Clean up the binary
