@@ -1,23 +1,14 @@
-package processes
+package main
 
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
-	"sort"
 	"strconv"
 	"strings"
+	"io/ioutil"
 )
-
-type GetProcessesArgs struct {
-	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
-	User         string `json:"user"`
-	SortBy       string `json:"sort_by"`
-	Limit        int    `json:"limit"`
-	Privileged   bool   `json:"privileged"`
-}
 
 type Process struct {
 	PID     int    `json:"pid"`
@@ -29,19 +20,8 @@ type Process struct {
 	Cmdline string `json:"cmdline"`
 }
 
-func GetProcesses(argsJSON []byte) (string, error) {
-	var args GetProcessesArgs
-	if len(argsJSON) > 0 {
-		if err := json.Unmarshal(argsJSON, &args); err != nil {
-			return "", fmt.Errorf("invalid arguments: %v", err)
-		}
-	}
-
-	entries, err := os.ReadDir("/proc")
-	if err != nil {
-		return "", fmt.Errorf("failed to read /proc: %v", err)
-	}
-
+func main() {
+	entries, _ := os.ReadDir("/proc")
 	var procs []Process
 	for _, e := range entries {
 		if !e.IsDir() {
@@ -51,9 +31,9 @@ func GetProcesses(argsJSON []byte) (string, error) {
 		if err != nil {
 			continue
 		}
-
+		
 		p := Process{PID: pid}
-
+		
 		// Read stat
 		statData, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
 		if err == nil {
@@ -92,38 +72,12 @@ func GetProcesses(argsJSON []byte) (string, error) {
 				break
 			}
 		}
-
-		// Filter by user if requested
-		if args.User != "" && p.User != args.User && strconv.Itoa(p.PID) != args.User {
-			continue
-		}
-
+		
 		procs = append(procs, p)
-	}
-
-	// Sort
-	if args.SortBy != "" {
-		switch args.SortBy {
-		case "mem":
-			sort.Slice(procs, func(i, j int) bool {
-				return procs[i].RSS > procs[j].RSS // Descending
-			})
-		case "pid":
-			sort.Slice(procs, func(i, j int) bool {
-				return procs[i].PID < procs[j].PID // Ascending
-			})
+		if len(procs) >= 5 {
+			break
 		}
 	}
-
-	// Limit
-	if args.Limit > 0 && len(procs) > args.Limit {
-		procs = procs[:args.Limit]
-	}
-
-	j, err := json.Marshal(procs)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal JSON: %v", err)
-	}
-
-	return string(j), nil
+	j, _ := json.MarshalIndent(procs, "", "  ")
+	fmt.Println(string(j))
 }
