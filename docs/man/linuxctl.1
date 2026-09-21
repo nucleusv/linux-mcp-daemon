@@ -3,7 +3,7 @@
 linuxctl \- Command line interface for the Linux MCP Daemon
 .SH SYNOPSIS
 .B linuxctl
-[\fIOPTIONS\fR] \fICOMMAND\fR
+[\fIOPTIONS\fR] \fI<group>/<command>\fR [\fIcommand-options\fR]
 .SH DESCRIPTION
 .B linuxctl
 is the client utility for interacting with the Linux Model Context Protocol (MCP) Daemon (mcpd). It allows users and AI agents to send commands to the daemon running in the background.
@@ -18,6 +18,12 @@ Bearer token for authentication. If not provided via this flag, the client will 
 .TP
 .B ping
 Pings the mcpd daemon to verify connectivity and authentication. Returns a success message if the daemon is reachable and the token is valid.
+.TP
+.B <group>/<command>
+Dynamically executes an MCP tool exposed by the daemon. For example, \fBfiles/list-directory\fR or \fBdisks/disk-free\fR. Run \fBlinuxctl\fR without arguments to see available groups, or \fBlinuxctl <group>\fR to see available commands within a group.
+.TP
+.B [command-options]
+Arguments specific to the command being executed. You can provide these either positionally (e.g., \fBlinuxctl files/list-directory /var/log\fR) or as explicit flags (e.g., \fB--path /var/log --privileged true\fR).
 .SH ENVIRONMENT
 .TP
 .B MCP_TOKEN
@@ -33,6 +39,14 @@ Ping the daemon using an environment variable:
 .B export MCP_TOKEN="my-test-token-123"
 .br
 .B linuxctl ping
+.PP
+Execute a dynamic command with positional arguments:
+.IP
+.B linuxctl files/list-directory /var/log
+.PP
+Execute a dynamic command with explicit flags:
+.IP
+.B linuxctl disks/disk-free --path / --privileged true
 .SH AUTHOR
 Antigravity
 .SH SEE ALSO
