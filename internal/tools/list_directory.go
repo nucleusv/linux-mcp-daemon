@@ -9,7 +9,8 @@ import (
 
 // ListDirectoryArgs represents the arguments expected for the list_directory tool.
 type ListDirectoryArgs struct {
-	Path string `json:"path"`
+	Path       string `json:"path"`
+	Privileged bool   `json:"privileged,omitempty"`
 }
 
 // ListDirectory reads the contents of the specified directory.

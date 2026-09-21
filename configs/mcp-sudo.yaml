@@ -3,3 +3,7 @@ rules:
     tools:
       - name: "manage_sysctl"
         run_as: "root"
+  - user: "testuser"
+    tools:
+      - name: "list_directory"
+        run_as: "root"
