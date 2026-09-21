@@ -65,10 +65,28 @@ func List(argsJSON []byte) (string, error) {
 	sb.WriteString(fmt.Sprintf("CPU Information (Total Processors: %d)\n", len(processors)))
 	if len(processors) > 0 {
 		first := processors[0]
-		sb.WriteString(fmt.Sprintf("Vendor ID: %s\n", first["vendor_id"]))
-		sb.WriteString(fmt.Sprintf("Model Name: %s\n", first["model name"]))
-		sb.WriteString(fmt.Sprintf("CPU MHz: %s\n", first["cpu MHz"]))
-		sb.WriteString(fmt.Sprintf("Cache Size: %s\n", first["cache size"]))
+
+		vendor := first["vendor_id"]
+		if vendor == "" {
+			vendor = first["CPU implementer"]
+		}
+		model := first["model name"]
+		if model == "" {
+			model = first["CPU architecture"]
+		}
+		mhz := first["cpu MHz"]
+		if mhz == "" {
+			mhz = first["BogoMIPS"]
+		}
+		cache := first["cache size"]
+		if cache == "" {
+			cache = "N/A"
+		}
+
+		sb.WriteString(fmt.Sprintf("Vendor ID: %s\n", vendor))
+		sb.WriteString(fmt.Sprintf("Model Name: %s\n", model))
+		sb.WriteString(fmt.Sprintf("CPU MHz/BogoMIPS: %s\n", mhz))
+		sb.WriteString(fmt.Sprintf("Cache Size: %s\n", cache))
 	}
 	
 	return sb.String(), nil
