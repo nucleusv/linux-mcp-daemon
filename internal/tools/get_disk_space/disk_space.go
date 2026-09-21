@@ -6,10 +6,15 @@ import (
 	"syscall"
 )
 
+// GetDiskSpaceArgs defines the parameters for the get_disk_space tool.
 type GetDiskSpaceArgs struct {
+	// Path is the absolute directory or mount point to check.
 	Path          string `json:"path"`
+	// Inodes requests the total and free inode index counts instead of byte usage.
 	Inodes        bool   `json:"inodes,omitempty"`
+	// HumanReadable formats the raw byte counts into human-readable strings (e.g. 24.5 GiB).
 	HumanReadable bool   `json:"human_readable,omitempty"`
+	// Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
 	Privileged    bool   `json:"privileged,omitempty"`
 }
 

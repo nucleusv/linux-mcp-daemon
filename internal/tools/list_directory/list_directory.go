@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 )
 
-// ListDirectoryArgs represents the arguments expected for the list_directory tool.
+// ListDirectoryArgs defines the parameters for the list_directory tool.
 type ListDirectoryArgs struct {
+	// Path is the absolute path of the directory to list.
 	Path       string `json:"path"`
+	// Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
 	Privileged bool   `json:"privileged,omitempty"`
 }
 
