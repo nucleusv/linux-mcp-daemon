@@ -353,8 +353,27 @@ func handleToolsList(session *Session, resp *JSONRPCResponse) {
 					"type": "object",
 					"properties": map[string]interface{}{
 						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"path":          map[string]interface{}{"type": "string", "description": "Absolute path to list"},
+						"path":          map[string]interface{}{"type": "string", "description": "Directory path to list"},
+						"all":           map[string]interface{}{"type": "boolean", "description": "Include hidden files (-a)"},
+						"long":          map[string]interface{}{"type": "boolean", "description": "Use long listing format (-l)"},
 						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+					},
+					"required": []string{"path"},
+				},
+			},
+			map[string]interface{}{
+				"name":        "files/read",
+				"tools_group": "files",
+				"description": "Precision reading of file contents with chunking/streaming support.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"path":       map[string]interface{}{"type": "string", "description": "Path to the file to read"},
+						"start_line": map[string]interface{}{"type": "integer", "description": "Starting line number (1-indexed). Takes precedence over byte offsets."},
+						"end_line":   map[string]interface{}{"type": "integer", "description": "Ending line number (inclusive)."},
+						"offset":     map[string]interface{}{"type": "integer", "description": "Starting byte offset."},
+						"limit":      map[string]interface{}{"type": "integer", "description": "Number of bytes to read."},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to read as root"},
 					},
 					"required": []string{"path"},
 				},
@@ -626,6 +645,7 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 
 		standardWorkers := map[string]bool{
 			"files/list":          true,
+			"files/read":          true,
 			"disks/free":          true,
 			"disks/usage":         true,
 			"processes/list":      true,
@@ -655,8 +675,8 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 			}
 			_ = json.Unmarshal(params.Arguments, &baseArgs)
 
-			if params.Name == "files/list" && baseArgs.Privileged {
-				allowedPaths := sudoConfig.GetAllowedPaths(session.User, "files/list")
+			if (params.Name == "files/list" || params.Name == "files/read") && baseArgs.Privileged {
+				allowedPaths := sudoConfig.GetAllowedPaths(session.User, params.Name)
 				allowed := false
 				for _, p := range allowedPaths {
 					if strings.HasPrefix(baseArgs.Path, p) {
@@ -665,7 +685,7 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 					}
 				}
 				if !allowed {
-					execErr = fmt.Errorf("permission denied: path '%s' is not in your allowed paths for list_directory", baseArgs.Path)
+					execErr = fmt.Errorf("user %s is not authorized to run %s on path %s as root", session.User, params.Name, baseArgs.Path)
 				}
 			}
 

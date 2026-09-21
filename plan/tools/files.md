@@ -17,6 +17,6 @@ This document tracks the standard Linux file utilities and their implementation 
 
 ## File Manipulation and Precision Reading (Tools)
 
-- [ ] **read** (`files/read`): A tool specifically designed for precision reading of large files. It MUST accept `offset`/`limit` (bytes) or `start_line`/`end_line` arguments to stream or chunk large files safely into context.
+- [x] **read** (`files/read`): A tool specifically designed for precision reading of large files. It MUST accept `offset`/`limit` (bytes) or `start_line`/`end_line` arguments to stream or chunk large files safely into context.
 - [ ] **touch / echo** (`files/create`): Create a new file or append to it.
 - [ ] **vi / nano / sed** (`files/update`): Modify file contents.
