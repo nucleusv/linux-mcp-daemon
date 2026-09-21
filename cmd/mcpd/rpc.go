@@ -240,8 +240,11 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			} else if strings.HasSuffix(rawPath, "/content") {
 				path = strings.TrimSuffix(rawPath, "/content")
 				toolName = "files/content"
+			} else if strings.HasSuffix(rawPath, "/type") {
+				path = strings.TrimSuffix(rawPath, "/type")
+				toolName = "files/filetype"
 			} else {
-				readErr = fmt.Errorf("invalid file URI: must end in /stat or /content")
+				readErr = fmt.Errorf("invalid file URI: must end in /stat, /content, or /type")
 				goto SendResponse
 			}
 
@@ -376,6 +379,56 @@ func handleToolsList(session *Session, resp *JSONRPCResponse) {
 						"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to read as root"},
 					},
 					"required": []string{"path"},
+				},
+			},
+			map[string]interface{}{
+				"name":        "files/create",
+				"tools_group": "files",
+				"description": "Create a new file or replace file contents.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"path":       map[string]interface{}{"type": "string", "description": "Path to the file to create"},
+						"content":    map[string]interface{}{"type": "string", "description": "Text content to write to the file"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to write as root"},
+					},
+					"required": []string{"path"},
+				},
+			},
+			map[string]interface{}{
+				"name":        "files/update",
+				"tools_group": "files",
+				"description": "Programmatically edit a file by appending text or replacing specific line ranges.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"path":       map[string]interface{}{"type": "string", "description": "Path to the file to edit"},
+						"content":    map[string]interface{}{"type": "string", "description": "Text content to insert or append"},
+						"append":     map[string]interface{}{"type": "boolean", "description": "If true, appends the content to the end of the file"},
+						"start_line": map[string]interface{}{"type": "integer", "description": "Start of the line range to replace (1-indexed)"},
+						"end_line":   map[string]interface{}{"type": "integer", "description": "End of the line range to replace (inclusive)"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to edit as root"},
+					},
+					"required": []string{"path", "content"},
+				},
+			},
+			map[string]interface{}{
+				"name":        "files/find",
+				"tools_group": "files",
+				"description": "Search for files in a directory hierarchy.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format. Defaults to text"},
+						"path":          map[string]interface{}{"type": "string", "description": "Starting directory for the search. Defaults to '/'"},
+						"name":          map[string]interface{}{"type": "string", "description": "Glob pattern to match filenames"},
+						"type":          map[string]interface{}{"type": "string", "description": "File type ('f' for file, 'd' for directory, 'l' for symlink)"},
+						"mtime":         map[string]interface{}{"type": "string", "description": "Modification time (e.g. '+7' for older than 7 days)"},
+						"size":          map[string]interface{}{"type": "string", "description": "File size (e.g. '+100M' for larger than 100MB)"},
+						"max_depth":     map[string]interface{}{"type": "integer", "description": "Maximum depth for directory recursion"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to search as root"},
+					},
+					"required": []string{},
 				},
 			},
 			map[string]interface{}{
@@ -646,6 +699,9 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 		standardWorkers := map[string]bool{
 			"files/list":          true,
 			"files/read":          true,
+			"files/create":        true,
+			"files/update":        true,
+			"files/find":          true,
 			"disks/free":          true,
 			"disks/usage":         true,
 			"processes/list":      true,
@@ -675,7 +731,7 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 			}
 			_ = json.Unmarshal(params.Arguments, &baseArgs)
 
-			if (params.Name == "files/list" || params.Name == "files/read") && baseArgs.Privileged {
+			if (params.Name == "files/list" || params.Name == "files/read" || params.Name == "files/create" || params.Name == "files/update" || params.Name == "files/find") && baseArgs.Privileged {
 				allowedPaths := sudoConfig.GetAllowedPaths(session.User, params.Name)
 				allowed := false
 				for _, p := range allowedPaths {

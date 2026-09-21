@@ -18,10 +18,14 @@ import (
 	disklist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/list"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/free"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/usage"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/content"
+	content "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/content"
+	createfile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/create"
+	filetype "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/filetype"
+	findfile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/find"
 	listfiles "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/list"
 	readfile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/read"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/stat"
+	stat "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/stat"
+	updatefile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/update"
 	mem_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/memory/usage"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/arp"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/connections"
@@ -66,6 +70,10 @@ func main() {
 			"files/stat":          stat.Stat,
 			"files/content":       content.Content,
 			"files/read":          readfile.Read,
+			"files/create":        createfile.Create,
+			"files/update":        updatefile.Update,
+			"files/find":          findfile.Find,
+			"files/filetype":      filetype.Type,
 			"read_usb":            usb.ReadUSB,
 			"read_pci":            pci.ReadPCI,
 			"read_dmi":            dmi.ReadDMI,
