@@ -1,28 +1,41 @@
 package load_average
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
+	"syscall"
 )
 
+type GetLoadAverageArgs struct {
+	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
+}
+
 func GetLoadAverage(argsJSON []byte) (string, error) {
-	// Let's try /proc/loadavg first for a cleaner output, fallback to uptime
-	content, err := os.ReadFile("/proc/loadavg")
-	if err == nil {
-		return string(content), nil
+	var args GetLoadAverageArgs
+	if err := json.Unmarshal(argsJSON, &args); err != nil {
+		return "", fmt.Errorf("failed to parse args: %v", err)
+	}
+	// Use the native Linux syscall for system info
+	var info syscall.Sysinfo_t
+	if err := syscall.Sysinfo(&info); err != nil {
+		return "", fmt.Errorf("failed to get sysinfo: %v", err)
 	}
 
-	cmd := exec.Command("uptime")
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	// Loads are stored as fixed-point values shifted by 16 bits
+	const shift = 65536.0
+	load1 := float64(info.Loads[0]) / shift
+	load5 := float64(info.Loads[1]) / shift
+	load15 := float64(info.Loads[2]) / shift
 
-	err = cmd.Run()
-	if err != nil {
-		return "", fmt.Errorf("uptime error: %v, stderr: %s", err, stderr.String())
+	if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
+		data := map[string]interface{}{
+			"1_min":  load1,
+			"5_min":  load5,
+			"15_min": load15,
+		}
+		jsonB, _ := json.Marshal(data)
+		return string(jsonB), nil
 	}
 
-	return stdout.String(), nil
+	return fmt.Sprintf("Load Average: %.2f, %.2f, %.2f", load1, load5, load15), nil
 }

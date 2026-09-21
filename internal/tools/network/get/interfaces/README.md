@@ -1,6 +1,6 @@
-# `get_list_of_files`
+# `get_interfaces`
 
-Lists the contents of a directory natively via os.ReadDir.
+Lists native network interfaces and IP addresses via net.Interfaces.
 
 ## Standard Output Format
 All tools in the Linux MCP Daemon natively support returning structured JSON output. This can be requested by passing the `output_format` parameter.

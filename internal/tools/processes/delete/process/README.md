@@ -1,6 +1,6 @@
-# `get_list_of_files`
+# `delete_process`
 
-Lists the contents of a directory natively via os.ReadDir.
+Sends a signal to a process using syscall.Kill.
 
 ## Standard Output Format
 All tools in the Linux MCP Daemon natively support returning structured JSON output. This can be requested by passing the `output_format` parameter.

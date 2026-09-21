@@ -1,6 +1,6 @@
-# `get_list_of_files`
+# `get_memory_usage`
 
-Lists the contents of a directory natively via os.ReadDir.
+Returns detailed memory usage metrics by parsing /proc/meminfo.
 
 ## Standard Output Format
 All tools in the Linux MCP Daemon natively support returning structured JSON output. This can be requested by passing the `output_format` parameter.

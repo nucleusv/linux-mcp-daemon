@@ -26,6 +26,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/blocks"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/connections"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/get/list_of_files"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/read/file"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/interfaces"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/get/processes"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
@@ -156,6 +157,8 @@ func main() {
 			result, err = blocks.GetBlocks(toolArgs)
 		} else if toolName == "get_os_release" {
 			result, err = os_release.GetOSRelease(toolArgs)
+		} else if toolName == "read_file" {
+			result, err = file.ReadFile(toolArgs)
 		} else {
 			log.Fatalf("Unknown tool: %s", toolName)
 		}
@@ -339,6 +342,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 			"protocolVersion": "2024-11-05",
 			"capabilities": map[string]interface{}{
 				"tools": map[string]interface{}{},
+				"resources": map[string]interface{}{},
 			},
 			"serverInfo": map[string]interface{}{
 				"name":    "linux-mcp-daemon",
@@ -350,6 +354,79 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 		return
 	} else if req.Method == "ping" {
 		resp.Result = map[string]interface{}{}
+	} else if req.Method == "resources/list" {
+		// Enumerate static resources and wildcard templates
+		resp.Result = map[string]interface{}{
+			"resources": []interface{}{
+				map[string]interface{}{
+					"uri": "os://uname",
+					"name": "OS Uname",
+					"description": "Native system uname information",
+					"mimeType": "text/plain",
+				},
+				map[string]interface{}{
+					"uri": "os://release",
+					"name": "OS Release",
+					"description": "/etc/os-release information",
+					"mimeType": "text/plain",
+				},
+			},
+			"resourceTemplates": []interface{}{
+				map[string]interface{}{
+					"uriTemplate": "file:///{path}",
+					"name": "File Reader",
+					"description": "Reads any file on the system (subject to worker isolation and mcp-sudo.yaml permissions).",
+					"mimeType": "text/plain",
+				},
+			},
+		}
+	} else if req.Method == "resources/read" {
+		var params struct {
+			URI string `json:"uri"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err == nil {
+			var content string
+			var readErr error
+
+			if params.URI == "os://uname" {
+				// Handle static URN directly
+				content, readErr = os_release.GetOSRelease([]byte{})
+			} else if params.URI == "os://release" {
+				// Handle static URN directly
+				content, readErr = os_release.GetOSRelease([]byte{})
+			} else if strings.HasPrefix(params.URI, "file://") {
+				// Handle dynamic URN via Isolated Worker!
+				path := strings.TrimPrefix(params.URI, "file://")
+				
+				// Check mcp-sudo.yaml to see if this user is allowed to read THIS file as root
+				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI)
+				
+				// We map it to a "read_file" internal tool for the spawner
+				argsJSON, _ := json.Marshal(map[string]interface{}{
+					"path": path,
+				})
+				
+				content, readErr = worker.SpawnWorker(session.User, "read_file", argsJSON, isPrivileged, sudoConfig, 30)
+			} else {
+				readErr = fmt.Errorf("unsupported resource URI scheme: %s", params.URI)
+			}
+
+			if readErr != nil {
+				resp.Error = map[string]interface{}{"code": -32603, "message": readErr.Error()}
+			} else {
+				resp.Result = map[string]interface{}{
+					"contents": []interface{}{
+						map[string]interface{}{
+							"uri": params.URI,
+							"mimeType": "text/plain",
+							"text": content,
+						},
+					},
+				}
+			}
+		} else {
+			resp.Error = map[string]interface{}{"code": -32602, "message": "Invalid params"}
+		}
 	} else if req.Method == "tools/list" {
 		// Dynamically generate the tools list based on sudo rules.
 		listDesc := "Lists contents of a directory."
@@ -376,6 +453,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 							"path":       map[string]interface{}{"type": "string", "description": "Absolute path to list"},
 							"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 						},
@@ -389,6 +467,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 							"path":           map[string]interface{}{"type": "string", "description": "Absolute path to check"},
 							"inodes":         map[string]interface{}{"type": "boolean", "description": "List inode information instead of block usage (-i)"},
 							"human_readable": map[string]interface{}{"type": "boolean", "description": "Print sizes in powers of 1024 (-h)"},
@@ -404,6 +483,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 							"path":            map[string]interface{}{"type": "string", "description": "Target directory to measure"},
 							"max_depth":       map[string]interface{}{"type": "integer", "description": "How deep to recurse (0 for summarize only)"},
 							"one_file_system": map[string]interface{}{"type": "boolean", "description": "Skip directories on different file systems (-x)"},
@@ -424,6 +504,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 							"user":       map[string]interface{}{"type": "string", "description": "Filter by username"},
 							"sort_by":    map[string]interface{}{"type": "string", "description": "Sort by cpu, mem, or pid"},
 							"limit":      map[string]interface{}{"type": "integer", "description": "Limit returned processes"},
@@ -438,6 +519,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 							"pid":        map[string]interface{}{"type": "integer", "description": "The PID to kill"},
 							"signal":     map[string]interface{}{"type": "string", "description": "Signal to send (e.g., SIGTERM, SIGKILL)"},
 							"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root to kill other user's processes"},
@@ -452,6 +534,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 							"up_only":    map[string]interface{}{"type": "boolean", "description": "Only show interfaces that are UP"},
 							"privileged": map[string]interface{}{"type": "boolean"},
 						},
@@ -464,6 +547,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 							"state":      map[string]interface{}{"type": "string", "description": "Filter by TCP state (e.g., LISTEN, ESTABLISHED)"},
 							"port":       map[string]interface{}{"type": "integer", "description": "Filter by port"},
 							"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root to see PIDs of other users"},
@@ -477,6 +561,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 							"detailed": map[string]interface{}{"type": "boolean", "description": "Set to true to return raw /proc/meminfo instead of summary"},
 						},
 					},
@@ -488,6 +573,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 							"topology_only": map[string]interface{}{"type": "boolean", "description": "Only return basic core topology"},
 						},
 					},
@@ -498,7 +584,8 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"description": "Retrieves system load averages (1m, 5m, 15m).",
 					"inputSchema": map[string]interface{}{
 						"type": "object",
-						"properties": map[string]interface{}{},
+						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},},
 					},
 				},
 				map[string]interface{}{
@@ -508,6 +595,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 							"all": map[string]interface{}{"type": "boolean", "description": "Include empty devices"},
 						},
 					},
@@ -518,7 +606,8 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"description": "Retrieves Linux distribution and kernel version.",
 					"inputSchema": map[string]interface{}{
 						"type": "object",
-						"properties": map[string]interface{}{},
+						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},},
 					},
 				},
 				map[string]interface{}{
@@ -527,7 +616,8 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"description": "Returns your authorized tools and privileges from mcp-sudo.yaml.",
 					"inputSchema": map[string]interface{}{
 						"type": "object",
-						"properties": map[string]interface{}{},
+						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},},
 					},
 				},
 			},
@@ -544,7 +634,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 
 			if params.Name == "get_sudo_rules" {
 				// No need to spawn an isolated worker to read our own memory config
-				resultText, execErr = sudo_rules.GetSudoRules(session.User, sudoConfig)
+				resultText, execErr = sudo_rules.GetSudoRules(params.Arguments, session.User, sudoConfig)
 
 			} else if params.Name == "get_list_of_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "get_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "get_connections" || params.Name == "get_memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
 				

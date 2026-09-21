@@ -1,6 +1,6 @@
-# `get_list_of_files`
+# `get_processes`
 
-Lists the contents of a directory natively via os.ReadDir.
+Lists running processes by iterating over /proc natively.
 
 ## Standard Output Format
 All tools in the Linux MCP Daemon natively support returning structured JSON output. This can be requested by passing the `output_format` parameter.

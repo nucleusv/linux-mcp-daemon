@@ -11,6 +11,7 @@ import (
 
 // GetUsageArgs defines the parameters for the get_disk_usage tool.
 type GetUsageArgs struct {
+	OutputFormat  string   `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
 	Path          string   `json:"path"`                      // Path is the absolute directory to start calculating from.
 	MaxDepth      int      `json:"max_depth,omitempty"`       // MaxDepth determines how deep to recurse (0 for summarize only).
 	OneFileSystem bool     `json:"one_file_system,omitempty"` // OneFileSystem prevents traversing into directories on different file systems.

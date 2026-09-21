@@ -8,6 +8,7 @@ import (
 )
 
 type GetProcessesArgs struct {
+	OutputFormat string `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
 	User       string `json:"user"`
 	SortBy     string `json:"sort_by"`
 	Limit      int    `json:"limit"`

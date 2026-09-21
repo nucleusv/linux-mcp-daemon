@@ -1,6 +1,9 @@
 # `get_sudo_rules`
 
-This package implements the `get_sudo_rules` tool. Unlike other tools, this is executed directly by the Master daemon because it simply reads the in-memory parsed configuration to tell the user what tools they are authorized to use as root.
+Reads the authorized privileged tools for the user from mcp-sudo.yaml.
+
+## Standard Output Format
+All tools in the Linux MCP Daemon natively support returning structured JSON output. This can be requested by passing the `output_format` parameter.
 
 ## Parameters
-This tool takes no parameters. It automatically resolves your identity via the session token.
+- `output_format` (string, optional): The requested format. Setting this to `json`, `yaml`, `table`, or `wide` will return the raw structured JSON payload instead of human-readable text.

@@ -1,9 +1,9 @@
-# `get_disk_free`
+# `get_free`
 
-This package implements the `get_disk_free` tool (equivalent to `df`). It uses `syscall.Statfs` to calculate available disk space and inodes without shelling out.
+Returns filesystem disk space usage for a given path using syscall.Statfs.
+
+## Standard Output Format
+All tools in the Linux MCP Daemon natively support returning structured JSON output. This can be requested by passing the `output_format` parameter.
 
 ## Parameters
-- `path` (string): The absolute path to check.
-- `inodes` (boolean): If set to true, it will query `stat.Files` and `stat.Ffree` to return the total and free inode counts for the partition, rather than byte sizes.
-- `human_readable` (boolean): If set to true, the raw byte counts are formatted into human-readable strings (e.g. `24.5 GiB`).
-- `privileged` (boolean): Set to true to execute the worker as the root user (if authorized).
+- `output_format` (string, optional): The requested format. Setting this to `json`, `yaml`, `table`, or `wide` will return the raw structured JSON payload instead of human-readable text.

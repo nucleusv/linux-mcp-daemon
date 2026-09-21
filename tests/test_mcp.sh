@@ -51,7 +51,7 @@ curl -s -X POST "$DAEMON_URL/message" \
 
 # 4. Wait for the daemon to process the worker and stream the response
 echo "Waiting for JSON-RPC response..."
-sleep 2
+sleep 5
 
 if grep -q "Your authorized privileged tools" $LOG_FILE; then
     echo "✅ SUCCESS: Daemon successfully executed the tool and streamed the result back!"

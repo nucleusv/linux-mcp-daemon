@@ -9,9 +9,10 @@ import (
 )
 
 type DeleteProcessArgs struct {
-	PID        int    `json:"pid"`
-	Signal     string `json:"signal"`
-	Privileged bool   `json:"privileged"`
+	OutputFormat string `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
+	PID          int    `json:"pid"`
+	Signal       string `json:"signal"`
+	Privileged   bool   `json:"privileged"`
 }
 
 func DeleteProcess(argsJSON []byte) (string, error) {

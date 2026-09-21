@@ -8,11 +8,21 @@ import (
 )
 
 // GetSudoRulesArgs has no arguments since we just return the caller's rules.
-type GetSudoRulesArgs struct{}
+type GetSudoRulesArgs struct {
+	OutputFormat string `json:"output_format,omitempty"`
+}
 
 // GetSudoRules returns the subset of mcp-sudo.yaml rules applicable to the authenticated user.
-func GetSudoRules(username string, sudoCfg *config.SudoConfig) (string, error) {
+func GetSudoRules(argsJSON []byte, username string, sudoCfg *config.SudoConfig) (string, error) {
+	var args GetSudoRulesArgs
+	if err := json.Unmarshal(argsJSON, &args); err != nil && len(argsJSON) > 0 {
+		// Ignore error if it's empty, since args are optional here
+	}
+
 	if sudoCfg == nil {
+		if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
+			return `{"error": "No sudo configuration loaded."}`, nil
+		}
 		return "No sudo configuration loaded.", nil
 	}
 
@@ -21,8 +31,14 @@ func GetSudoRules(username string, sudoCfg *config.SudoConfig) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to encode rules: %v", err)
 		}
+		if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
+			return string(bytes), nil
+		}
 		return fmt.Sprintf("Your authorized privileged tools:\n%s", string(bytes)), nil
 	}
 
+	if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
+		return `{}`, nil
+	}
 	return "You have no privileged tools authorized in mcp-sudo.yaml.", nil
 }

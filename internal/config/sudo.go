@@ -12,7 +12,8 @@ type SudoConfig struct {
 }
 
 type UserSudo struct {
-	Privileged map[string]ToolPrivilege `yaml:"privileged"`
+	Privileged          map[string]ToolPrivilege `yaml:"privileged"`
+	PrivilegedResources []string                 `yaml:"privileged_resources,omitempty"`
 }
 
 type ToolPrivilege struct {
@@ -63,4 +64,16 @@ func (c *SudoConfig) GetAllowedPaths(username, toolName string) []string {
 		}
 	}
 	return nil
+}
+
+// CanReadResourceAsRoot checks if a specific user is authorized to read a resource path as root.
+func (c *SudoConfig) CanReadResourceAsRoot(username, resourcePath string) bool {
+	if userSudo, ok := c.Users[username]; ok {
+		for _, res := range userSudo.PrivilegedResources {
+			if res == resourcePath {
+				return true
+			}
+		}
+	}
+	return false
 }

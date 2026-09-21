@@ -11,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"text/tabwriter"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -275,6 +277,10 @@ func main() {
 		arg := args[i]
 		if strings.HasPrefix(arg, "--") {
 			key := strings.TrimPrefix(arg, "--")
+			key = strings.TrimPrefix(key, "-")
+			if key == "o" || key == "output" {
+				key = "output_format"
+			}
 			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
 				val := args[i+1]
 				if val == "true" {
@@ -320,11 +326,75 @@ func main() {
 	var result map[string]interface{}
 	json.Unmarshal(respRPC.Result, &result)
 	
+
 	if contentList, ok := result["content"].([]interface{}); ok {
+		var outputFormat string
+		if of, ok := toolArgs["output_format"].(string); ok {
+			outputFormat = of
+		}
+
 		for _, c := range contentList {
 			content := c.(map[string]interface{})
 			if text, ok := content["text"].(string); ok {
-				fmt.Print(text)
+				if outputFormat == "json" {
+					// Prettify JSON if it is valid JSON
+					var obj interface{}
+					if err := json.Unmarshal([]byte(text), &obj); err == nil {
+						b, _ := json.MarshalIndent(obj, "", "  ")
+						fmt.Println(string(b))
+					} else {
+						fmt.Print(text)
+					}
+				} else if outputFormat == "yaml" {
+					var obj interface{}
+					if err := json.Unmarshal([]byte(text), &obj); err == nil {
+						b, _ := yaml.Marshal(obj)
+						fmt.Print(string(b))
+					} else {
+						fmt.Print(text)
+					}
+				} else if outputFormat == "table" || outputFormat == "wide" {
+					// Basic dynamic table formatting for JSON arrays/objects
+					var obj interface{}
+					if err := json.Unmarshal([]byte(text), &obj); err == nil {
+						w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+						
+						if arr, ok := obj.([]interface{}); ok && len(arr) > 0 {
+							// Array of objects
+							if first, ok := arr[0].(map[string]interface{}); ok {
+								var keys []string
+								for k := range first {
+									keys = append(keys, k)
+								}
+								fmt.Fprintln(w, strings.ToUpper(strings.Join(keys, "\t")))
+								for _, item := range arr {
+									if m, ok := item.(map[string]interface{}); ok {
+										var vals []string
+										for _, k := range keys {
+											vals = append(vals, fmt.Sprintf("%v", m[k]))
+										}
+										fmt.Fprintln(w, strings.Join(vals, "\t"))
+									}
+								}
+							} else {
+								// Array of primitives
+								for _, item := range arr {
+									fmt.Fprintln(w, fmt.Sprintf("%v", item))
+								}
+							}
+						} else if m, ok := obj.(map[string]interface{}); ok {
+							// Single object
+							for k, v := range m {
+								fmt.Fprintf(w, "%s\t%v\n", strings.ToUpper(k), v)
+							}
+						}
+						w.Flush()
+					} else {
+						fmt.Print(text)
+					}
+				} else {
+					fmt.Print(text)
+				}
 			}
 		}
 	} else if result["isError"] == true {

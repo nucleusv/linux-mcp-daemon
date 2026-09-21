@@ -8,8 +8,9 @@ import (
 )
 
 type GetInterfacesArgs struct {
-	UpOnly     bool `json:"up_only"`
-	Privileged bool `json:"privileged"`
+	OutputFormat string `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
+	UpOnly       bool   `json:"up_only"`
+	Privileged   bool   `json:"privileged"`
 }
 
 func GetInterfaces(argsJSON []byte) (string, error) {
