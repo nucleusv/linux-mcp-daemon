@@ -15,7 +15,7 @@ import (
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/auth"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/get_disk_space"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/get_disk_free"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/get_disk_usage"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/get_sudo_rules"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/list_directory"
@@ -125,8 +125,8 @@ func main() {
 
 		if toolName == "list_directory" {
 			result, err = list_directory.ListDirectory(toolArgs)
-		} else if toolName == "get_disk_space" {
-			result, err = get_disk_space.GetDiskSpace(toolArgs)
+		} else if toolName == "get_disk_free" {
+			result, err = get_disk_free.GetDiskFree(toolArgs)
 		} else if toolName == "get_disk_usage" {
 			result, err = get_disk_usage.GetDiskUsage(toolArgs)
 		} else {
@@ -315,7 +315,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 		}
 		
 		dfDesc := "Returns disk space statistics (df -h)."
-		if sudoConfig.CanRunAsRoot(session.User, "get_disk_space") {
+		if sudoConfig.CanRunAsRoot(session.User, "get_disk_free") {
 			dfDesc += " (Authorized for 'privileged: true')"
 		}
 		
@@ -340,7 +340,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					},
 				},
 				map[string]interface{}{
-					"name": "get_disk_space",
+					"name": "get_disk_free",
 					"tools_group": "disks",
 					"description": dfDesc,
 					"inputSchema": map[string]interface{}{
@@ -399,7 +399,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				// No need to spawn an isolated worker to read our own memory config
 				resultText, execErr = get_sudo_rules.GetSudoRules(session.User, sudoConfig)
 
-			} else if params.Name == "list_directory" || params.Name == "get_disk_space" || params.Name == "get_disk_usage" {
+			} else if params.Name == "list_directory" || params.Name == "get_disk_free" || params.Name == "get_disk_usage" {
 				
 				// All these tools share the 'privileged' boolean and 'path' string in their arguments
 				var baseArgs struct {
