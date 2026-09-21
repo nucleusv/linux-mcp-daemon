@@ -2,16 +2,20 @@
 
 This document tracks the standard Linux file utilities and their implementation status in the MCP Daemon.
 
-## File Exploration and Status
+## File Exploration and Status (Tools)
 
 - [x] **ls** (`files/list`): List directory contents.
-- [ ] **lsof** (`files/get_open_files`): List open files.
-- [ ] **stat**: Display file or file system status.
 - [ ] **find**: Search for files in a directory hierarchy.
-- [ ] **file**: Determine file type.
-- [ ] **cat / head / tail / less / grep**: Output, stream, or search file contents.
+- [ ] **lsof** (`files/open`): List open files.
 
-## File Manipulation
+## File Metadata and Contents (Resource Templates)
+*Because reading file content and metadata is inherently read-only, we should expose these using MCP Resource Templates rather than tools.*
 
-- [ ] **touch / echo** (`files/create/file`): Create a new file or append to it.
-- [ ] **vi / nano / sed** (`files/update/file`): Modify file contents.
+- [ ] **file://{path}/stat**: Expose file metadata (size, permissions, owner, modified time, etc.) via the `stat` utility natively.
+- [ ] **file://{path}/content**: Expose the actual file contents (like `cat`, `head`, `tail`).
+- [ ] **file://{path}/type**: Expose the file type using the `file` utility.
+
+## File Manipulation (Tools)
+
+- [ ] **touch / echo** (`files/create`): Create a new file or append to it.
+- [ ] **vi / nano / sed** (`files/update`): Modify file contents.
