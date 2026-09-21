@@ -279,6 +279,14 @@ func main() {
 	// Match the CLI command to the backend tool name via suffix matching
 	expectedCommand := strings.ReplaceAll(command, "-", "_")
 	
+	// Map noun/verb CLI structure (e.g. connections/list) to verb_noun MCP tools (e.g. list_connections)
+	if strings.Contains(expectedCommand, "/") {
+		parts := strings.Split(expectedCommand, "/")
+		if len(parts) == 2 {
+			expectedCommand = parts[1] + "_" + parts[0]
+		}
+	}
+	
 	var respRPC JSONRPCResponse
 	var outputFormat string
 	

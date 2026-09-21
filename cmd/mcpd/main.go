@@ -168,7 +168,7 @@ func main() {
 			result, err = processes.GetProcesses(toolArgs)
 		} else if toolName == "delete_process" {
 			result, err = process.DeleteProcess(toolArgs)
-		} else if toolName == "get_connections" {
+		} else if toolName == "list_connections" {
 			result, err = connections.GetConnections(toolArgs)
 		} else if toolName == "nslookup" {
 			result, err = nslookup.Nslookup(toolArgs)
@@ -777,7 +777,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					},
 				},
 				map[string]interface{}{
-					"name": "get_connections",
+					"name": "list_connections",
 					"tools_group": "network",
 					"description": "Lists active network connections and listening ports.",
 					"inputSchema": map[string]interface{}{
@@ -923,7 +923,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				// No need to spawn an isolated worker to read our own memory config
 				resultText, execErr = sudo_rules.GetSudoRules(params.Arguments, session.User, sudoConfig)
 
-			} else if params.Name == "get_list_of_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "get_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "get_memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
+			} else if params.Name == "get_list_of_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "list_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "get_memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
 				
 				// Standard privileged check payload
 				var baseArgs struct {

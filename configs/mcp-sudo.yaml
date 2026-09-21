@@ -18,5 +18,5 @@ users:
           allowed: true
         delete_process:
           allowed: true
-        get_connections:
+        list_connections:
           allowed: true
