@@ -24,6 +24,51 @@ export DAEMON_URL="http://localhost:9090"
 If you prefer not to use `linuxctl`, you must connect using a legitimate MCP Client over the SSE transport layer. DO NOT use raw `curl` for JSON-RPC, as it violates the standard MCP streaming paradigms. 
 - Use the official **MCP Inspector** (`npx @modelcontextprotocol/inspector`).
 - Write a quick script using the official `@modelcontextprotocol/sdk` (Node or Python).
+
+## AI Desktop Client Configurations
+
+If you want to configure **Claude Desktop** or **Antigravity IDE** to permanently connect to this remote Linux daemon, you need an SSE-to-Stdio proxy (since desktop clients natively expect local `stdio` binaries).
+
+You can use the official MCP SSE client proxy in your config file:
+
+### Claude Desktop (`claude_desktop_config.json`)
+```json
+{
+  "mcpServers": {
+    "linux-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/client-sse",
+        "--url",
+        "http://<LINUX_HOST_IP>:9090/sse",
+        "--header",
+        "Authorization: Bearer my-test-token-123"
+      ]
+    }
+  }
+}
+```
+
+### Antigravity IDE (`.agents/mcp_config.json`)
+Antigravity IDE uses the exact same universal `mcpServers` format:
+```json
+{
+  "mcpServers": {
+    "linux-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/client-sse",
+        "--url",
+        "http://<LINUX_HOST_IP>:9090/sse",
+        "--header",
+        "Authorization: Bearer my-test-token-123"
+      ]
+    }
+  }
+}
+```
 ## AI Task Challenges
 
 Your goal is to complete the following tasks using the MCP Daemon. Do not use standard linux shell utilities (like `ls`, `ps`, `cat`) directly. You MUST retrieve all information exclusively through the MCP daemon tools and resources.
