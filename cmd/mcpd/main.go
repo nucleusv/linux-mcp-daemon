@@ -15,10 +15,19 @@ import (
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/auth"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/get_disk_free"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/get_disk_usage"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/get_sudo_rules"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/list_directory"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/get/info"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/free"
+	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/usage"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/get/load_average"
+	mem_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/memory/get/usage"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/system/get/os_release"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/get/sudo_rules"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/delete/process"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/blocks"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/connections"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/get/list_of_files"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/interfaces"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/get/processes"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 	"gopkg.in/yaml.v3"
 )
@@ -123,12 +132,30 @@ func main() {
 		var result string
 		var err error
 
-		if toolName == "list_directory" {
-			result, err = list_directory.ListDirectory(toolArgs)
-		} else if toolName == "get_disk_free" {
-			result, err = get_disk_free.GetDiskFree(toolArgs)
-		} else if toolName == "get_disk_usage" {
-			result, err = get_disk_usage.GetDiskUsage(toolArgs)
+		if toolName == "get_list_of_files" {
+			result, err = list_of_files.GetListOfFiles(toolArgs)
+		} else if toolName == "get_free" {
+			result, err = free.GetFree(toolArgs)
+		} else if toolName == "get_usage" {
+			result, err = disk_usage.GetUsage(toolArgs)
+		} else if toolName == "get_processes" {
+			result, err = processes.GetProcesses(toolArgs)
+		} else if toolName == "delete_process" {
+			result, err = process.DeleteProcess(toolArgs)
+		} else if toolName == "get_interfaces" {
+			result, err = interfaces.GetInterfaces(toolArgs)
+		} else if toolName == "get_connections" {
+			result, err = connections.GetConnections(toolArgs)
+		} else if toolName == "get_memory_usage" {
+			result, err = mem_usage.GetUsage(toolArgs)
+		} else if toolName == "get_info" {
+			result, err = info.GetInfo(toolArgs)
+		} else if toolName == "get_load_average" {
+			result, err = load_average.GetLoadAverage(toolArgs)
+		} else if toolName == "get_blocks" {
+			result, err = blocks.GetBlocks(toolArgs)
+		} else if toolName == "get_os_release" {
+			result, err = os_release.GetOSRelease(toolArgs)
 		} else {
 			log.Fatalf("Unknown tool: %s", toolName)
 		}
@@ -326,24 +353,24 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 	} else if req.Method == "tools/list" {
 		// Dynamically generate the tools list based on sudo rules.
 		listDesc := "Lists contents of a directory."
-		if sudoConfig.CanRunAsRoot(session.User, "list_directory") {
+		if sudoConfig.CanRunAsRoot(session.User, "get_list_of_files") {
 			listDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
 		}
 		
 		dfDesc := "Returns disk space statistics (df -h)."
-		if sudoConfig.CanRunAsRoot(session.User, "get_disk_free") {
+		if sudoConfig.CanRunAsRoot(session.User, "get_free") {
 			dfDesc += " (Authorized for 'privileged: true')"
 		}
 		
 		duDesc := "Calculates the total disk space utilized by a specific directory (du -sh)."
-		if sudoConfig.CanRunAsRoot(session.User, "get_disk_usage") {
+		if sudoConfig.CanRunAsRoot(session.User, "get_usage") {
 			duDesc += " (Authorized for 'privileged: true' to traverse protected subdirectories)"
 		}
 
 		toolsList := map[string]interface{}{
 			"tools": []interface{}{
 				map[string]interface{}{
-					"name": "list_directory",
+					"name": "get_list_of_files",
 					"tools_group": "files",
 					"description": listDesc,
 					"inputSchema": map[string]interface{}{
@@ -356,7 +383,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					},
 				},
 				map[string]interface{}{
-					"name": "get_disk_free",
+					"name": "get_free",
 					"tools_group": "disks",
 					"description": dfDesc,
 					"inputSchema": map[string]interface{}{
@@ -371,7 +398,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					},
 				},
 				map[string]interface{}{
-					"name": "get_disk_usage",
+					"name": "get_usage",
 					"tools_group": "disks",
 					"description": duDesc,
 					"inputSchema": map[string]interface{}{
@@ -388,6 +415,110 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 							"privileged":      map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 						},
 						"required": []string{"path"},
+					},
+				},
+				map[string]interface{}{
+					"name": "get_processes",
+					"tools_group": "processes",
+					"description": "Lists running processes on the system.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"user":       map[string]interface{}{"type": "string", "description": "Filter by username"},
+							"sort_by":    map[string]interface{}{"type": "string", "description": "Sort by cpu, mem, or pid"},
+							"limit":      map[string]interface{}{"type": "integer", "description": "Limit returned processes"},
+							"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						},
+					},
+				},
+				map[string]interface{}{
+					"name": "delete_process",
+					"tools_group": "processes",
+					"description": "Terminates a specific process by PID.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"pid":        map[string]interface{}{"type": "integer", "description": "The PID to kill"},
+							"signal":     map[string]interface{}{"type": "string", "description": "Signal to send (e.g., SIGTERM, SIGKILL)"},
+							"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root to kill other user's processes"},
+						},
+						"required": []string{"pid"},
+					},
+				},
+				map[string]interface{}{
+					"name": "get_interfaces",
+					"tools_group": "network",
+					"description": "Lists network interfaces.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"up_only":    map[string]interface{}{"type": "boolean", "description": "Only show interfaces that are UP"},
+							"privileged": map[string]interface{}{"type": "boolean"},
+						},
+					},
+				},
+				map[string]interface{}{
+					"name": "get_connections",
+					"tools_group": "network",
+					"description": "Lists active network connections and listening ports.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"state":      map[string]interface{}{"type": "string", "description": "Filter by TCP state (e.g., LISTEN, ESTABLISHED)"},
+							"port":       map[string]interface{}{"type": "integer", "description": "Filter by port"},
+							"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root to see PIDs of other users"},
+						},
+					},
+				},
+				map[string]interface{}{
+					"name": "get_memory_usage",
+					"tools_group": "memory",
+					"description": "Returns memory and swap utilization information.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"detailed": map[string]interface{}{"type": "boolean", "description": "Set to true to return raw /proc/meminfo instead of summary"},
+						},
+					},
+				},
+				map[string]interface{}{
+					"name": "get_info",
+					"tools_group": "cpu",
+					"description": "Retrieves CPU topology and architecture.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"topology_only": map[string]interface{}{"type": "boolean", "description": "Only return basic core topology"},
+						},
+					},
+				},
+				map[string]interface{}{
+					"name": "get_load_average",
+					"tools_group": "cpu",
+					"description": "Retrieves system load averages (1m, 5m, 15m).",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{},
+					},
+				},
+				map[string]interface{}{
+					"name": "get_blocks",
+					"tools_group": "disks",
+					"description": "Lists block devices.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"all": map[string]interface{}{"type": "boolean", "description": "Include empty devices"},
+						},
+					},
+				},
+				map[string]interface{}{
+					"name": "get_os_release",
+					"tools_group": "system",
+					"description": "Retrieves Linux distribution and kernel version.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{},
 					},
 				},
 				map[string]interface{}{
@@ -413,19 +544,19 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 
 			if params.Name == "get_sudo_rules" {
 				// No need to spawn an isolated worker to read our own memory config
-				resultText, execErr = get_sudo_rules.GetSudoRules(session.User, sudoConfig)
+				resultText, execErr = sudo_rules.GetSudoRules(session.User, sudoConfig)
 
-			} else if params.Name == "list_directory" || params.Name == "get_disk_free" || params.Name == "get_disk_usage" {
+			} else if params.Name == "get_list_of_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "get_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "get_connections" || params.Name == "get_memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
 				
-				// All these tools share the 'privileged' boolean and 'path' string in their arguments
+				// Standard privileged check payload
 				var baseArgs struct {
 					Privileged bool   `json:"privileged"`
 					Path       string `json:"path"`
 				}
 				_ = json.Unmarshal(params.Arguments, &baseArgs)
 
-				if params.Name == "list_directory" && baseArgs.Privileged {
-					allowedPaths := sudoConfig.GetAllowedPaths(session.User, "list_directory")
+				if params.Name == "get_list_of_files" && baseArgs.Privileged {
+					allowedPaths := sudoConfig.GetAllowedPaths(session.User, "get_list_of_files")
 					allowed := false
 					for _, p := range allowedPaths {
 						if strings.HasPrefix(baseArgs.Path, p) {
@@ -446,7 +577,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 
 				if execErr == nil {
 					// Use the Ephemeral Worker Spawner with caching for heavy tools
-					if params.Name == "get_disk_usage" {
+					if params.Name == "get_usage" {
 						cacheKey := fmt.Sprintf("%s:%s:%t", session.User, string(params.Arguments), baseArgs.Privileged)
 						
 						cacheMu.RLock()

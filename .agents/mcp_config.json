@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "linux-mcp-daemon": {
+      "serverUrl": "http://localhost:9090/sse",
+      "headers": {
+        "Authorization": "Bearer my-test-token-123"
+      }
+    }
+  }
+}

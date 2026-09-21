@@ -5,12 +5,16 @@ users:
         allowed: true
   testuser:
     privileged:
-      list_directory:
+      get_list_of_files:
         allowed: true
         paths:
           - /var/log
           - /etc
-      get_disk_free:
+      get_free:
         allowed: true
-      get_disk_usage:
+      get_usage:
+        allowed: true
+      delete_process:
+        allowed: true
+      get_connections:
         allowed: true

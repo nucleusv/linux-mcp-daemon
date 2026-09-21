@@ -20,7 +20,7 @@ If authorized, the Ephemeral Worker spawns natively as UID 0. If denied, the req
 users:
   alice:
     privileged:
-      get_disk_space:
+      get_disk_free:
         allowed: true
       list_directory:
         allowed: true

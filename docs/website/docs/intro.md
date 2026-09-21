@@ -15,4 +15,4 @@ The Linux MCP Daemon is a high-performance, ultra-secure Model Context Protocol 
 - **Intelligent Caching**: Hardened against abuse with `golang.org/x/sync/singleflight` to prevent the AI from spamming expensive I/O operations like recursive disk usage tree traversals.
 - **Dynamic Sudo Rules**: Allows administrators to grant specific users granular root access (`privileged: true`) for specific tools via a `mcp-sudo.yaml` configuration.
 
-Explore the sidebar to dive deep into the specific tools (like `list_directory` or `get_disk_space`) or read up on our architectural design choices!
+Explore the sidebar to dive deep into the specific tools (like `list_directory` or `get_disk_free`) or read up on our architectural design choices!
