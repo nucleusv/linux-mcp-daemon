@@ -11,24 +11,15 @@ import (
 
 // GetDiskUsageArgs defines the parameters for the get_disk_usage tool.
 type GetDiskUsageArgs struct {
-	// Path is the absolute directory to start calculating from.
-	Path          string   `json:"path"`
-	// MaxDepth determines how deep to recurse (0 for summarize only).
-	MaxDepth      int      `json:"max_depth,omitempty"`
-	// OneFileSystem prevents traversing into directories on different file systems.
-	OneFileSystem bool     `json:"one_file_system,omitempty"`
-	// Exclude contains file name patterns to ignore during traversal.
-	Exclude       []string `json:"exclude,omitempty"`
-	// All includes individual file counts in the output, not just directories.
-	All           bool     `json:"all,omitempty"`
-	// ApparentSize forces the calculation of logical file sizes instead of physical blocks.
-	ApparentSize  bool     `json:"apparent_size,omitempty"`
-	// Threshold filters files. Positive skips smaller files, negative skips larger files.
-	Threshold     int64    `json:"threshold,omitempty"`
-	// SeparateDirs isolates a directory's size so it does not include subdirectories.
-	SeparateDirs  bool     `json:"separate_dirs,omitempty"`
-	// Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
-	Privileged    bool     `json:"privileged,omitempty"`
+	Path          string   `json:"path"`                    // Path is the absolute directory to start calculating from.
+	MaxDepth      int      `json:"max_depth,omitempty"`     // MaxDepth determines how deep to recurse (0 for summarize only).
+	OneFileSystem bool     `json:"one_file_system,omitempty"` // OneFileSystem prevents traversing into directories on different file systems.
+	Exclude       []string `json:"exclude,omitempty"`       // Exclude contains file name patterns to ignore during traversal.
+	All           bool     `json:"all,omitempty"`           // All includes individual file counts in the output, not just directories.
+	ApparentSize  bool     `json:"apparent_size,omitempty"` // ApparentSize forces the calculation of logical file sizes instead of physical blocks.
+	Threshold     int64    `json:"threshold,omitempty"`     // Threshold filters files. Positive skips smaller files, negative skips larger files.
+	SeparateDirs  bool     `json:"separate_dirs,omitempty"` // SeparateDirs isolates a directory's size so it does not include subdirectories.
+	Privileged    bool     `json:"privileged,omitempty"`    // Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
 }
 
 // GetDiskUsage calculates disk usage by traversing a directory tree (equivalent to du -sh).

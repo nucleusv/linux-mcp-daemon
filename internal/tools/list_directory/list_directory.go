@@ -9,10 +9,8 @@ import (
 
 // ListDirectoryArgs defines the parameters for the list_directory tool.
 type ListDirectoryArgs struct {
-	// Path is the absolute path of the directory to list.
-	Path       string `json:"path"`
-	// Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
-	Privileged bool   `json:"privileged,omitempty"`
+	Path       string `json:"path"`                 // Path is the absolute path of the directory to list.
+	Privileged bool   `json:"privileged,omitempty"` // Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
 }
 
 // ListDirectory reads the contents of the specified directory.

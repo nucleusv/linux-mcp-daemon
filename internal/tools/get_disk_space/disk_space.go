@@ -8,14 +8,10 @@ import (
 
 // GetDiskSpaceArgs defines the parameters for the get_disk_space tool.
 type GetDiskSpaceArgs struct {
-	// Path is the absolute directory or mount point to check.
-	Path          string `json:"path"`
-	// Inodes requests the total and free inode index counts instead of byte usage.
-	Inodes        bool   `json:"inodes,omitempty"`
-	// HumanReadable formats the raw byte counts into human-readable strings (e.g. 24.5 GiB).
-	HumanReadable bool   `json:"human_readable,omitempty"`
-	// Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
-	Privileged    bool   `json:"privileged,omitempty"`
+	Path          string `json:"path"`                    // Path is the absolute directory or mount point to check.
+	Inodes        bool   `json:"inodes,omitempty"`        // Inodes requests the total and free inode index counts instead of byte usage.
+	HumanReadable bool   `json:"human_readable,omitempty"` // HumanReadable formats the raw byte counts into human-readable strings (e.g. 24.5 GiB).
+	Privileged    bool   `json:"privileged,omitempty"`    // Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
 }
 
 // GetDiskSpace calculates filesystem usage statistics (equivalent to df -h).
