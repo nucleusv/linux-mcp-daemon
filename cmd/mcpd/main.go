@@ -493,6 +493,16 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 			var readErr error
 			mimeType := "text/plain"
 
+			// Pre-authorization check for strictly privileged resources
+			if strings.HasPrefix(params.URI, "devices://") || strings.HasPrefix(params.URI, "kernel://") {
+				if !sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*") {
+					resp.Error = map[string]interface{}{"code": -32603, "message": fmt.Sprintf("resource %s is strictly accessible only in privileged mode", params.URI)}
+					data, _ := json.Marshal(resp)
+					session.Event <- string(data)
+					return
+				}
+			}
+
 			// 1. Check cache first!
 			if cachedContent, cachedMimeType, hit := resourceCache.Get(params.URI); hit {
 				resp.Result = map[string]interface{}{
@@ -576,20 +586,36 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				content, readErr = worker.SpawnWorker(session.User, "read_file", argsJSON, isPrivileged, sudoConfig, 30)
 			} else if params.URI == "devices://usb" {
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
-				content, readErr = worker.SpawnWorker(session.User, "read_usb", []byte("{}"), isPrivileged, sudoConfig, 30)
-				mimeType = "application/json"
+				if !isPrivileged {
+					readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
+				} else {
+					content, readErr = worker.SpawnWorker(session.User, "read_usb", []byte("{}"), isPrivileged, sudoConfig, 30)
+					mimeType = "application/json"
+				}
 			} else if params.URI == "devices://pci" {
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
-				content, readErr = worker.SpawnWorker(session.User, "read_pci", []byte("{}"), isPrivileged, sudoConfig, 30)
-				mimeType = "application/json"
+				if !isPrivileged {
+					readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
+				} else {
+					content, readErr = worker.SpawnWorker(session.User, "read_pci", []byte("{}"), isPrivileged, sudoConfig, 30)
+					mimeType = "application/json"
+				}
 			} else if params.URI == "devices://dmi" {
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
-				content, readErr = worker.SpawnWorker(session.User, "read_dmi", []byte("{}"), isPrivileged, sudoConfig, 30)
-				mimeType = "application/json"
+				if !isPrivileged {
+					readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
+				} else {
+					content, readErr = worker.SpawnWorker(session.User, "read_dmi", []byte("{}"), isPrivileged, sudoConfig, 30)
+					mimeType = "application/json"
+				}
 			} else if params.URI == "kernel://modules" {
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
-				content, readErr = worker.SpawnWorker(session.User, "read_modules", []byte("{}"), isPrivileged, sudoConfig, 30)
-				mimeType = "application/json"
+				if !isPrivileged {
+					readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
+				} else {
+					content, readErr = worker.SpawnWorker(session.User, "read_modules", []byte("{}"), isPrivileged, sudoConfig, 30)
+					mimeType = "application/json"
+				}
 			} else if params.URI == "network://routes" {
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 				content, readErr = worker.SpawnWorker(session.User, "read_routes", []byte("{}"), isPrivileged, sudoConfig, 30)

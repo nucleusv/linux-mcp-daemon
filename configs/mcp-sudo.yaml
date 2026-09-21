@@ -4,14 +4,17 @@ users:
       tools:
         manage_sysctl:
           allowed: true
+  unpriviliged:
+    privileged:
+      tools: {}
+      resources: {}
   testuser:
     privileged:
       tools:
         list_files:
           allowed: true
           paths:
-            - /var/log
-            - /etc
+            - /
         get_free:
           allowed: true
         get_usage:
@@ -20,3 +23,34 @@ users:
           allowed: true
         list_connections:
           allowed: true
+        nslookup:
+          allowed: true
+        curl:
+          allowed: true
+        arp:
+          allowed: true
+        ping:
+          allowed: true
+        memory_usage:
+          allowed: true
+        get_info:
+          allowed: true
+        load_average:
+          allowed: true
+        blocks:
+          allowed: true
+        get_os_release:
+          allowed: true
+      resources:
+        devices://usb:
+          - "*"
+        devices://pci:
+          - "*"
+        devices://dmi:
+          - "*"
+        kernel://modules:
+          - "*"
+        network://routes:
+          - "*"
+        network://interfaces:
+          - "*"

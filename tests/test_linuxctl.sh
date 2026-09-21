@@ -86,6 +86,15 @@ run_resource "devices://pci"
 run_resource "devices://dmi"
 run_resource "kernel://modules"
 
+UNPRIV_TOKEN="my-unprivileged-token-123"
+echo "Testing unpriviliged user resource access (should fail)..."
+if ./linuxctl -token "$UNPRIV_TOKEN" -server "$DAEMON_URL" resource "devices://usb" --output json; then
+    echo "❌ FAILED: unpriviliged user was able to access devices://usb"
+    exit 1
+else
+    echo "✅ SUCCESS: unpriviliged user was correctly denied access to devices://usb"
+fi
+
 echo "✅ SUCCESS: linuxctl successfully dynamically executed all tools and resources over SSE with format parsers!"
 # Clean up the binary
 rm -f linuxctl

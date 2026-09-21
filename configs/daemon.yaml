@@ -19,3 +19,5 @@ tools:
 users:
   - username: "testuser"
     token: "my-test-token-123"
+  - username: "unpriviliged"
+    token: "my-unprivileged-token-123"
