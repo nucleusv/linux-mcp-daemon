@@ -36,6 +36,10 @@ RUN apt-get update && apt-get install -y \
     sudo \
     curl \
     man-db \
+    iproute2 \
+    dnsutils \
+    iputils-ping \
+    net-tools \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -s /bin/bash testuser
 

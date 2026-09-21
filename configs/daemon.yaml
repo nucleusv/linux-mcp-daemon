@@ -6,8 +6,8 @@ server:
     cert_file: "/etc/ssl/certs/mcpd.crt"
     key_file: "/etc/ssl/private/mcpd.key"
 rate_limits:
-  default_rps: 10.0
-  default_burst: 20
+  default_rps: 50.0
+  default_burst: 100
 
 worker:
   timeout_seconds: 30

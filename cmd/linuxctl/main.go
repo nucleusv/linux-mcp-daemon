@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"text/tabwriter"
@@ -177,6 +178,34 @@ func main() {
 			os.Exit(0)
 		}
 		
+		if group == "resources" {
+			// Fetch resources/list
+			resourcesResp := callMethod(authToken, "1", "resources/list", nil)
+			var resResult map[string]interface{}
+			json.Unmarshal(resourcesResp.Result, &resResult)
+			
+			resList, ok := resResult["resources"].([]interface{})
+			if !ok {
+				fmt.Println("Failed to fetch resources from daemon.")
+				os.Exit(1)
+			}
+			fmt.Println("Available static resources:")
+			for _, r := range resList {
+				res := r.(map[string]interface{})
+				fmt.Printf("  %-20s - %s\n", res["uri"], res["description"])
+			}
+			
+			resTemplates, ok := resResult["resourceTemplates"].([]interface{})
+			if ok && len(resTemplates) > 0 {
+				fmt.Println("\nAvailable resource templates:")
+				for _, r := range resTemplates {
+					res := r.(map[string]interface{})
+					fmt.Printf("  %-20s - %s\n", res["uriTemplate"], res["description"])
+				}
+			}
+			os.Exit(0)
+		}
+		
 		// Fetch tools/list for dynamic help
 		tools := callMethod(authToken, "1", "tools/list", nil)
 		var result map[string]interface{}
@@ -190,10 +219,12 @@ func main() {
 
 		if group == "" {
 			fmt.Println("Usage: linuxctl [options] <group>/<command> [command-options]")
+			fmt.Println("       linuxctl [options] resources")
+			fmt.Println("       linuxctl [options] resource <uri>")
 			fmt.Println("Options:")
 			flag.PrintDefaults()
 			
-			fmt.Println("\nAvailable groups (dynamically fetched from daemon):")
+			fmt.Println("\nAvailable tool groups (dynamically fetched from daemon):")
 			
 			groups := make(map[string]bool)
 			for _, t := range toolList {
@@ -207,8 +238,9 @@ func main() {
 				fmt.Printf("  %s\n", g)
 			}
 			fmt.Println("\nRun 'linuxctl <group>' to see available commands in that group.")
+			fmt.Println("Run 'linuxctl resources' to see available resources.")
 			os.Exit(1)
-		} else {
+		} else if group != "resource" {
 			// Print commands matching the group
 			fmt.Printf("Available commands for group '%s':\n", group)
 			found := false
@@ -243,81 +275,111 @@ func main() {
 	// Match the CLI command to the backend tool name via suffix matching
 	expectedCommand := strings.ReplaceAll(command, "-", "_")
 	
-	// Fetch tools/list to find the exact match
-	tools := callMethod(authToken, "1", "tools/list", nil)
-	var resultList map[string]interface{}
-	json.Unmarshal(tools.Result, &resultList)
+	var respRPC JSONRPCResponse
+	var outputFormat string
 	
-	var actualToolName string
-	var actualTool map[string]interface{}
-	if toolList, ok := resultList["tools"].([]interface{}); ok {
-		for _, t := range toolList {
-			tool := t.(map[string]interface{})
-			tg, _ := tool["tools_group"].(string)
-			name := tool["name"].(string)
-			
-			if tg == group && strings.HasSuffix(name, expectedCommand) {
-				actualToolName = name
-				actualTool = tool
-				break
+	if group == "resource" {
+		if len(args) < 2 {
+			fmt.Println("Error: resource URI required. Example: linuxctl resource os://uname")
+			os.Exit(1)
+		}
+		uri := args[1]
+		
+		// Parse formatting arguments
+		for i := 2; i < len(args); i++ {
+			if args[i] == "--output" || args[i] == "-o" {
+				if i+1 < len(args) {
+					outputFormat = args[i+1]
+				}
 			}
 		}
-	}
-	
-	if actualToolName == "" {
-		fmt.Printf("Error: Command '%s/%s' not found.\n", group, command)
-		os.Exit(1)
-	}
-
-	// Build arguments from CLI args like --path /var/log --privileged true
-	toolArgs := make(map[string]interface{})
-	var positionalArgs []string
-	
-	for i := 1; i < len(args); i++ {
-		arg := args[i]
-		if strings.HasPrefix(arg, "--") {
-			key := strings.TrimPrefix(arg, "--")
-			key = strings.TrimPrefix(key, "-")
-			if key == "o" || key == "output" {
-				key = "output_format"
+		
+		params := map[string]interface{}{
+			"uri": uri,
+		}
+		respRPC = callMethod(authToken, "2", "resources/read", params)
+	} else {
+		// Fetch tools/list to find the exact match
+		tools := callMethod(authToken, "1", "tools/list", nil)
+		var resultList map[string]interface{}
+		json.Unmarshal(tools.Result, &resultList)
+		
+		var actualToolName string
+		var actualTool map[string]interface{}
+		if toolList, ok := resultList["tools"].([]interface{}); ok {
+			for _, t := range toolList {
+				tool := t.(map[string]interface{})
+				tg, _ := tool["tools_group"].(string)
+				name := tool["name"].(string)
+				
+				if tg == group && strings.HasSuffix(name, expectedCommand) {
+					actualToolName = name
+					actualTool = tool
+					break
+				}
 			}
-			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
-				val := args[i+1]
-				if val == "true" {
-					toolArgs[key] = true
-				} else if val == "false" {
-					toolArgs[key] = false
+		}
+		
+		if actualToolName == "" {
+			fmt.Printf("Error: Command '%s/%s' not found.\n", group, command)
+			os.Exit(1)
+		}
+	
+		// Build arguments from CLI args like --path /var/log --privileged true
+		toolArgs := make(map[string]interface{})
+		var positionalArgs []string
+		
+		for i := 1; i < len(args); i++ {
+			arg := args[i]
+			if strings.HasPrefix(arg, "--") {
+				key := strings.TrimPrefix(arg, "--")
+				key = strings.TrimPrefix(key, "-")
+				if key == "o" || key == "output" {
+					key = "output_format"
+					if i+1 < len(args) {
+						outputFormat = args[i+1]
+					}
+				}
+				if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
+					val := args[i+1]
+					if val == "true" {
+						toolArgs[key] = true
+					} else if val == "false" {
+						toolArgs[key] = false
+					} else if num, err := strconv.Atoi(val); err == nil {
+						toolArgs[key] = num
+					} else {
+						toolArgs[key] = val
+					}
+					i++ // skip value
 				} else {
-					toolArgs[key] = val
+					toolArgs[key] = true // boolean flag
 				}
-				i++ // skip value
 			} else {
-				toolArgs[key] = true // boolean flag
+				positionalArgs = append(positionalArgs, arg)
 			}
-		} else {
-			positionalArgs = append(positionalArgs, arg)
 		}
-	}
-
-	// Smart mapping of positional arguments
-	if len(positionalArgs) > 0 {
-		if schema, ok := actualTool["inputSchema"].(map[string]interface{}); ok {
-			if props, ok := schema["properties"].(map[string]interface{}); ok {
-				// If the tool has a "path" property, map the first positional arg to it
-				if _, hasPath := props["path"]; hasPath && toolArgs["path"] == nil {
-					toolArgs["path"] = positionalArgs[0]
+	
+		// Smart mapping of positional arguments
+		if len(positionalArgs) > 0 {
+			if schema, ok := actualTool["inputSchema"].(map[string]interface{}); ok {
+				if props, ok := schema["properties"].(map[string]interface{}); ok {
+					// If the tool has a "path" property, map the first positional arg to it
+					if _, hasPath := props["path"]; hasPath && toolArgs["path"] == nil {
+						toolArgs["path"] = positionalArgs[0]
+					}
 				}
 			}
 		}
-	}
-
-	params := map[string]interface{}{
-		"name":      actualToolName,
-		"arguments": toolArgs,
-	}
-
-	respRPC := callMethod(authToken, "2", "tools/call", params)
 	
+		params := map[string]interface{}{
+			"name":      actualToolName,
+			"arguments": toolArgs,
+		}
+	
+		respRPC = callMethod(authToken, "2", "tools/call", params)
+	}
+
 	if respRPC.Error != nil {
 		fmt.Printf("Error: %s (Code: %d)\n", respRPC.Error.Message, respRPC.Error.Code)
 		os.Exit(1)
@@ -328,11 +390,6 @@ func main() {
 	
 
 	if contentList, ok := result["content"].([]interface{}); ok {
-		var outputFormat string
-		if of, ok := toolArgs["output_format"].(string); ok {
-			outputFormat = of
-		}
-
 		for _, c := range contentList {
 			content := c.(map[string]interface{})
 			if text, ok := content["text"].(string); ok {
@@ -389,6 +446,24 @@ func main() {
 							}
 						}
 						w.Flush()
+					} else {
+						fmt.Print(text)
+					}
+				} else {
+					fmt.Print(text)
+				}
+			}
+		}
+	} else if contentList, ok := result["contents"].([]interface{}); ok {
+		// Handle resource/read result array which is called "contents" not "content"
+		for _, c := range contentList {
+			content := c.(map[string]interface{})
+			if text, ok := content["text"].(string); ok {
+				if outputFormat == "json" {
+					var obj interface{}
+					if err := json.Unmarshal([]byte(text), &obj); err == nil {
+						b, _ := json.MarshalIndent(obj, "", "  ")
+						fmt.Println(string(b))
 					} else {
 						fmt.Print(text)
 					}

@@ -3,6 +3,12 @@
 linuxctl \- Command line interface for the Linux MCP Daemon
 .SH SYNOPSIS
 .B linuxctl
+[\fIOPTIONS\fR] \fIresources\fR
+.br
+.B linuxctl
+[\fIOPTIONS\fR] \fIresource <uri>\fR
+.br
+.B linuxctl
 [\fIOPTIONS\fR] \fI<group>/<command>\fR [\fIcommand-options\fR]
 .SH DESCRIPTION
 .B linuxctl
@@ -19,11 +25,17 @@ Bearer token for authentication. If not provided via this flag, the client will 
 .B ping
 Pings the mcpd daemon to verify connectivity and authentication. Returns a success message if the daemon is reachable and the token is valid.
 .TP
+.B resources
+Fetches and lists all statically available resources and resource templates from the daemon.
+.TP
+.B resource <uri>
+Reads the exact contents of an MCP resource. Use \fB--output\fR to optionally format JSON output as \fBtable\fR or \fBjson\fR.
+.TP
 .B <group>/<command>
 Dynamically executes an MCP tool exposed by the daemon. For example, \fBfiles/list-directory\fR or \fBdisks/disk-free\fR. Run \fBlinuxctl\fR without arguments to see available groups, or \fBlinuxctl <group>\fR to see available commands within a group.
 .TP
 .B [command-options]
-Arguments specific to the command being executed. You can provide these either positionally (e.g., \fBlinuxctl files/list-directory /var/log\fR) or as explicit flags (e.g., \fB--path /var/log --privileged true\fR).
+Arguments specific to the command being executed. You can provide these either positionally (e.g., \fBlinuxctl files/list-directory /var/log\fR) or as explicit flags (e.g., \fB--path /var/log --privileged true\fR). You can also use \fB--output table\fR or \fB--output json\fR to format structural data.
 .SH ENVIRONMENT
 .TP
 .B MCP_TOKEN
@@ -39,6 +51,18 @@ Ping the daemon using an environment variable:
 .B export MCP_TOKEN="my-test-token-123"
 .br
 .B linuxctl ping
+.PP
+List all available resources:
+.IP
+.B linuxctl resources
+.PP
+Read the system uname as a resource:
+.IP
+.B linuxctl resource os://uname
+.PP
+Read connected USB devices as a formatted table:
+.IP
+.B linuxctl resource devices://usb --output table
 .PP
 Execute a dynamic command with positional arguments:
 .IP

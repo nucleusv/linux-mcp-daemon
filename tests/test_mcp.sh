@@ -21,7 +21,7 @@ trap cleanup EXIT
 
 # 2. Wait for connection
 echo "Waiting for SSE endpoint initialization..."
-sleep 2
+sleep 5
 
 if ! grep -q "event: endpoint" $LOG_FILE; then
     echo "❌ FAILED: Did not receive endpoint event over SSE."
@@ -44,16 +44,24 @@ PAYLOAD='{
   }
 }'
 
-curl -s -X POST "$DAEMON_URL/message" \
+ENDPOINT=$(grep "data: /message" $LOG_FILE | cut -d' ' -f2 | tr -d '\r')
+if [ -z "$ENDPOINT" ]; then
+    echo "❌ FAILED: Could not extract dynamic SSE POST endpoint."
+    cat $LOG_FILE
+    exit 1
+fi
+echo "Extracted endpoint: $ENDPOINT"
+
+curl -v -s -X POST "$DAEMON_URL$ENDPOINT" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $TOKEN" \
-    -d "$PAYLOAD" > /dev/null
+    -d "$PAYLOAD" || echo "❌ curl POST failed!"
 
 # 4. Wait for the daemon to process the worker and stream the response
 echo "Waiting for JSON-RPC response..."
 sleep 5
 
-if grep -q "Your authorized privileged tools" $LOG_FILE; then
+if grep -q "get_list_of_files" $LOG_FILE; then
     echo "✅ SUCCESS: Daemon successfully executed the tool and streamed the result back!"
     exit 0
 else

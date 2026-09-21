@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -33,7 +34,6 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/arp"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/connections"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/curl"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/interfaces"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/nslookup"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/ping"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/delete/process"
@@ -74,8 +74,9 @@ var (
 	sudoConfig     *config.SudoConfig
 	limiterManager *auth.LimiterManager
 	
-	sessions   = make(map[string]*Session)
-	sessionsMu sync.RWMutex
+	sessions       = make(map[string]*Session)
+	sessionsMu     sync.RWMutex
+	sessionCounter int64
 
 	requestGroup  singleflight.Group
 	rpcCache      = make(map[string]cacheEntry)
@@ -166,8 +167,6 @@ func main() {
 			result, err = processes.GetProcesses(toolArgs)
 		} else if toolName == "delete_process" {
 			result, err = process.DeleteProcess(toolArgs)
-		} else if toolName == "get_interfaces" {
-			result, err = interfaces.GetInterfaces(toolArgs)
 		} else if toolName == "get_connections" {
 			result, err = connections.GetConnections(toolArgs)
 		} else if toolName == "nslookup" {
@@ -281,34 +280,39 @@ func handleSSE(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionID := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-
-	session := &Session{
-		ID:    sessionID,
-		User:  username,
-		Event: make(chan string, 10),
-	}
+	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	sessionUser := username
 
 	sessionsMu.Lock()
-	sessions[sessionID] = session
+	sessionCounter++
+	uniqueSessionID := fmt.Sprintf("%s-%d", token, sessionCounter)
+	
+	session := &Session{
+		ID:    uniqueSessionID,
+		User:  sessionUser,
+		Event: make(chan string, 10),
+	}
+	sessions[uniqueSessionID] = session
 	sessionsMu.Unlock()
 
-	defer func() {
-		sessionsMu.Lock()
-		delete(sessions, sessionID)
-		sessionsMu.Unlock()
-	}()
+	log.Printf("SSE connection established for user: %s (Session: %s)", sessionUser, uniqueSessionID)
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	fmt.Fprintf(w, "event: endpoint\ndata: /message\n\n")
+	fmt.Fprintf(w, "event: endpoint\ndata: /message?session_id=%s\n\n", uniqueSessionID)
 	if flusher, ok := w.(http.Flusher); ok {
 		flusher.Flush()
 	}
 
-	log.Printf("SSE connection established for user: %s", username)
+	defer func() {
+		sessionsMu.Lock()
+		delete(sessions, uniqueSessionID)
+		sessionsMu.Unlock()
+		close(session.Event)
+		log.Printf("SSE connection closed for user: %s (Session: %s)", sessionUser, uniqueSessionID)
+	}()
 
 	for {
 		select {
@@ -336,7 +340,11 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionID := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	sessionID := r.URL.Query().Get("session_id")
+	if sessionID == "" {
+		http.Error(w, "Missing session_id in query parameters", http.StatusBadRequest)
+		return
+	}
 
 	sessionsMu.RLock()
 	session, exists := sessions[sessionID]
@@ -361,9 +369,12 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 
 	var req JSONRPCRequest
 	if err := json.Unmarshal(body, &req); err != nil {
+		log.Printf("Failed to unmarshal JSON-RPC: %v", err)
 		http.Error(w, "Invalid JSON-RPC", http.StatusBadRequest)
 		return
 	}
+
+	log.Printf("Received JSON-RPC method: %s for session %s", req.Method, sessionID)
 
 	go processJSONRPC(session, req)
 
@@ -408,6 +419,18 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"name":        "OS Release",
 					"description": "/etc/os-release information",
 					"mimeType":    "text/plain",
+				},
+				map[string]interface{}{
+					"uri":         "os://hostname",
+					"name":        "OS Hostname",
+					"description": "Native system network hostname",
+					"mimeType":    "text/plain",
+				},
+				map[string]interface{}{
+					"uri":         "network://interfaces",
+					"name":        "Network Interfaces",
+					"description": "Network interfaces and assigned IP addresses (ip addr equivalent)",
+					"mimeType":    "application/json",
 				},
 				map[string]interface{}{
 					"uri":         "devices://usb",
@@ -494,6 +517,38 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				} else {
 					content = string(data)
 				}
+			} else if params.URI == "os://hostname" {
+				hostname, err := os.Hostname()
+				if err != nil {
+					readErr = fmt.Errorf("os.Hostname failed: %v", err)
+				} else {
+					content = hostname
+				}
+			} else if params.URI == "network://interfaces" {
+				ifaces, err := net.Interfaces()
+				if err != nil {
+					readErr = fmt.Errorf("net.Interfaces failed: %v", err)
+				} else {
+					var resultList []map[string]interface{}
+					for _, iface := range ifaces {
+						addrs, _ := iface.Addrs()
+						var addrList []string
+						for _, addr := range addrs {
+							addrList = append(addrList, addr.String())
+						}
+						resultList = append(resultList, map[string]interface{}{
+							"index":     iface.Index,
+							"name":      iface.Name,
+							"mac":       iface.HardwareAddr.String(),
+							"mtu":       iface.MTU,
+							"flags":     iface.Flags.String(),
+							"addresses": addrList,
+						})
+					}
+					b, _ := json.MarshalIndent(resultList, "", "  ")
+					content = string(b)
+					mimeType = "application/json"
+				}
 			} else if strings.HasPrefix(params.URI, "file://") {
 				// Handle dynamic URN via Isolated Worker!
 				path := strings.TrimPrefix(params.URI, "file://")
@@ -531,13 +586,13 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				resp.Error = map[string]interface{}{"code": -32603, "message": readErr.Error()}
 			} else {
 				// Cache the result if applicable
-				if params.URI == "devices://dmi" {
+				if params.URI == "devices://dmi" || params.URI == "os://hostname" {
 					resourceCache.Set(params.URI, content, mimeType, 24*time.Hour)
 				} else if params.URI == "devices://pci" {
 					resourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
 				} else if params.URI == "os://release" || params.URI == "os://uname" {
 					resourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
-				} else if params.URI == "devices://usb" || params.URI == "kernel://modules" {
+				} else if params.URI == "devices://usb" || params.URI == "kernel://modules" || params.URI == "network://interfaces" {
 					resourceCache.Set(params.URI, content, mimeType, 60*time.Second)
 				}
 
@@ -704,19 +759,6 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					},
 				},
 				map[string]interface{}{
-					"name": "get_interfaces",
-					"tools_group": "network",
-					"description": "Lists network interfaces.",
-					"inputSchema": map[string]interface{}{
-						"type": "object",
-						"properties": map[string]interface{}{
-							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-							"up_only":    map[string]interface{}{"type": "boolean", "description": "Only show interfaces that are UP"},
-							"privileged": map[string]interface{}{"type": "boolean"},
-						},
-					},
-				},
-				map[string]interface{}{
 					"name": "get_connections",
 					"tools_group": "network",
 					"description": "Lists active network connections and listening ports.",
@@ -796,6 +838,57 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},},
 					},
 				},
+				map[string]interface{}{
+					"name": "nslookup",
+					"tools_group": "network",
+					"description": "Resolves a hostname to an IP address.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"host": map[string]interface{}{"type": "string", "description": "Hostname to resolve"},
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format"},
+						},
+						"required": []string{"host"},
+					},
+				},
+				map[string]interface{}{
+					"name": "curl",
+					"tools_group": "network",
+					"description": "Executes an HTTP GET request.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"url": map[string]interface{}{"type": "string", "description": "URL to fetch"},
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format"},
+						},
+						"required": []string{"url"},
+					},
+				},
+				map[string]interface{}{
+					"name": "arp",
+					"tools_group": "network",
+					"description": "Displays the ARP cache.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format"},
+						},
+					},
+				},
+				map[string]interface{}{
+					"name": "ping",
+					"tools_group": "network",
+					"description": "Sends ICMP echo requests.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"host": map[string]interface{}{"type": "string", "description": "Host to ping"},
+							"count": map[string]interface{}{"type": "integer", "description": "Number of packets"},
+							"output_format": map[string]interface{}{"type": "string", "description": "Desired output format"},
+						},
+						"required": []string{"host"},
+					},
+				},
 			},
 		}
 		resp.Result = toolsList
@@ -812,7 +905,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				// No need to spawn an isolated worker to read our own memory config
 				resultText, execErr = sudo_rules.GetSudoRules(params.Arguments, session.User, sudoConfig)
 
-			} else if params.Name == "get_list_of_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "get_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "get_connections" || params.Name == "get_memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
+			} else if params.Name == "get_list_of_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "get_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "get_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "get_memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
 				
 				// Standard privileged check payload
 				var baseArgs struct {
@@ -899,5 +992,6 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 	}
 
 	respBytes, _ := json.Marshal(resp)
+	log.Printf("Sending response for %s: %s", req.Method, string(respBytes))
 	session.Event <- string(respBytes)
 }
