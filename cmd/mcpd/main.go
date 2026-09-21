@@ -45,49 +45,32 @@ func main() {
 		var result string
 		var err error
 
-		if toolName == "files/list" {
-			result, err = listfiles.ListOfFiles(toolArgs)
-		} else if toolName == "disks/free" {
-			result, err = free.Free(toolArgs)
-		} else if toolName == "disks/usage" {
-			result, err = disk_usage.Usage(toolArgs)
-		} else if toolName == "processes/list" {
-			result, err = listprocesses.Processes(toolArgs)
-		} else if toolName == "processes/delete" {
-			result, err = deleteprocess.Delete(toolArgs)
-		} else if toolName == "network/connections" {
-			result, err = connections.Connections(toolArgs)
-		} else if toolName == "network/nslookup" {
-			result, err = nslookup.Nslookup(toolArgs)
-		} else if toolName == "network/curl" {
-			result, err = curl.Curl(toolArgs)
-		} else if toolName == "network/arp" {
-			result, err = arp.ARP(toolArgs)
-		} else if toolName == "network/ping" {
-			result, err = ping.Ping(toolArgs)
-		} else if toolName == "memory/usage" {
-			result, err = mem_usage.Usage(toolArgs)
-		} else if toolName == "cpu/info" {
-			result, err = info.Info(toolArgs)
-		} else if toolName == "cpu/load-average" {
-			result, err = loadaverage.LoadAverage(toolArgs)
-		} else if toolName == "disks/block-devices" {
-			result, err = blockdevices.GetBlockDevices(toolArgs)
-		} else if toolName == "system/os-release" {
-			result, err = osrelease.OSRelease(toolArgs)
-		} else if toolName == "files/read" {
-			result, err = readfile.Read(toolArgs)
+		handlers := map[string]func([]byte) (string, error){
+			"files/list":          listfiles.ListOfFiles,
+			"disks/free":          free.Free,
+			"disks/usage":         disk_usage.Usage,
+			"processes/list":      listprocesses.Processes,
+			"processes/delete":    deleteprocess.Delete,
+			"network/connections": connections.Connections,
+			"network/nslookup":    nslookup.Nslookup,
+			"network/curl":        curl.Curl,
+			"network/arp":         arp.ARP,
+			"network/ping":        ping.Ping,
+			"memory/usage":        mem_usage.Usage,
+			"cpu/info":            info.Info,
+			"cpu/load-average":    loadaverage.LoadAverage,
+			"disks/block-devices": blockdevices.GetBlockDevices,
+			"system/os-release":   osrelease.OSRelease,
+			"files/read":          readfile.Read,
+			"read_usb":            usb.ReadUSB,
+			"read_pci":            pci.ReadPCI,
+			"read_dmi":            dmi.ReadDMI,
+			"read_modules":        modules.ReadModules,
+			"read_routes":         routes.ReadRoutes,
+		}
 
-		} else if toolName == "read_usb" {
-			result, err = usb.ReadUSB(toolArgs)
-		} else if toolName == "read_pci" {
-			result, err = pci.ReadPCI(toolArgs)
-		} else if toolName == "read_dmi" {
-			result, err = dmi.ReadDMI(toolArgs)
-		} else if toolName == "read_modules" {
-			result, err = modules.ReadModules(toolArgs)
-		} else if toolName == "read_routes" {
-			result, err = routes.ReadRoutes(toolArgs)
+		if handler, exists := handlers[toolName]; exists {
+			result, err = handler(toolArgs)
 		} else {
 			log.Fatalf("Unknown tool: %s", toolName)
 		}

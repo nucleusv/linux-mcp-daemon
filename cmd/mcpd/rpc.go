@@ -579,11 +579,29 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 			var resultText string
 			var execErr error
 
+			standardWorkers := map[string]bool{
+				"files/list":          true,
+				"disks/free":          true,
+				"disks/usage":         true,
+				"processes/list":      true,
+				"processes/delete":    true,
+				"network/connections": true,
+				"network/nslookup":    true,
+				"network/curl":        true,
+				"network/arp":         true,
+				"network/ping":        true,
+				"memory/usage":        true,
+				"cpu/info":            true,
+				"cpu/load-average":    true,
+				"disks/block-devices": true,
+				"system/os-release":   true,
+			}
+
 			if params.Name == "auth/sudo-rules" {
 				// No need to spawn an isolated worker to read our own memory config
 				resultText, execErr = sudorules.SudoRules(params.Arguments, session.User, sudoConfig)
 
-			} else if params.Name == "files/list" || params.Name == "disks/free" || params.Name == "disks/usage" || params.Name == "processes/list" || params.Name == "processes/delete" || params.Name == "network/connections" || params.Name == "network/nslookup" || params.Name == "network/curl" || params.Name == "network/arp" || params.Name == "network/ping" || params.Name == "memory/usage" || params.Name == "cpu/info" || params.Name == "cpu/load-average" || params.Name == "disks/block-devices" || params.Name == "system/os-release" {
+			} else if standardWorkers[params.Name] {
 
 				// Standard privileged check payload
 				var baseArgs struct {
@@ -592,8 +610,8 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				}
 				_ = json.Unmarshal(params.Arguments, &baseArgs)
 
-				if params.Name == "get_list" && baseArgs.Privileged {
-					allowedPaths := sudoConfig.GetAllowedPaths(session.User, "get_list")
+				if params.Name == "files/list" && baseArgs.Privileged {
+					allowedPaths := sudoConfig.GetAllowedPaths(session.User, "files/list")
 					allowed := false
 					for _, p := range allowedPaths {
 						if strings.HasPrefix(baseArgs.Path, p) {
