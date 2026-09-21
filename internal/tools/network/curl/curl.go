@@ -54,8 +54,8 @@ func Curl(argsJSON []byte) (string, error) {
 	}
 
 	var reqBody io.Reader
-	if args.Body != "" {
-		reqBody = bytes.NewBufferString(args.Body)
+	if args.Data != "" {
+		reqBody = bytes.NewBuffer([]byte(args.Data))
 	}
 
 	req, err := http.NewRequest(args.Method, args.URL, reqBody)

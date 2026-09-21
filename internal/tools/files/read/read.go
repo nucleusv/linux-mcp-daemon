@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"strings"
 )
 
 // ReadFileArgs defines the parameters for the files/read tool.
@@ -34,6 +36,35 @@ func Read(argsJSON []byte) (string, error) {
 		return "", fmt.Errorf("failed to open file: %v", err)
 	}
 	defer file.Close()
+
+	// Detect if file is binary
+	{
+		sniffBuf := make([]byte, 512)
+		n, err := file.Read(sniffBuf)
+		if err != nil && err != io.EOF {
+			return "", fmt.Errorf("failed to read file for type detection: %v", err)
+		}
+		if n > 0 {
+			contentType := http.DetectContentType(sniffBuf[:n])
+			if !strings.HasPrefix(contentType, "text/") && contentType != "application/json" {
+				// verify with a null byte check, as some valid config files might be misidentified
+				isBinary := false
+				for _, b := range sniffBuf[:n] {
+					if b == 0 {
+						isBinary = true
+						break
+					}
+				}
+				if isBinary {
+					return "", fmt.Errorf("cannot read binary file (detected type: %s)", contentType)
+				}
+			}
+			// Reset file pointer
+			if _, err := file.Seek(0, io.SeekStart); err != nil {
+				return "", fmt.Errorf("failed to reset file pointer: %v", err)
+			}
+		}
+	}
 
 	// 1. Line-level extraction takes precedence
 	if args.StartLine != nil || args.EndLine != nil {
