@@ -178,7 +178,7 @@ func main() {
 			result, err = arp.ARP(toolArgs)
 		} else if toolName == "ping" {
 			result, err = ping.Ping(toolArgs)
-		} else if toolName == "get_memory_usage" {
+		} else if toolName == "memory_usage" {
 			result, err = mem_usage.GetUsage(toolArgs)
 		} else if toolName == "get_info" {
 			result, err = info.GetInfo(toolArgs)
@@ -791,7 +791,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					},
 				},
 				map[string]interface{}{
-					"name": "get_memory_usage",
+					"name": "memory_usage",
 					"tools_group": "memory",
 					"description": "Returns memory and swap utilization information.",
 					"inputSchema": map[string]interface{}{
@@ -923,7 +923,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				// No need to spawn an isolated worker to read our own memory config
 				resultText, execErr = sudo_rules.GetSudoRules(params.Arguments, session.User, sudoConfig)
 
-			} else if params.Name == "list_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "list_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "get_memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
+			} else if params.Name == "list_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "list_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
 				
 				// Standard privileged check payload
 				var baseArgs struct {

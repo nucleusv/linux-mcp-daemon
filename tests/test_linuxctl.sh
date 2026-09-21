@@ -50,7 +50,7 @@ run_tool "network/nslookup --host 1.1.1.1" "nslookup"
 run_tool "network/curl --url http://127.0.0.1:9090/ping" "curl"
 run_tool "network/arp" "arp"
 run_tool "network/ping --host 127.0.0.1" "ping"
-run_tool "memory/get-memory-usage" "get_memory_usage"
+run_tool "memory/usage" "memory_usage"
 run_tool "cpu/get-info" "get_info"
 run_tool "cpu/get-load-average" "get_load_average"
 
