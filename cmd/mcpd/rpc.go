@@ -229,17 +229,31 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			}
 		} else if strings.HasPrefix(params.URI, "file://") {
 			// Handle dynamic URN via Isolated Worker!
-			path := strings.TrimPrefix(params.URI, "file://")
+			rawPath := strings.TrimPrefix(params.URI, "file://")
+
+			var path string
+			var toolName string
+
+			if strings.HasSuffix(rawPath, "/stat") {
+				path = strings.TrimSuffix(rawPath, "/stat")
+				toolName = "files/stat"
+			} else if strings.HasSuffix(rawPath, "/content") {
+				path = strings.TrimSuffix(rawPath, "/content")
+				toolName = "files/content"
+			} else {
+				readErr = fmt.Errorf("invalid file URI: must end in /stat or /content")
+				goto SendResponse
+			}
 
 			// Check mcp-sudo.yaml to see if this user is allowed to read THIS file as root
 			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, "file://", path)
 
-			// We map it to a "read_file" internal tool for the spawner
+			// We map it to the corresponding internal tool for the spawner
 			argsJSON, _ := json.Marshal(map[string]interface{}{
 				"path": path,
 			})
 
-			content, readErr = worker.SpawnWorker(session.User, "read_file", argsJSON, isPrivileged, sudoConfig, 30)
+			content, readErr = worker.SpawnWorker(session.User, toolName, argsJSON, isPrivileged, sudoConfig, 30)
 		} else if params.URI == "devices://usb" {
 			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
@@ -277,9 +291,10 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			content, readErr = worker.SpawnWorker(session.User, "read_routes", []byte("{}"), isPrivileged, sudoConfig, 30)
 			mimeType = "application/json"
 		} else {
-			readErr = fmt.Errorf("unsupported resource URI scheme: %s", params.URI)
+			readErr = fmt.Errorf("unknown resource: %s", params.URI)
 		}
 
+	SendResponse:
 		if readErr != nil {
 			resp.Error = map[string]interface{}{"code": -32603, "message": readErr.Error()}
 		} else {

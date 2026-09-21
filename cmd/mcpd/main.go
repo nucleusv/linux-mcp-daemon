@@ -18,8 +18,10 @@ import (
 	disklist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/list"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/free"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/usage"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/content"
 	listfiles "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/list"
 	readfile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/read"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/stat"
 	mem_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/memory/usage"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/arp"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/connections"
@@ -59,8 +61,10 @@ func main() {
 			"memory/usage":        mem_usage.Usage,
 			"cpu/list":            cpulist.List,
 			"cpu/load-average":    loadaverage.LoadAverage,
-			"disks/list": disklist.List,
+			"disks/list":          disklist.List,
 			"system/os-release":   osrelease.OSRelease,
+			"files/stat":          stat.Stat,
+			"files/content":       content.Content,
 			"files/read":          readfile.Read,
 			"read_usb":            usb.ReadUSB,
 			"read_pci":            pci.ReadPCI,
