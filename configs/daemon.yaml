@@ -3,3 +3,6 @@ server:
 rate_limits:
   default_rps: 5.0
   default_burst: 10
+users:
+  - username: "testuser"
+    token: "my-test-token-123"

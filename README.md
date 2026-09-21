@@ -18,7 +18,7 @@ Communication happens directly between the AI agent and the daemon via HTTP Serv
 
 ## Getting Started
 
-### Local Deployment (Docker Desktop / Kubernetes)
+### 1. Build and Deploy the Server (`mcpd`)
 
 1. Build the Docker image:
    ```bash
@@ -30,15 +30,30 @@ Communication happens directly between the AI agent and the daemon via HTTP Serv
    ./scripts/deploy.sh
    ```
 
-3. Access the Daemon:
-   The daemon runs on port `9090`. You can connect via your AI client using SSE:
-   ```bash
-   curl -H "Authorization: Bearer <your_token>" http://localhost:9090/sse
-   ```
+### 2. Build the Client (`linuxctl`)
+
+You can build the CLI client directly on your host machine (e.g. macOS):
+
+```bash
+./scripts/build-cli.sh
+```
+
+### 3. Usage
+
+The daemon runs on port `9090`. You can connect via your AI client using SSE, or use the `linuxctl` CLI tool:
+
+```bash
+# Set your token as an environment variable
+export MCP_TOKEN="your_token_here"
+
+# Ping the daemon
+./linuxctl ping
+```
 
 ## Project Structure
 
-- `cmd/mcpd/`: Main application entrypoint.
+- `cmd/mcpd/`: Main server application entrypoint.
+- `cmd/linuxctl/`: The CLI client application.
 - `configs/`: Configuration files (Daemon config, Sudo rules).
 - `internal/`: Encapsulated business logic:
   - `auth/`: Authentication, authorization, rate limiting.

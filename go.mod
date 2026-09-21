@@ -6,3 +6,5 @@ require (
 	golang.org/x/sync v0.23.0
 	golang.org/x/time v0.16.0
 )
+
+require gopkg.in/yaml.v3 v3.0.1
