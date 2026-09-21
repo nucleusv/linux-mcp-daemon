@@ -1,4 +1,4 @@
-package tools
+package get_disk_space
 
 import (
 	"encoding/json"

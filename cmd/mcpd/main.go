@@ -15,7 +15,10 @@ import (
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/auth"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/get_disk_space"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/get_disk_usage"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/get_sudo_rules"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/list_directory"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 	"gopkg.in/yaml.v3"
 )
@@ -115,11 +118,11 @@ func main() {
 		var err error
 
 		if toolName == "list_directory" {
-			result, err = tools.ListDirectory(toolArgs)
+			result, err = list_directory.ListDirectory(toolArgs)
 		} else if toolName == "get_disk_space" {
-			result, err = tools.GetDiskSpace(toolArgs)
+			result, err = get_disk_space.GetDiskSpace(toolArgs)
 		} else if toolName == "get_disk_usage" {
-			result, err = tools.GetDiskUsage(toolArgs)
+			result, err = get_disk_usage.GetDiskUsage(toolArgs)
 		} else {
 			log.Fatalf("Unknown tool: %s", toolName)
 		}
@@ -371,7 +374,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 
 			if params.Name == "get_sudo_rules" {
 				// No need to spawn an isolated worker to read our own memory config
-				resultText, execErr = tools.GetSudoRules(session.User, sudoConfig)
+				resultText, execErr = get_sudo_rules.GetSudoRules(session.User, sudoConfig)
 
 			} else if params.Name == "list_directory" || params.Name == "get_disk_space" || params.Name == "get_disk_usage" {
 				

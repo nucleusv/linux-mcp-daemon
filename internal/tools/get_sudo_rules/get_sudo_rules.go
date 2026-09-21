@@ -1,4 +1,4 @@
-package tools
+package get_sudo_rules
 
 import (
 	"encoding/json"

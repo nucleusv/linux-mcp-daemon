@@ -1,4 +1,4 @@
-package tools
+package get_disk_usage
 
 import (
 	"encoding/json"
@@ -156,4 +156,17 @@ func GetDiskUsage(rawArgs json.RawMessage) (string, error) {
 	result += fmt.Sprintf("Total size of %s: %s\n", cleanPath, formatBytes(uint64(totalSize)))
 
 	return result, nil
+}
+
+func formatBytes(b uint64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := uint64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
 }
