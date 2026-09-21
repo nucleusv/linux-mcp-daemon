@@ -7,8 +7,10 @@ import (
 )
 
 type GetDiskSpaceArgs struct {
-	Path       string `json:"path"`
-	Privileged bool   `json:"privileged,omitempty"`
+	Path          string `json:"path"`
+	Inodes        bool   `json:"inodes,omitempty"`
+	HumanReadable bool   `json:"human_readable,omitempty"`
+	Privileged    bool   `json:"privileged,omitempty"`
 }
 
 // GetDiskSpace calculates filesystem usage statistics (equivalent to df -h).
@@ -28,6 +30,21 @@ func GetDiskSpace(rawArgs json.RawMessage) (string, error) {
 		return "", fmt.Errorf("failed to get disk space for path %s: %v", args.Path, err)
 	}
 
+	if args.Inodes {
+		totalInodes := stat.Files
+		freeInodes := stat.Ffree
+		usedInodes := totalInodes - freeInodes
+		usePercent := float64(0)
+		if totalInodes > 0 {
+			usePercent = float64(usedInodes) / float64(totalInodes) * 100
+		}
+		result := fmt.Sprintf("Filesystem inodes on %s\n", args.Path)
+		result += fmt.Sprintf("Total Inodes: %d\n", totalInodes)
+		result += fmt.Sprintf("Used Inodes:  %d (%.1f%%)\n", usedInodes, usePercent)
+		result += fmt.Sprintf("Free Inodes:  %d\n", freeInodes)
+		return result, nil
+	}
+
 	// Calculate sizes in bytes
 	totalBytes := stat.Blocks * uint64(stat.Bsize)
 	freeBytes := stat.Bavail * uint64(stat.Bsize)
@@ -38,15 +55,16 @@ func GetDiskSpace(rawArgs json.RawMessage) (string, error) {
 		usePercent = float64(usedBytes) / float64(totalBytes) * 100
 	}
 
-	// Format to human readable
-	totalHR := formatBytes(totalBytes)
-	usedHR := formatBytes(usedBytes)
-	freeHR := formatBytes(freeBytes)
-
 	result := fmt.Sprintf("Filesystem space on %s\n", args.Path)
-	result += fmt.Sprintf("Total:     %s\n", totalHR)
-	result += fmt.Sprintf("Used:      %s (%.1f%%)\n", usedHR, usePercent)
-	result += fmt.Sprintf("Available: %s\n", freeHR)
+	if args.HumanReadable {
+		result += fmt.Sprintf("Total:     %s\n", formatBytes(totalBytes))
+		result += fmt.Sprintf("Used:      %s (%.1f%%)\n", formatBytes(usedBytes), usePercent)
+		result += fmt.Sprintf("Available: %s\n", formatBytes(freeBytes))
+	} else {
+		result += fmt.Sprintf("Total:     %d\n", totalBytes)
+		result += fmt.Sprintf("Used:      %d (%.1f%%)\n", usedBytes, usePercent)
+		result += fmt.Sprintf("Available: %d\n", freeBytes)
+	}
 
 	return result, nil
 }

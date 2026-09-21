@@ -15,6 +15,9 @@ type GetDiskUsageArgs struct {
 	OneFileSystem bool     `json:"one_file_system,omitempty"`
 	Exclude       []string `json:"exclude,omitempty"`
 	All           bool     `json:"all,omitempty"`
+	ApparentSize  bool     `json:"apparent_size,omitempty"`
+	Threshold     int64    `json:"threshold,omitempty"`
+	SeparateDirs  bool     `json:"separate_dirs,omitempty"`
 	Privileged    bool     `json:"privileged,omitempty"`
 }
 
@@ -88,10 +91,21 @@ func GetDiskUsage(rawArgs json.RawMessage) (string, error) {
 
 		// Calculate blocks instead of apparent size
 		var size int64
-		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-			size = stat.Blocks * 512 // 512-byte blocks
+		if !args.ApparentSize {
+			if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+				size = stat.Blocks * 512 // 512-byte blocks
+			} else {
+				size = info.Size() // fallback
+			}
 		} else {
-			size = info.Size() // fallback
+			size = info.Size()
+		}
+
+		// Apply threshold logic
+		if args.Threshold > 0 && size < args.Threshold {
+			return nil // skip if smaller
+		} else if args.Threshold < 0 && size > -args.Threshold {
+			return nil // skip if larger
 		}
 
 		if !info.IsDir() {
@@ -104,6 +118,9 @@ func GetDiskUsage(rawArgs json.RawMessage) (string, error) {
 				parent := filepath.Dir(path)
 				for strings.HasPrefix(parent, cleanPath) {
 					dirSizes[parent] += size
+					if args.SeparateDirs {
+						break // only add to immediate parent
+					}
 					if parent == cleanPath || parent == "/" || parent == "." {
 						break
 					}

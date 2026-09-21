@@ -320,8 +320,10 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
-							"path":       map[string]interface{}{"type": "string", "description": "Absolute path to check"},
-							"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+							"path":           map[string]interface{}{"type": "string", "description": "Absolute path to check"},
+							"inodes":         map[string]interface{}{"type": "boolean", "description": "List inode information instead of block usage (-i)"},
+							"human_readable": map[string]interface{}{"type": "boolean", "description": "Print sizes in powers of 1024 (-h)"},
+							"privileged":     map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 						},
 						"required": []string{"path"},
 					},
@@ -338,6 +340,9 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 							"one_file_system": map[string]interface{}{"type": "boolean", "description": "Skip directories on different file systems (-x)"},
 							"exclude":         map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Patterns to exclude"},
 							"all":             map[string]interface{}{"type": "boolean", "description": "Write counts for all files, not just directories (-a)"},
+							"apparent_size":   map[string]interface{}{"type": "boolean", "description": "Print apparent sizes rather than device usage (--apparent-size)"},
+							"threshold":       map[string]interface{}{"type": "integer", "description": "Exclude entries smaller than SIZE if positive, or greater than SIZE if negative (-t)"},
+							"separate_dirs":   map[string]interface{}{"type": "boolean", "description": "For directories do not include size of subdirectories (-S)"},
 							"privileged":      map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 						},
 						"required": []string{"path"},
