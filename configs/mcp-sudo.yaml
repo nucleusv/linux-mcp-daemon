@@ -33,11 +33,11 @@ users:
           allowed: true
         memory/usage:
           allowed: true
-        cpu/info:
+        cpu/list:
           allowed: true
         cpu/load-average:
           allowed: true
-        disks/block-devices:
+        disks/list:
           allowed: true
         system/os-release:
           allowed: true

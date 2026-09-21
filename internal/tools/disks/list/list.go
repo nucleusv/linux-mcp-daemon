@@ -1,4 +1,4 @@
-package blockdevices
+package list
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ type GetBlockDevicesArgs struct {
 	All          bool   `json:"all"`
 }
 
-func GetBlockDevices(argsJSON []byte) (string, error) {
+func List(argsJSON []byte) (string, error) {
 	var args GetBlockDevicesArgs
 	if len(argsJSON) > 0 {
 		if err := json.Unmarshal(argsJSON, &args); err != nil {

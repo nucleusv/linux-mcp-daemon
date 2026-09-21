@@ -1,4 +1,4 @@
-package info
+package list
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ type GetInfoArgs struct {
 	TopologyOnly bool `json:"topology_only"`
 }
 
-func Info(argsJSON []byte) (string, error) {
+func List(argsJSON []byte) (string, error) {
 	var args GetInfoArgs
 	if len(argsJSON) > 0 {
 		if err := json.Unmarshal(argsJSON, &args); err != nil {

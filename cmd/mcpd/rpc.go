@@ -491,7 +491,7 @@ func handleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "cpu/info",
+				"name":        "cpu/list",
 				"tools_group": "cpu",
 				"description": "Retrieves CPU topology and architecture.",
 				"inputSchema": map[string]interface{}{
@@ -513,7 +513,7 @@ func handleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "disks/block-devices",
+				"name":        "disks/list",
 				"tools_group": "disks",
 				"description": "Lists block devices.",
 				"inputSchema": map[string]interface{}{
@@ -621,9 +621,9 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 			"network/arp":         true,
 			"network/ping":        true,
 			"memory/usage":        true,
-			"cpu/info":            true,
+			"cpu/list":            true,
 			"cpu/load-average":    true,
-			"disks/block-devices": true,
+			"disks/list": true,
 			"system/os-release":   true,
 		}
 

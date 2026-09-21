@@ -13,9 +13,9 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/usb"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/kernel/modules"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/routes"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/info"
+	cpulist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/list"
 	loadaverage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/load-average"
-	blockdevices "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/block-devices"
+	disklist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/list"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/free"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/usage"
 	listfiles "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/list"
@@ -57,9 +57,9 @@ func main() {
 			"network/arp":         arp.ARP,
 			"network/ping":        ping.Ping,
 			"memory/usage":        mem_usage.Usage,
-			"cpu/info":            info.Info,
+			"cpu/list":            cpulist.List,
 			"cpu/load-average":    loadaverage.LoadAverage,
-			"disks/block-devices": blockdevices.GetBlockDevices,
+			"disks/list": disklist.List,
 			"system/os-release":   osrelease.OSRelease,
 			"files/read":          readfile.Read,
 			"read_usb":            usb.ReadUSB,
