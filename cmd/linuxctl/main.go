@@ -117,14 +117,19 @@ func main() {
 				if eventName == "endpoint" {
 					postEndpoint = *serverURL + data
 				} else if eventName == "message" {
-					var rpcResp JSONRPCResponse
-					if err := json.Unmarshal([]byte(data), &rpcResp); err == nil {
-						chanMutex.Lock()
-						if ch, ok := responseChans[rpcResp.ID]; ok {
-							ch <- rpcResp
-							delete(responseChans, rpcResp.ID)
+					if group == "stdio" {
+						// Transparently forward all JSON-RPC messages to stdout for Claude Desktop
+						fmt.Println(data)
+					} else {
+						var rpcResp JSONRPCResponse
+						if err := json.Unmarshal([]byte(data), &rpcResp); err == nil {
+							chanMutex.Lock()
+							if ch, ok := responseChans[rpcResp.ID]; ok {
+								ch <- rpcResp
+								delete(responseChans, rpcResp.ID)
+							}
+							chanMutex.Unlock()
 						}
-						chanMutex.Unlock()
 					}
 				}
 			} else if line == "" {
@@ -139,6 +144,31 @@ func main() {
 	}
 
 	// 5. Route Logic
+	if group == "stdio" {
+		// Read JSON-RPC requests from stdin line by line
+		scanner := bufio.NewScanner(os.Stdin)
+		// Claude Desktop sends one JSON object per line
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			
+			// Forward the exact raw JSON to the message endpoint
+			postReq, err := http.NewRequest("POST", postEndpoint, strings.NewReader(line))
+			if err != nil {
+				continue
+			}
+			postReq.Header.Set("Authorization", "Bearer "+authToken)
+			postReq.Header.Set("Content-Type", "application/json")
+			postResp, err := client.Do(postReq)
+			if err == nil {
+				postResp.Body.Close()
+			}
+		}
+		os.Exit(0)
+	}
+
 	if command == "" {
 		if group == "ping" {
 			fmt.Println("Successfully connected to mcpd daemon!")
