@@ -1,10 +1,15 @@
 {
   "mcpServers": {
     "linux-mcp-daemon": {
-      "serverUrl": "http://localhost:9090/sse",
-      "headers": {
-        "Authorization": "Bearer my-test-token-123"
-      }
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/client-sse",
+        "--url",
+        "http://localhost:9090/sse",
+        "--header",
+        "Authorization: Bearer my-test-token-123"
+      ]
     }
   }
 }
