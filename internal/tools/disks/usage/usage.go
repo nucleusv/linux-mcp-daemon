@@ -11,7 +11,7 @@ import (
 
 // GetUsageArgs defines the parameters for the get_disk_usage tool.
 type GetUsageArgs struct {
-	OutputFormat  string   `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
+	OutputFormat  string   `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 	Path          string   `json:"path"`                      // Path is the absolute directory to start calculating from.
 	MaxDepth      int      `json:"max_depth,omitempty"`       // MaxDepth determines how deep to recurse (0 for summarize only).
 	OneFileSystem bool     `json:"one_file_system,omitempty"` // OneFileSystem prevents traversing into directories on different file systems.
@@ -139,6 +139,19 @@ func Usage(argsJSON []byte) (string, error) {
 
 	if err != nil {
 		return "", fmt.Errorf("error during traversal: %v", err)
+	}
+
+	if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
+		outObj := map[string]interface{}{
+			"path":       cleanPath,
+			"total_size": totalSize,
+			"human_size": formatBytes(uint64(totalSize)),
+		}
+		if args.MaxDepth > 0 {
+			outObj["directory_sizes"] = dirSizes
+		}
+		b, _ := json.Marshal(outObj)
+		return string(b), nil
 	}
 
 	var result string

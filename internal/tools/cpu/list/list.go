@@ -8,8 +8,8 @@ import (
 )
 
 type GetInfoArgs struct {
-	OutputFormat string `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
-	TopologyOnly bool `json:"topology_only"`
+	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
+	TopologyOnly bool   `json:"topology_only"`
 }
 
 func List(argsJSON []byte) (string, error) {
