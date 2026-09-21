@@ -9,30 +9,36 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"golang.org/x/sync/singleflight"
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/auth"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/cache"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/dmi"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/pci"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/usb"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/kernel/modules"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/get/sudo_rules"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/get/info"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/get/load_average"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/blocks"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/free"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/usage"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/get/load_average"
-	mem_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/memory/get/usage"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/system/get/os_release"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/get/sudo_rules"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/delete/process"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/blocks"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/connections"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/get/list_of_files"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/read/file"
+	mem_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/memory/get/usage"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/arp"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/connections"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/curl"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/interfaces"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/nslookup"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/get/ping"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/delete/process"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/get/processes"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/usb"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/pci"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/dmi"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/kernel/modules"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/system/get/os_release"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 	"gopkg.in/yaml.v3"
 )
@@ -71,10 +77,23 @@ var (
 	sessions   = make(map[string]*Session)
 	sessionsMu sync.RWMutex
 
-	requestGroup singleflight.Group
-	cache        = make(map[string]cacheEntry)
-	cacheMu      sync.RWMutex
+	requestGroup  singleflight.Group
+	rpcCache      = make(map[string]cacheEntry)
+	cacheMu       sync.RWMutex
+	resourceCache = cache.NewTTLCache()
 )
+
+func charsToString(ca []int8) string {
+	s := make([]byte, len(ca))
+	var i int
+	for ; i < len(ca); i++ {
+		if ca[i] == 0 {
+			break
+		}
+		s[i] = uint8(ca[i])
+	}
+	return string(s[:i])
+}
 
 type cacheEntry struct {
 	result    string
@@ -151,6 +170,14 @@ func main() {
 			result, err = interfaces.GetInterfaces(toolArgs)
 		} else if toolName == "get_connections" {
 			result, err = connections.GetConnections(toolArgs)
+		} else if toolName == "nslookup" {
+			result, err = nslookup.Nslookup(toolArgs)
+		} else if toolName == "curl" {
+			result, err = curl.Curl(toolArgs)
+		} else if toolName == "arp" {
+			result, err = arp.ARP(toolArgs)
+		} else if toolName == "ping" {
+			result, err = ping.Ping(toolArgs)
 		} else if toolName == "get_memory_usage" {
 			result, err = mem_usage.GetUsage(toolArgs)
 		} else if toolName == "get_info" {
@@ -353,7 +380,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 		resp.Result = map[string]interface{}{
 			"protocolVersion": "2024-11-05",
 			"capabilities": map[string]interface{}{
-				"tools": map[string]interface{}{},
+				"tools":     map[string]interface{}{},
 				"resources": map[string]interface{}{},
 			},
 			"serverInfo": map[string]interface{}{
@@ -371,48 +398,54 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 		resp.Result = map[string]interface{}{
 			"resources": []interface{}{
 				map[string]interface{}{
-					"uri": "os://uname",
-					"name": "OS Uname",
+					"uri":         "os://uname",
+					"name":        "OS Uname",
 					"description": "Native system uname information",
-					"mimeType": "text/plain",
+					"mimeType":    "text/plain",
 				},
 				map[string]interface{}{
-					"uri": "os://release",
-					"name": "OS Release",
+					"uri":         "os://release",
+					"name":        "OS Release",
 					"description": "/etc/os-release information",
-					"mimeType": "text/plain",
+					"mimeType":    "text/plain",
 				},
 				map[string]interface{}{
-					"uri": "devices://usb",
-					"name": "USB Devices",
+					"uri":         "devices://usb",
+					"name":        "USB Devices",
 					"description": "Connected USB devices (lsusb equivalent)",
-					"mimeType": "application/json",
+					"mimeType":    "application/json",
 				},
 				map[string]interface{}{
-					"uri": "devices://pci",
-					"name": "PCI Devices",
+					"uri":         "devices://pci",
+					"name":        "PCI Devices",
 					"description": "Connected PCI devices (lspci equivalent)",
-					"mimeType": "application/json",
+					"mimeType":    "application/json",
 				},
 				map[string]interface{}{
-					"uri": "devices://dmi",
-					"name": "DMI Hardware Info",
+					"uri":         "devices://dmi",
+					"name":        "DMI Hardware Info",
 					"description": "Desktop Management Interface info (lshw/hwinfo equivalent)",
-					"mimeType": "application/json",
+					"mimeType":    "application/json",
 				},
 				map[string]interface{}{
-					"uri": "kernel://modules",
-					"name": "Kernel Modules",
+					"uri":         "kernel://modules",
+					"name":        "Kernel Modules",
 					"description": "Loaded kernel drivers (lsmod equivalent)",
-					"mimeType": "application/json",
+					"mimeType":    "application/json",
 				},
 			},
 			"resourceTemplates": []interface{}{
 				map[string]interface{}{
 					"uriTemplate": "file:///{path}",
-					"name": "File Reader",
+					"name":        "File Reader",
 					"description": "Reads any file on the system (subject to worker isolation and mcp-sudo.yaml permissions).",
-					"mimeType": "text/plain",
+					"mimeType":    "text/plain",
+				},
+				map[string]interface{}{
+					"uriTemplate": "devices://{type}",
+					"name":        "Hardware Devices",
+					"description": "Hardware device metadata. Valid types: usb, pci, dmi",
+					"mimeType":    "application/json",
 				},
 			},
 		}
@@ -423,38 +456,73 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 		if err := json.Unmarshal(req.Params, &params); err == nil {
 			var content string
 			var readErr error
+			mimeType := "text/plain"
+
+			// 1. Check cache first!
+			if cachedContent, cachedMimeType, hit := resourceCache.Get(params.URI); hit {
+				resp.Result = map[string]interface{}{
+					"contents": []interface{}{
+						map[string]interface{}{
+							"uri":      params.URI,
+							"mimeType": cachedMimeType,
+							"text":     cachedContent,
+						},
+					},
+				}
+				data, _ := json.Marshal(resp)
+				session.Event <- string(data)
+				return
+			}
 
 			if params.URI == "os://uname" {
-				// Handle static URN directly
-				content, readErr = os_release.GetOSRelease([]byte{})
+				var uts syscall.Utsname
+				if err := syscall.Uname(&uts); err != nil {
+					readErr = fmt.Errorf("syscall.Uname failed: %v", err)
+				} else {
+					content = fmt.Sprintf("Sysname: %s\nNodename: %s\nRelease: %s\nVersion: %s\nMachine: %s",
+						charsToString(uts.Sysname[:]),
+						charsToString(uts.Nodename[:]),
+						charsToString(uts.Release[:]),
+						charsToString(uts.Version[:]),
+						charsToString(uts.Machine[:]),
+					)
+				}
 			} else if params.URI == "os://release" {
-				// Handle static URN directly
-				content, readErr = os_release.GetOSRelease([]byte{})
+				data, err := os.ReadFile("/etc/os-release")
+				if err != nil {
+					readErr = fmt.Errorf("failed to read /etc/os-release: %v", err)
+				} else {
+					content = string(data)
+				}
 			} else if strings.HasPrefix(params.URI, "file://") {
 				// Handle dynamic URN via Isolated Worker!
 				path := strings.TrimPrefix(params.URI, "file://")
-				
+
 				// Check mcp-sudo.yaml to see if this user is allowed to read THIS file as root
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, "file://", path)
-				
+
 				// We map it to a "read_file" internal tool for the spawner
 				argsJSON, _ := json.Marshal(map[string]interface{}{
 					"path": path,
 				})
-				
+
 				content, readErr = worker.SpawnWorker(session.User, "read_file", argsJSON, isPrivileged, sudoConfig, 30)
 			} else if params.URI == "devices://usb" {
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 				content, readErr = worker.SpawnWorker(session.User, "read_usb", []byte("{}"), isPrivileged, sudoConfig, 30)
+				mimeType = "application/json"
 			} else if params.URI == "devices://pci" {
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 				content, readErr = worker.SpawnWorker(session.User, "read_pci", []byte("{}"), isPrivileged, sudoConfig, 30)
+				mimeType = "application/json"
 			} else if params.URI == "devices://dmi" {
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 				content, readErr = worker.SpawnWorker(session.User, "read_dmi", []byte("{}"), isPrivileged, sudoConfig, 30)
+				mimeType = "application/json"
 			} else if params.URI == "kernel://modules" {
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 				content, readErr = worker.SpawnWorker(session.User, "read_modules", []byte("{}"), isPrivileged, sudoConfig, 30)
+				mimeType = "application/json"
 			} else {
 				readErr = fmt.Errorf("unsupported resource URI scheme: %s", params.URI)
 			}
@@ -462,12 +530,23 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 			if readErr != nil {
 				resp.Error = map[string]interface{}{"code": -32603, "message": readErr.Error()}
 			} else {
+				// Cache the result if applicable
+				if params.URI == "devices://dmi" {
+					resourceCache.Set(params.URI, content, mimeType, 24*time.Hour)
+				} else if params.URI == "devices://pci" {
+					resourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
+				} else if params.URI == "os://release" || params.URI == "os://uname" {
+					resourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
+				} else if params.URI == "devices://usb" || params.URI == "kernel://modules" {
+					resourceCache.Set(params.URI, content, mimeType, 60*time.Second)
+				}
+
 				resp.Result = map[string]interface{}{
 					"contents": []interface{}{
 						map[string]interface{}{
-							"uri": params.URI,
-							"mimeType": "text/plain",
-							"text": content,
+							"uri":      params.URI,
+							"mimeType": mimeType,
+							"text":     content,
 						},
 					},
 				}
@@ -573,6 +652,55 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 							"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root to kill other user's processes"},
 						},
 						"required": []string{"pid"},
+					},
+				},
+				map[string]interface{}{
+					"name":        "nslookup",
+					"description": "Query DNS records natively.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"host":        map[string]interface{}{"type": "string"},
+							"record_type": map[string]interface{}{"type": "string", "description": "e.g. A, TXT, MX, CNAME, NS, or ANY"},
+						},
+						"required": []string{"host"},
+					},
+				},
+				map[string]interface{}{
+					"name":        "curl",
+					"description": "Transfer data from a URL using native HTTP client.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"url":     map[string]interface{}{"type": "string"},
+							"method":  map[string]interface{}{"type": "string"},
+							"body":    map[string]interface{}{"type": "string"},
+							"timeout": map[string]interface{}{"type": "number"},
+						},
+						"required": []string{"url"},
+					},
+				},
+				map[string]interface{}{
+					"name":        "arp",
+					"description": "View the system ARP cache (IP to MAC address mappings).",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"interface": map[string]interface{}{"type": "string"},
+						},
+					},
+				},
+				map[string]interface{}{
+					"name":        "ping",
+					"description": "Measure TCP reachability and latency to a host.",
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"host":    map[string]interface{}{"type": "string"},
+							"port":    map[string]interface{}{"type": "number", "description": "Defaults to 80"},
+							"timeout": map[string]interface{}{"type": "number"},
+						},
+						"required": []string{"host"},
 					},
 				},
 				map[string]interface{}{
@@ -719,7 +847,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 						cacheKey := fmt.Sprintf("%s:%s:%t", session.User, string(params.Arguments), baseArgs.Privileged)
 						
 						cacheMu.RLock()
-						entry, ok := cache[cacheKey]
+						entry, ok := rpcCache[cacheKey]
 						cacheMu.RUnlock()
 
 						if ok && time.Now().Before(entry.expiresAt) {
@@ -729,7 +857,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 								res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, executionTimeout)
 								if exErr == nil {
 									cacheMu.Lock()
-									cache[cacheKey] = cacheEntry{
+									rpcCache[cacheKey] = cacheEntry{
 										result:    res,
 										expiresAt: time.Now().Add(60 * time.Second),
 									}
