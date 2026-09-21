@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 DAEMON_URL=${DAEMON_URL:-"http://localhost:9090"}
 
@@ -21,7 +20,7 @@ SERVER_ONLINE=false
 
 # First, wait for the root server to come online
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    HTTP_STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" "$DAEMON_URL/docs/")
+    HTTP_STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" "$DAEMON_URL/docs/" || echo "000")
     if [ "$HTTP_STATUS" -eq 200 ]; then
         SERVER_ONLINE=true
         break
@@ -42,7 +41,7 @@ echo "✅ Server is online! Validating individual documentation pages..."
 FAILED=0
 
 for PAGE in "${EXPECTED_PAGES[@]}"; do
-    STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" "$DAEMON_URL$PAGE")
+    STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" "$DAEMON_URL$PAGE" || echo "000")
     if [ "$STATUS" -eq 200 ]; then
         echo "  [OK] $PAGE"
     else
