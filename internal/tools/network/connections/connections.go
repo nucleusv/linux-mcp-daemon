@@ -7,11 +7,12 @@ import (
 	"os/exec"
 )
 
+// GetConnectionsArgs defines the parameters for the network/connections tool.
 type GetConnectionsArgs struct {
-	OutputFormat string `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
-	State      string `json:"state"`
-	Port       int    `json:"port"`
-	Privileged bool   `json:"privileged"`
+	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
+	State        string `json:"state,omitempty"`         // State filters by connection state (e.g., "ESTABLISHED", "LISTEN").
+	Port         int    `json:"port,omitempty"`          // Port filters by a specific local or remote port.
+	Privileged   bool   `json:"privileged,omitempty"`    // Privileged runs the tool as root to see all processes owning the sockets.
 }
 
 func Connections(argsJSON []byte) (string, error) {

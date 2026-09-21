@@ -7,8 +7,9 @@ import (
 	"os"
 )
 
+// ContentArgs defines the parameters for the files/content resource template.
 type ContentArgs struct {
-	Path string `json:"path"`
+	Path string `json:"path"` // Path is the absolute path to the file to read. Required.
 }
 
 const maxReadBytes = 10240 // 10KB

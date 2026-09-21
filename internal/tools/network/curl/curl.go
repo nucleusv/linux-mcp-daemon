@@ -10,12 +10,15 @@ import (
 	"time"
 )
 
+// CurlArgs defines the parameters for the network/curl tool.
 type CurlArgs struct {
-	URL     string            `json:"url"`
-	Method  string            `json:"method"`
-	Headers map[string]string `json:"headers"`
-	Body    string            `json:"body"`
-	Timeout int               `json:"timeout"`
+	URL          string            `json:"url"`                     // URL is the target URL to request. Required.
+	Method       string            `json:"method,omitempty"`        // Method is the HTTP method to use (e.g., "GET", "POST"). Defaults to "GET".
+	Headers      map[string]string `json:"headers,omitempty"`       // Headers contains the HTTP headers to send.
+	Data         string            `json:"data,omitempty"`          // Data is the request body payload.
+	Insecure     bool              `json:"insecure,omitempty"`      // Insecure skips TLS certificate validation.
+	OutputFormat string            `json:"output_format,omitempty"` // OutputFormat specifies the desired output format. Defaults to text.
+	Timeout      int               `json:"timeout,omitempty"`       // Timeout is the request timeout in seconds. Defaults to 10.
 }
 
 type CurlResponse struct {

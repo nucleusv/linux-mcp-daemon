@@ -7,8 +7,10 @@ import (
 	"strings"
 )
 
+// ARPArgs defines the parameters for the network/arp tool.
 type ARPArgs struct {
-	Interface string `json:"interface"` // Optional interface filter
+	Interface    string `json:"interface,omitempty"`     // Interface filters the ARP cache by a specific network interface (e.g. "eth0").
+	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 }
 
 type ARPEntry struct {

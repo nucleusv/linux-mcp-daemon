@@ -8,11 +8,12 @@ import (
 	"strconv"
 )
 
+// DeleteProcessArgs defines the parameters for the processes/delete tool.
 type DeleteProcessArgs struct {
-	OutputFormat string `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
-	PID          int    `json:"pid"`
-	Signal       string `json:"signal"`
-	Privileged   bool   `json:"privileged"`
+	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
+	PID          int    `json:"pid"`                     // PID is the Process ID to terminate. Required.
+	Signal       string `json:"signal,omitempty"`        // Signal is the signal to send (e.g., "SIGTERM", "SIGKILL"). Defaults to "SIGTERM".
+	Privileged   bool   `json:"privileged,omitempty"`    // Privileged executes the kill command as root.
 }
 
 func Delete(argsJSON []byte) (string, error) {

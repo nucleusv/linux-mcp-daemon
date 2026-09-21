@@ -8,12 +8,13 @@ import (
 	"os"
 )
 
+// ReadFileArgs defines the parameters for the files/read tool.
 type ReadFileArgs struct {
-	Path      string `json:"path"`
-	Offset    *int64 `json:"offset,omitempty"`
-	Limit     *int64 `json:"limit,omitempty"`
-	StartLine *int   `json:"start_line,omitempty"`
-	EndLine   *int   `json:"end_line,omitempty"`
+	Path      string `json:"path"`                 // Path is the absolute path to the file to read. Required.
+	Offset    *int64 `json:"offset,omitempty"`     // Offset is the starting byte offset. Takes precedence if limit is set and lines are not.
+	Limit     *int64 `json:"limit,omitempty"`      // Limit is the maximum number of bytes to read. Defaults to 10KB safely.
+	StartLine *int   `json:"start_line,omitempty"` // StartLine is the starting line number (1-indexed). Takes precedence over byte offsets.
+	EndLine   *int   `json:"end_line,omitempty"`   // EndLine is the inclusive ending line number. 
 }
 
 const maxSafeBytes = 10240 // 10KB fallback

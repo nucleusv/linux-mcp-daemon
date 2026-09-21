@@ -8,8 +8,9 @@ import (
 )
 
 // GetSudoRulesArgs has no arguments since we just return the caller's rules.
+// GetSudoRulesArgs defines the parameters for the auth/sudo-rules tool.
 type GetSudoRulesArgs struct {
-	OutputFormat string `json:"output_format,omitempty"`
+	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format. Defaults to text.
 }
 
 // GetSudoRules returns the subset of mcp-sudo.yaml rules applicable to the authenticated user.

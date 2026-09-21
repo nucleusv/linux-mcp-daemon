@@ -6,8 +6,9 @@ import (
 	"os"
 )
 
+// StatArgs defines the parameters for the files/stat resource template.
 type StatArgs struct {
-	Path string `json:"path"`
+	Path string `json:"path"` // Path is the absolute path to the file or directory to stat. Required.
 }
 
 type FileStat struct {

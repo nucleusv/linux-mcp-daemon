@@ -8,10 +8,12 @@ import (
 	"time"
 )
 
+// PingArgs defines the parameters for the network/ping tool.
 type PingArgs struct {
-	Host    string `json:"host"`
-	Port    int    `json:"port"`    // Optional, defaults to 80 or 443
-	Timeout int    `json:"timeout"` // Timeout in seconds
+	Host         string `json:"host"`                    // Host is the IP address or hostname to ping. Required.
+	Port         int    `json:"port,omitempty"`          // Port is the TCP port to ping. Defaults to 80.
+	Timeout      int    `json:"timeout,omitempty"`       // Timeout is the maximum time in seconds to wait for a reply. Defaults to 5.
+	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 }
 
 type PingResponse struct {

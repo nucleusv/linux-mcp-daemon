@@ -7,9 +7,11 @@ import (
 	"strings"
 )
 
+// NslookupArgs defines the parameters for the network/nslookup tool.
 type NslookupArgs struct {
-	Host       string `json:"host"`
-	RecordType string `json:"record_type"` // e.g. "A", "TXT", "MX", "CNAME", "NS", or "ANY"
+	Host         string `json:"host"`                    // Host is the hostname or IP to resolve. Required.
+	RecordType   string `json:"record_type,omitempty"`   // RecordType specifies the DNS record type (e.g. A, TXT, MX, CNAME, NS). Defaults to ANY or standard A/AAAA.
+	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format. Defaults to text.
 }
 
 type Record struct {

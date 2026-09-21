@@ -6,6 +6,7 @@ import (
 	"syscall"
 )
 
+// GetLoadAverageArgs defines the parameters for the cpu/load-average tool.
 type GetLoadAverageArgs struct {
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 }
