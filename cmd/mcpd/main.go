@@ -307,7 +307,23 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 		ID:      req.ID,
 	}
 
-	if req.Method == "tools/list" {
+	if req.Method == "initialize" {
+		resp.Result = map[string]interface{}{
+			"protocolVersion": "2024-11-05",
+			"capabilities": map[string]interface{}{
+				"tools": map[string]interface{}{},
+			},
+			"serverInfo": map[string]interface{}{
+				"name":    "linux-mcp-daemon",
+				"version": "1.0.0",
+			},
+		}
+	} else if req.Method == "notifications/initialized" {
+		// This is a client notification, not a request. The server should not send a response.
+		return
+	} else if req.Method == "ping" {
+		resp.Result = map[string]interface{}{}
+	} else if req.Method == "tools/list" {
 		// Dynamically generate the tools list based on sudo rules.
 		listDesc := "Lists contents of a directory."
 		if sudoConfig.CanRunAsRoot(session.User, "list_directory") {
