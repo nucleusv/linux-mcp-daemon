@@ -8,3 +8,8 @@ require (
 )
 
 require gopkg.in/yaml.v3 v3.0.1
+
+require (
+	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
+	github.com/godbus/dbus/v5 v5.1.0 // indirect
+)

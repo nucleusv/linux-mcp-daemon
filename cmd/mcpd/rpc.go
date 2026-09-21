@@ -257,6 +257,18 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			})
 
 			content, readErr = worker.SpawnWorker(session.User, toolName, argsJSON, isPrivileged, sudoConfig, 30)
+		} else if strings.HasPrefix(params.URI, "service://") && strings.HasSuffix(params.URI, "/status") {
+			// service://kubelet.service/status
+			serviceName := strings.TrimPrefix(params.URI, "service://")
+			serviceName = strings.TrimSuffix(serviceName, "/status")
+
+			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, "service://", serviceName)
+			
+			argsJSON, _ := json.Marshal(map[string]interface{}{
+				"service": serviceName,
+			})
+			content, readErr = worker.SpawnWorker(session.User, "services/status", argsJSON, isPrivileged, sudoConfig, 30)
+			mimeType = "application/json"
 		} else if params.URI == "devices://usb" {
 			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
@@ -578,6 +590,62 @@ func handleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
+				"name":        "services/manage",
+				"tools_group": "system",
+				"description": "Control systemd services (start, stop, restart, enable, disable).",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"service":    map[string]interface{}{"type": "string", "description": "Service name (e.g., 'kubelet.service')"},
+						"action":     map[string]interface{}{"type": "string", "description": "Action (start, stop, restart, reload, enable, disable)"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root"},
+					},
+					"required": []string{"service", "action"},
+				},
+			},
+			map[string]interface{}{
+				"name":        "logs/journalctl",
+				"tools_group": "logs",
+				"description": "Query the systemd journal for application and system logs.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"unit":          map[string]interface{}{"type": "string", "description": "Unit name to filter by (e.g., 'kubelet.service')"},
+						"lines":         map[string]interface{}{"type": "integer", "description": "Number of most recent lines to return (default 100)"},
+						"since":         map[string]interface{}{"type": "string", "description": "Filter logs newer than (e.g., '1 hour ago')"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Output format (e.g., 'json')"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root"},
+					},
+				},
+			},
+			map[string]interface{}{
+				"name":        "logs/dmesg",
+				"tools_group": "logs",
+				"description": "Read the kernel ring buffer for hardware/driver logs.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"level":         map[string]interface{}{"type": "string", "description": "Filter by log level (e.g., 'err,warn')"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Output format"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root"},
+					},
+				},
+			},
+			map[string]interface{}{
+				"name":        "kernel/sysctl",
+				"tools_group": "kernel",
+				"description": "Read and write kernel runtime parameters.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"key":        map[string]interface{}{"type": "string", "description": "Kernel parameter to read/write"},
+						"value":      map[string]interface{}{"type": "string", "description": "Value to write (requires privileged: true)"},
+						"read_all":   map[string]interface{}{"type": "boolean", "description": "Read all parameters"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root"},
+					},
+				},
+			},
+			map[string]interface{}{
 				"name":        "cpu/list",
 				"tools_group": "cpu",
 				"description": "Retrieves CPU topology and architecture.",
@@ -702,6 +770,10 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 			"files/create":        true,
 			"files/update":        true,
 			"files/find":          true,
+			"services/manage":     true,
+			"logs/journalctl":     true,
+			"logs/dmesg":          true,
+			"kernel/sysctl":       true,
 			"disks/free":          true,
 			"disks/usage":         true,
 			"processes/list":      true,

@@ -27,6 +27,11 @@ import (
 	stat "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/stat"
 	updatefile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/update"
 	mem_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/memory/usage"
+	sysctl "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/kernel/sysctl"
+	dmesg "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/dmesg"
+	journalctl "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/journalctl"
+	manage_service "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/manage"
+	status_service "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/status"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/arp"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/connections"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/curl"
@@ -79,6 +84,11 @@ func main() {
 			"read_dmi":            dmi.ReadDMI,
 			"read_modules":        modules.ReadModules,
 			"read_routes":         routes.ReadRoutes,
+			"services/manage":     manage_service.Manage,
+			"services/status":     status_service.Status,
+			"logs/journalctl":     journalctl.Journalctl,
+			"logs/dmesg":          dmesg.Dmesg,
+			"kernel/sysctl":       sysctl.Sysctl,
 		}
 
 		if handler, exists := handlers[toolName]; exists {
