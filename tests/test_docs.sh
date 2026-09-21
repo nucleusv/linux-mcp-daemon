@@ -4,15 +4,28 @@ DAEMON_URL=${DAEMON_URL:-"http://localhost:9090"}
 
 echo "Waiting for Documentation server to come online..."
 
-# Define all expected pages
-EXPECTED_PAGES=(
-    "/docs/"
-    "/docs/intro/"
-    "/docs/tools/list_directory/"
-    "/docs/tools/get_disk_space/"
-    "/docs/tools/get_disk_usage/"
-    "/docs/architecture/ephemeral-workers/"
-)
+# Dynamically define all expected pages by scanning the source directory
+EXPECTED_PAGES=("/docs/")
+# Ensure we are in the project root
+cd "$(dirname "$0")/.."
+while IFS= read -r file; do
+    # Remove docs/website/docs/ prefix
+    rel_path="${file#docs/website/docs/}"
+    # Remove .md suffix
+    route_path="${rel_path%.md}"
+    
+    # Docusaurus maps index.md to the root of its folder
+    if [[ "$route_path" == *"/index" ]]; then
+        route_path="${route_path%/index}"
+    fi
+    
+    # Handle root index.md which becomes empty string
+    if [ "$route_path" == "index" ] || [ "$route_path" == "" ]; then
+        continue
+    fi
+    
+    EXPECTED_PAGES+=("/docs/$route_path/")
+done < <(find docs/website/docs -type f -name "*.md")
 
 MAX_RETRIES=10
 RETRY_COUNT=0

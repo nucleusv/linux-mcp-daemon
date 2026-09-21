@@ -22,7 +22,7 @@ spec:
       containers:
       - name: daemon
         image: linux-mcp-daemon:local
-        imagePullPolicy: IfNotPresent # Prevents K8s from trying to pull from Docker Hub
+        imagePullPolicy: IfNotPresent # Allows K8s to pull dynamic local image tags
         securityContext:
           privileged: true # Required to perform root-level operations via mcp-sudo
         ports:
