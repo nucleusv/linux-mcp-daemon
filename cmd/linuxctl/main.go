@@ -57,11 +57,14 @@ func main() {
 		}
 	}
 
-	// 2. Extract dynamic command and arguments
+	// 2. Extract dynamic group, command, and arguments
 	args := flag.Args()
-	var command string
+	var group, command string
 	if len(args) > 0 {
-		command = args[0]
+		group = args[0]
+	}
+	if len(args) > 1 {
+		command = args[1]
 	}
 
 	// 3. Connect to SSE
@@ -130,36 +133,67 @@ func main() {
 	}
 
 	// 5. Route Logic
-	if command == "" || command == "ping" {
-		if command == "ping" {
+	if command == "" {
+		if group == "ping" {
 			fmt.Println("Successfully connected to mcpd daemon!")
 			os.Exit(0)
 		}
 		
-		fmt.Println("Usage: linuxctl [options] <command> [command-options]")
-		fmt.Println("Options:")
-		flag.PrintDefaults()
-		
-		fmt.Println("\nAvailable commands (dynamically fetched from daemon):")
-		// Fetch tools/list
+		// Fetch tools/list for dynamic help
 		tools := callMethod(authToken, "1", "tools/list", nil)
 		var result map[string]interface{}
 		json.Unmarshal(tools.Result, &result)
-		if toolList, ok := result["tools"].([]interface{}); ok {
+		
+		toolList, ok := result["tools"].([]interface{})
+		if !ok {
+			fmt.Println("Failed to fetch tools from daemon.")
+			os.Exit(1)
+		}
+
+		if group == "" {
+			fmt.Println("Usage: linuxctl [options] <group> <command> [command-options]")
+			fmt.Println("Options:")
+			flag.PrintDefaults()
+			
+			fmt.Println("\nAvailable groups (dynamically fetched from daemon):")
+			
+			groups := make(map[string]bool)
 			for _, t := range toolList {
 				tool := t.(map[string]interface{})
-				name := tool["name"].(string)
-				desc := tool["description"].(string)
-				fmt.Printf("  %-20s - %s\n", name, desc)
+				if tg, ok := tool["tools_group"].(string); ok {
+					groups[tg] = true
+				}
 			}
+			
+			for g := range groups {
+				fmt.Printf("  %s\n", g)
+			}
+			fmt.Println("\nRun 'linuxctl <group>' to see available commands in that group.")
+			os.Exit(1)
+		} else {
+			// Print commands in the specified group
+			fmt.Printf("Available commands in group '%s':\n", group)
+			found := false
+			for _, t := range toolList {
+				tool := t.(map[string]interface{})
+				if tg, ok := tool["tools_group"].(string); ok && tg == group {
+					found = true
+					name := tool["name"].(string)
+					desc := tool["description"].(string)
+					fmt.Printf("  %-20s - %s\n", name, desc)
+				}
+			}
+			if !found {
+				fmt.Printf("  (No commands found for group '%s')\n", group)
+			}
+			os.Exit(1)
 		}
-		os.Exit(1)
 	}
 
 	// 6. Dynamic tools/call
 	// Build arguments from CLI args like --path /var/log --privileged true
 	toolArgs := make(map[string]interface{})
-	for i := 1; i < len(args); i++ {
+	for i := 2; i < len(args); i++ {
 		arg := args[i]
 		if strings.HasPrefix(arg, "--") {
 			key := strings.TrimPrefix(arg, "--")
