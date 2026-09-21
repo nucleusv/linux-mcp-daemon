@@ -52,7 +52,7 @@ run_tool "network/arp" "arp"
 run_tool "network/ping --host 127.0.0.1" "ping"
 run_tool "memory/usage" "memory_usage"
 run_tool "cpu/get-info" "get_info"
-run_tool "cpu/get-load-average" "get_load_average"
+run_tool "cpu/load-average" "load_average"
 
 echo "==========================================="
 echo "  Testing Resources (JSON & Table outputs) "

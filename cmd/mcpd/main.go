@@ -182,7 +182,7 @@ func main() {
 			result, err = mem_usage.GetUsage(toolArgs)
 		} else if toolName == "get_info" {
 			result, err = info.GetInfo(toolArgs)
-		} else if toolName == "get_load_average" {
+		} else if toolName == "load_average" {
 			result, err = load_average.GetLoadAverage(toolArgs)
 		} else if toolName == "get_blocks" {
 			result, err = blocks.GetBlocks(toolArgs)
@@ -815,7 +815,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					},
 				},
 				map[string]interface{}{
-					"name": "get_load_average",
+					"name": "load_average",
 					"tools_group": "cpu",
 					"description": "Retrieves system load averages (1m, 5m, 15m).",
 					"inputSchema": map[string]interface{}{
@@ -923,7 +923,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				// No need to spawn an isolated worker to read our own memory config
 				resultText, execErr = sudo_rules.GetSudoRules(params.Arguments, session.User, sudoConfig)
 
-			} else if params.Name == "list_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "list_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
+			} else if params.Name == "list_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "list_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "memory_usage" || params.Name == "get_info" || params.Name == "load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
 				
 				// Standard privileged check payload
 				var baseArgs struct {
