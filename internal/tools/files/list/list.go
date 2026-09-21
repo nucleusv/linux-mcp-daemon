@@ -1,4 +1,4 @@
-package list_of_files
+package listfiles
 
 import (
 	"encoding/json"

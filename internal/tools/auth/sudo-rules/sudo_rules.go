@@ -1,4 +1,4 @@
-package sudo_rules
+package sudorules
 
 import (
 	"encoding/json"

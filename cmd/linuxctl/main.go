@@ -74,6 +74,9 @@ func main() {
 		command = parts[1]
 	} else {
 		group = groupCommand
+		if len(args) > 1 && !strings.HasPrefix(args[1], "-") {
+			command = args[1]
+		}
 	}
 
 	// 3. Connect to SSE
@@ -255,17 +258,9 @@ func main() {
 					name := tool["name"].(string)
 					desc := tool["description"].(string)
 					
-					// Strip common verbs for display
-					displayName := name
-					displayName = strings.TrimPrefix(displayName, "get_")
-					displayName = strings.TrimPrefix(displayName, "list_")
+					displayName := strings.TrimPrefix(name, group+"/")
 					
-					// Unless stripping list makes it empty (e.g. list_directory -> directory makes sense, but we keep the suffix matching logic)
-					if displayName == "" {
-						displayName = name
-					}
-					
-					fmt.Printf("  %-20s - %s\n", strings.ReplaceAll(displayName, "_", "-"), desc)
+					fmt.Printf("  %-20s - %s\n", displayName, desc)
 				}
 			}
 			if !found {
@@ -276,16 +271,7 @@ func main() {
 	}
 
 	// 6. Dynamic tools/call
-	// Match the CLI command to the backend tool name via suffix matching
-	expectedCommand := strings.ReplaceAll(command, "-", "_")
-	
-	// Map noun/verb CLI structure (e.g. connections/list) to verb_noun MCP tools (e.g. list_connections)
-	if strings.Contains(expectedCommand, "/") {
-		parts := strings.Split(expectedCommand, "/")
-		if len(parts) == 2 {
-			expectedCommand = parts[1] + "_" + parts[0]
-		}
-	}
+	expectedCommand := group + "/" + command
 	
 	var respRPC JSONRPCResponse
 	var outputFormat string
@@ -321,10 +307,10 @@ func main() {
 		if toolList, ok := resultList["tools"].([]interface{}); ok {
 			for _, t := range toolList {
 				tool := t.(map[string]interface{})
-				tg, _ := tool["tools_group"].(string)
+				_ = tool["tools_group"].(string)
 				name := tool["name"].(string)
 				
-				if tg == group && (strings.HasSuffix(name, expectedCommand) || strings.HasPrefix(name, expectedCommand) || name == expectedCommand) {
+				if name == expectedCommand {
 					actualToolName = name
 					actualTool = tool
 					break
@@ -341,7 +327,12 @@ func main() {
 		toolArgs := make(map[string]interface{})
 		var positionalArgs []string
 		
-		for i := 1; i < len(args); i++ {
+		startIndex := 1
+		if len(args) > 1 && args[1] == command {
+			startIndex = 2
+		}
+		
+		for i := startIndex; i < len(args); i++ {
 			arg := args[i]
 			if strings.HasPrefix(arg, "--") {
 				key := strings.TrimPrefix(arg, "--")

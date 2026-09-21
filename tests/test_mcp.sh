@@ -31,15 +31,15 @@ fi
 
 echo "✅ SSE connected successfully."
 
-# 3. Fire an asynchronous tool call (list_files)
-echo "Sending JSON-RPC 'list_files' execution request to /message..."
+# 3. Fire an asynchronous tool call (files/list)
+echo "Sending JSON-RPC 'files/list' execution request to /message..."
 
 PAYLOAD='{
   "jsonrpc": "2.0",
   "id": 999,
   "method": "tools/call",
   "params": {
-    "name": "list_files",
+    "name": "files/list",
     "arguments": {"path": "/tmp"}
   }
 }'

@@ -1,4 +1,4 @@
-package os_release
+package osrelease
 
 import (
 	"bytes"

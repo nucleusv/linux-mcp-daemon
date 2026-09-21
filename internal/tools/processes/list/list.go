@@ -1,4 +1,4 @@
-package processes
+package listprocesses
 
 import (
 	"encoding/json"

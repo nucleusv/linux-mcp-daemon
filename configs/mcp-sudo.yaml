@@ -2,7 +2,7 @@ users:
   admin:
     privileged:
       tools:
-        manage_sysctl:
+        kernel/sysctl:
           allowed: true
   unpriviliged:
     privileged:
@@ -11,35 +11,35 @@ users:
   testuser:
     privileged:
       tools:
-        list_files:
+        files/list:
           allowed: true
           paths:
             - /
-        get_free:
+        disks/free:
           allowed: true
-        get_usage:
+        disks/usage:
           allowed: true
-        delete_process:
+        processes/delete:
           allowed: true
-        list_connections:
+        network/connections:
           allowed: true
-        nslookup:
+        network/nslookup:
           allowed: true
-        curl:
+        network/curl:
           allowed: true
-        arp:
+        network/arp:
           allowed: true
-        ping:
+        network/ping:
           allowed: true
-        memory_usage:
+        memory/usage:
           allowed: true
-        get_info:
+        cpu/info:
           allowed: true
-        load_average:
+        cpu/load-average:
           allowed: true
-        block_devices:
+        disks/block-devices:
           allowed: true
-        get_os_release:
+        system/os-release:
           allowed: true
       resources:
         devices://usb:

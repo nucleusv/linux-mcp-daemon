@@ -1,4 +1,4 @@
-package load_average
+package loadaverage
 
 import (
 	"encoding/json"

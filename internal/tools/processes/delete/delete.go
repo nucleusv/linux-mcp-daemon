@@ -1,4 +1,4 @@
-package process
+package deleteprocess
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ type DeleteProcessArgs struct {
 	Privileged   bool   `json:"privileged"`
 }
 
-func DeleteProcess(argsJSON []byte) (string, error) {
+func Delete(argsJSON []byte) (string, error) {
 	var args DeleteProcessArgs
 	if len(argsJSON) > 0 {
 		if err := json.Unmarshal(argsJSON, &args); err != nil {

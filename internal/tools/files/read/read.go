@@ -1,4 +1,4 @@
-package file
+package readfile
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ type ReadFileArgs struct {
 	Path string `json:"path"`
 }
 
-func ReadFile(argsJSON []byte) (string, error) {
+func Read(argsJSON []byte) (string, error) {
 	var args ReadFileArgs
 	if err := json.Unmarshal(argsJSON, &args); err != nil {
 		return "", fmt.Errorf("invalid arguments: %v", err)
