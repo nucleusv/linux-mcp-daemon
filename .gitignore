@@ -22,3 +22,8 @@ go.work.sum
 
 # Logs
 *.log
+
+# Docs
+docs/website/node_modules/
+docs/website/build/
+docs/website/.docusaurus/

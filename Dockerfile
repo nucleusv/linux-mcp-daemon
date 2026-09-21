@@ -32,6 +32,8 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /app/mcpd .
 # Copy configs
 COPY --from=builder /app/configs ./configs
+# Copy compiled documentation website
+COPY --from=builder /app/docs/website/build ./docs/website/build
 # Copy man pages
 COPY --from=builder /app/docs/man/linuxctl.1 /usr/local/share/man/man1/
 COPY --from=builder /app/docs/man/mcpd.8 /usr/local/share/man/man8/

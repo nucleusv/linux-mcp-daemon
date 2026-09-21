@@ -163,6 +163,10 @@ func main() {
 	http.HandleFunc("/sse", handleSSE)
 	http.HandleFunc("/message", handleMessage)
 
+	// Serve documentation
+	fs := http.FileServer(http.Dir("docs/website/build"))
+	http.Handle("/docs/", http.StripPrefix("/docs/", fs))
+
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("Daemon crashed: %v", err)
 	}
