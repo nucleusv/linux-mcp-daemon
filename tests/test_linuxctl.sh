@@ -44,7 +44,7 @@ run_tool "files/get-list-of-files /var/log --privileged true" "get_list_of_files
 run_tool "disks/get-usage --path /var/log --privileged true" "get_usage"
 run_tool "disks/get-free --path / --privileged true" "get_free"
 run_tool "disks/get-blocks" "get_blocks"
-run_tool "processes/get-processes --limit 5" "get_processes"
+run_tool "processes/list --limit 5" "list_processes"
 run_tool "network/get-connections" "get_connections"
 run_tool "network/nslookup --host 1.1.1.1" "nslookup"
 run_tool "network/curl --url http://127.0.0.1:9090/ping" "curl"

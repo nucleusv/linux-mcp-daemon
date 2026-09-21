@@ -316,7 +316,7 @@ func main() {
 				tg, _ := tool["tools_group"].(string)
 				name := tool["name"].(string)
 				
-				if tg == group && strings.HasSuffix(name, expectedCommand) {
+				if tg == group && (strings.HasSuffix(name, expectedCommand) || strings.HasPrefix(name, expectedCommand) || name == expectedCommand) {
 					actualToolName = name
 					actualTool = tool
 					break
