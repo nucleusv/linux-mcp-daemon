@@ -26,7 +26,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/get/sudo_rules"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/get/info"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/get/load_average"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/blocks"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/block-devices"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/free"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/get/usage"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/get/list_of_files"
@@ -184,8 +184,8 @@ func main() {
 			result, err = info.GetInfo(toolArgs)
 		} else if toolName == "load_average" {
 			result, err = load_average.GetLoadAverage(toolArgs)
-		} else if toolName == "blocks" {
-			result, err = blocks.GetBlocks(toolArgs)
+		} else if toolName == "block_devices" {
+			result, err = blockdevices.GetBlockDevices(toolArgs)
 		} else if toolName == "get_os_release" {
 			result, err = os_release.GetOSRelease(toolArgs)
 		} else if toolName == "read_file" {
@@ -851,7 +851,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					},
 				},
 				map[string]interface{}{
-					"name": "blocks",
+					"name": "block_devices",
 					"tools_group": "disks",
 					"description": "Lists block devices.",
 					"inputSchema": map[string]interface{}{
@@ -949,7 +949,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				// No need to spawn an isolated worker to read our own memory config
 				resultText, execErr = sudo_rules.GetSudoRules(params.Arguments, session.User, sudoConfig)
 
-			} else if params.Name == "list_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "list_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "memory_usage" || params.Name == "get_info" || params.Name == "load_average" || params.Name == "blocks" || params.Name == "get_os_release" {
+			} else if params.Name == "list_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "list_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "memory_usage" || params.Name == "get_info" || params.Name == "load_average" || params.Name == "block_devices" || params.Name == "get_os_release" {
 				
 				// Standard privileged check payload
 				var baseArgs struct {

@@ -1,4 +1,4 @@
-package blocks
+package blockdevices
 
 import (
 	"encoding/json"
@@ -9,13 +9,13 @@ import (
 	"strings"
 )
 
-type GetBlocksArgs struct {
+type GetBlockDevicesArgs struct {
 	OutputFormat string `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
 	All          bool   `json:"all"`
 }
 
-func GetBlocks(argsJSON []byte) (string, error) {
-	var args GetBlocksArgs
+func GetBlockDevices(argsJSON []byte) (string, error) {
+	var args GetBlockDevicesArgs
 	if len(argsJSON) > 0 {
 		if err := json.Unmarshal(argsJSON, &args); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)
