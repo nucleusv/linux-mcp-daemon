@@ -26,6 +26,11 @@ import (
 type Config struct {
 	Server struct {
 		Port int `yaml:"port"`
+		TLS  struct {
+			Enabled  bool   `yaml:"enabled"`
+			CertFile string `yaml:"cert_file"`
+			KeyFile  string `yaml:"key_file"`
+		} `yaml:"tls"`
 	} `yaml:"server"`
 	RateLimits struct {
 		DefaultRPS   float64 `yaml:"default_rps"`
@@ -158,8 +163,6 @@ func main() {
 		daemonConfig.Worker.TimeoutSeconds = 30
 	}
 
-	log.Printf("Starting Linux MCP Daemon (SSE Transport) on %s\n", addr)
-
 	http.HandleFunc("/sse", handleSSE)
 	http.HandleFunc("/message", handleMessage)
 
@@ -167,8 +170,16 @@ func main() {
 	fs := http.FileServer(http.Dir("docs/website/build"))
 	http.Handle("/docs/", http.StripPrefix("/docs/", fs))
 
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		log.Fatalf("Daemon crashed: %v", err)
+	if daemonConfig.Server.TLS.Enabled {
+		log.Printf("Starting Linux MCP Daemon (HTTPS SSE Transport) on %s\n", addr)
+		if err := http.ListenAndServeTLS(addr, daemonConfig.Server.TLS.CertFile, daemonConfig.Server.TLS.KeyFile, nil); err != nil {
+			log.Fatalf("Daemon TLS crashed: %v", err)
+		}
+	} else {
+		log.Printf("Starting Linux MCP Daemon (HTTP SSE Transport) on %s\n", addr)
+		if err := http.ListenAndServe(addr, nil); err != nil {
+			log.Fatalf("Daemon crashed: %v", err)
+		}
 	}
 }
 
