@@ -16,8 +16,8 @@ export DAEMON_URL="http://localhost:9090"
 # Example: List CPU information (Regular User)
 ./linuxctl cpu list --output json
 
-# Example: Read protected USB devices (Privileged User)
-./linuxctl -privileged devices usb --output json
+# Example: Read protected files (Privileged Mode via argument)
+./linuxctl files list --path /root/ --privileged true --output json
 ```
 
 ### Method 2: Standard MCP Clients (e.g., MCP Inspector)
@@ -92,13 +92,11 @@ Your goal is to complete the following tasks using the MCP Daemon. Do not use st
 4. **Deliverable**: A summary of network anomalies or active listening services.
 
 ### Task 3: Privilege Boundary Testing (RBAC)
-The daemon supports granular Role-Based Access Control (RBAC). Your task is to verify that the security boundary holds.
-1. Attempt to execute `files/list` on `/root/` using the daemon as a **regular user** (this should fail with a permission error).
-2. Attempt to execute the exact same command using the `-privileged` flag. Observe if it succeeds or is blocked by `mcp-sudo.yaml`.
-3. Attempt to read the `devices://usb` resource as a **regular user** (should be denied).
-4. Read the `devices://usb` resource again as a **privileged user** (should succeed).
-5. Query `auth/sudo-rules` to retrieve the current active RBAC ruleset and analyze why your requests succeeded or failed.
-6. **Deliverable**: A security audit report of the daemon's current active Sudo rules, detailing the exact results of the unprivileged vs privileged tests.
+The daemon supports granular Role-Based Access Control (RBAC) via the `mcp-sudo.yaml` config. Your task is to verify that the security boundary holds.
+1. Attempt to execute `files/list` on `/root/` using the daemon without any flags (this should fail with a permission error because the daemon drops privileges by default).
+2. Attempt to execute the exact same command, but pass the `--privileged true` argument to the tool. Observe that it now succeeds because your test token is authorized.
+3. Query `auth/sudo-rules` to retrieve the current active RBAC ruleset and verify that `files/list` on `/` is allowed for your token.
+4. **Deliverable**: A security audit report of the daemon's current active Sudo rules, detailing the exact results of the unprivileged vs privileged tool executions.
 
 ### Task 4: Process and Resource Management
 1. Execute `processes/list` to find the top 5 CPU-consuming tasks.
