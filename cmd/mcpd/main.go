@@ -328,7 +328,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 			"tools": []interface{}{
 				map[string]interface{}{
 					"name": "list_directory",
-					"tools_group": "file",
+					"tools_group": "files",
 					"description": listDesc,
 					"inputSchema": map[string]interface{}{
 						"type": "object",
@@ -341,7 +341,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				},
 				map[string]interface{}{
 					"name": "get_disk_space",
-					"tools_group": "disk",
+					"tools_group": "disks",
 					"description": dfDesc,
 					"inputSchema": map[string]interface{}{
 						"type": "object",
@@ -356,7 +356,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				},
 				map[string]interface{}{
 					"name": "get_disk_usage",
-					"tools_group": "disk",
+					"tools_group": "disks",
 					"description": duDesc,
 					"inputSchema": map[string]interface{}{
 						"type": "object",

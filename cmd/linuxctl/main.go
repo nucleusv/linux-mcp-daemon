@@ -57,14 +57,17 @@ func main() {
 		}
 	}
 
-	// 2. Extract dynamic verb, resource, and arguments
+	// 2. Extract dynamic verb, group, command, and arguments
 	args := flag.Args()
-	var verb, resource string
+	var verb, group, command string
 	if len(args) > 0 {
 		verb = args[0]
 	}
 	if len(args) > 1 {
-		resource = args[1]
+		group = args[1]
+	}
+	if len(args) > 2 {
+		command = args[2]
 	}
 
 	// 3. Connect to SSE
@@ -133,7 +136,7 @@ func main() {
 	}
 
 	// 5. Route Logic
-	if resource == "" {
+	if command == "" {
 		if verb == "ping" {
 			fmt.Println("Successfully connected to mcpd daemon!")
 			os.Exit(0)
@@ -150,63 +153,81 @@ func main() {
 			os.Exit(1)
 		}
 
-		// Helper to extract verb and resource from tool name
-		parseToolName := func(toolName string) (string, string) {
-			parts := strings.SplitN(toolName, "_", 2)
-			if len(parts) == 2 {
-				return parts[0], strings.ReplaceAll(parts[1], "_", "-")
-			}
-			return "run", toolName // fallback verb if no underscore
-		}
-
 		if verb == "" {
-			fmt.Println("Usage: linuxctl [options] <verb> <resource> [command-options]")
+			fmt.Println("Usage: linuxctl [options] <verb> <group> <command> [command-options]")
 			fmt.Println("Options:")
 			flag.PrintDefaults()
 			
-			fmt.Println("\nAvailable verbs (dynamically fetched from daemon):")
+			fmt.Println("\nAvailable groups (dynamically fetched from daemon):")
 			
-			verbs := make(map[string]bool)
+			groups := make(map[string]bool)
 			for _, t := range toolList {
 				tool := t.(map[string]interface{})
-				name := tool["name"].(string)
-				v, _ := parseToolName(name)
-				verbs[v] = true
+				if tg, ok := tool["tools_group"].(string); ok {
+					groups[tg] = true
+				}
 			}
 			
-			for v := range verbs {
-				fmt.Printf("  %s\n", v)
+			for g := range groups {
+				fmt.Printf("  %s\n", g)
 			}
-			fmt.Println("\nRun 'linuxctl <verb>' to see available resources for that action.")
+			fmt.Println("\nRun 'linuxctl <verb> <group>' to see available commands in that group.")
+			os.Exit(1)
+		} else if group == "" {
+			fmt.Printf("Please specify a group. Run 'linuxctl' to see available groups.\n")
 			os.Exit(1)
 		} else {
-			// Print resources matching the verb
-			fmt.Printf("Available resources for action '%s':\n", verb)
+			// Print commands matching the group
+			fmt.Printf("Available commands for group '%s':\n", group)
 			found := false
 			for _, t := range toolList {
 				tool := t.(map[string]interface{})
-				name := tool["name"].(string)
-				v, res := parseToolName(name)
-				if v == verb {
+				if tg, ok := tool["tools_group"].(string); ok && tg == group {
 					found = true
+					name := tool["name"].(string)
 					desc := tool["description"].(string)
-					fmt.Printf("  %-20s - %s\n", res, desc)
+					fmt.Printf("  %-20s - %s\n", strings.ReplaceAll(name, "_", "-"), desc)
 				}
 			}
 			if !found {
-				fmt.Printf("  (No resources found for action '%s')\n", verb)
+				fmt.Printf("  (No commands found for group '%s')\n", group)
 			}
 			os.Exit(1)
 		}
 	}
 
 	// 6. Dynamic tools/call
-	// Reconstruct the exact backend tool name
-	toolName := verb + "_" + strings.ReplaceAll(resource, "-", "_")
+	// Match the CLI command to the backend tool name
+	expectedCommand := strings.ReplaceAll(command, "-", "_")
+	expectedVerbCommand := verb + "_" + expectedCommand
+	
+	// Fetch tools/list to find the exact match
+	tools := callMethod(authToken, "1", "tools/list", nil)
+	var resultList map[string]interface{}
+	json.Unmarshal(tools.Result, &resultList)
+	
+	var actualToolName string
+	if toolList, ok := resultList["tools"].([]interface{}); ok {
+		for _, t := range toolList {
+			tool := t.(map[string]interface{})
+			tg, _ := tool["tools_group"].(string)
+			name := tool["name"].(string)
+			
+			if tg == group && (name == expectedCommand || name == expectedVerbCommand) {
+				actualToolName = name
+				break
+			}
+		}
+	}
+	
+	if actualToolName == "" {
+		fmt.Printf("Error: Command '%s %s %s' not found.\n", verb, group, command)
+		os.Exit(1)
+	}
 
 	// Build arguments from CLI args like --path /var/log --privileged true
 	toolArgs := make(map[string]interface{})
-	for i := 2; i < len(args); i++ {
+	for i := 3; i < len(args); i++ {
 		arg := args[i]
 		if strings.HasPrefix(arg, "--") {
 			key := strings.TrimPrefix(arg, "--")
@@ -227,7 +248,7 @@ func main() {
 	}
 
 	params := map[string]interface{}{
-		"name":      toolName,
+		"name":      actualToolName,
 		"arguments": toolArgs,
 	}
 
