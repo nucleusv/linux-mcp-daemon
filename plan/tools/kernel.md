@@ -6,4 +6,5 @@ This document tracks the standard Linux kernel manipulation utilities and their 
 
 - [ ] **sysctl**: Configure kernel parameters at runtime (read/write `/proc/sys`).
 - [ ] **modprobe / insmod / rmmod**: Add and remove modules from the Linux kernel.
-- [ ] **uname -r**: (Covered in `system` group, but highly relevant here).
+- [x] **lsmod** (`read_modules` resource): Show the status of modules in the Linux kernel.
+- [x] **uname -r**: (Covered in `system` group).
