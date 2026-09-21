@@ -40,9 +40,9 @@ func LoadSudoConfig(path string) (*SudoConfig, error) {
 	// Validation
 	for username, userSudo := range cfg.Users {
 		for toolName, privs := range userSudo.Privileged.Tools {
-			if toolName == "get_list_of_files" && privs.Allowed {
+			if toolName == "list_files" && privs.Allowed {
 				if len(privs.Paths) == 0 {
-					return nil, fmt.Errorf("validation error in %s: user '%s' has get_list_of_files allowed but no paths specified. 'paths' array must not be empty", path, username)
+					return nil, fmt.Errorf("validation error in %s: user '%s' has list_files allowed but no paths specified. 'paths' array must not be empty", path, username)
 				}
 			}
 		}

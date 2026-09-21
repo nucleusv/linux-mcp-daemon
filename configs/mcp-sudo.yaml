@@ -7,7 +7,7 @@ users:
   testuser:
     privileged:
       tools:
-        get_list_of_files:
+        list_files:
           allowed: true
           paths:
             - /var/log

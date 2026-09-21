@@ -31,16 +31,16 @@ fi
 
 echo "✅ SSE connected successfully."
 
-# 3. Fire an asynchronous tool call (get_sudo_rules)
-echo "Sending JSON-RPC 'get_sudo_rules' execution request to /message..."
+# 3. Fire an asynchronous tool call (list_files)
+echo "Sending JSON-RPC 'list_files' execution request to /message..."
 
 PAYLOAD='{
   "jsonrpc": "2.0",
   "id": 999,
   "method": "tools/call",
   "params": {
-    "name": "get_sudo_rules",
-    "arguments": {}
+    "name": "list_files",
+    "arguments": {"path": "/tmp"}
   }
 }'
 
@@ -61,7 +61,7 @@ curl -v -s -X POST "$DAEMON_URL$ENDPOINT" \
 echo "Waiting for JSON-RPC response..."
 sleep 5
 
-if grep -q "get_list_of_files" $LOG_FILE; then
+if grep -q "result" $LOG_FILE && ! grep -q "isError" $LOG_FILE; then
     echo "✅ SUCCESS: Daemon successfully executed the tool and streamed the result back!"
     exit 0
 else

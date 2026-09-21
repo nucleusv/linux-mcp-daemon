@@ -40,7 +40,7 @@ run_tool() {
 }
 
 run_tool "auth/get-sudo-rules" "get_sudo_rules"
-run_tool "files/get-list-of-files /var/log --privileged true" "get_list_of_files"
+run_tool "files/list /var/log --privileged true" "list_files"
 run_tool "disks/get-usage --path /var/log --privileged true" "get_usage"
 run_tool "disks/get-free --path / --privileged true" "get_free"
 run_tool "disks/get-blocks" "get_blocks"

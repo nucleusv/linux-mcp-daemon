@@ -158,7 +158,7 @@ func main() {
 		var result string
 		var err error
 
-		if toolName == "get_list_of_files" {
+		if toolName == "list_files" {
 			result, err = list_of_files.GetListOfFiles(toolArgs)
 		} else if toolName == "get_free" {
 			result, err = free.GetFree(toolArgs)
@@ -647,7 +647,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 		toolsList := map[string]interface{}{
 			"tools": []interface{}{
 				map[string]interface{}{
-					"name": "get_list_of_files",
+					"name": "list_files",
 					"tools_group": "files",
 					"description": listDesc,
 					"inputSchema": map[string]interface{}{
@@ -923,7 +923,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				// No need to spawn an isolated worker to read our own memory config
 				resultText, execErr = sudo_rules.GetSudoRules(params.Arguments, session.User, sudoConfig)
 
-			} else if params.Name == "get_list_of_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "list_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "get_memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
+			} else if params.Name == "list_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "list_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "get_memory_usage" || params.Name == "get_info" || params.Name == "get_load_average" || params.Name == "get_blocks" || params.Name == "get_os_release" {
 				
 				// Standard privileged check payload
 				var baseArgs struct {
