@@ -1,8 +1,12 @@
 server:
   port: 9090
 rate_limits:
-  default_rps: 5.0
-  default_burst: 10
+  default_rps: 10.0
+  default_burst: 20
+
+worker:
+  timeout_seconds: 30
+
 users:
   - username: "testuser"
     token: "my-test-token-123"

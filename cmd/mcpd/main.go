@@ -28,6 +28,9 @@ type Config struct {
 		DefaultRPS   float64 `yaml:"default_rps"`
 		DefaultBurst int     `yaml:"default_burst"`
 	} `yaml:"rate_limits"`
+	Worker struct {
+		TimeoutSeconds int `yaml:"timeout_seconds"`
+	} `yaml:"worker"`
 	Users []struct {
 		Username string `yaml:"username"`
 		Token    string `yaml:"token"`
@@ -144,6 +147,9 @@ func main() {
 	addr := fmt.Sprintf(":%d", daemonConfig.Server.Port)
 	if daemonConfig.Server.Port == 0 {
 		addr = ":9090"
+	}
+	if daemonConfig.Worker.TimeoutSeconds == 0 {
+		daemonConfig.Worker.TimeoutSeconds = 30
 	}
 
 	log.Printf("Starting Linux MCP Daemon (SSE Transport) on %s\n", addr)
@@ -379,7 +385,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 						resultText = entry.result
 					} else {
 						v, err, _ := requestGroup.Do(cacheKey, func() (interface{}, error) {
-							res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig)
+							res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, daemonConfig.Worker.TimeoutSeconds)
 							if exErr == nil {
 								cacheMu.Lock()
 								cache[cacheKey] = cacheEntry{
@@ -398,7 +404,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 						}
 					}
 				} else {
-					resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig)
+					resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, daemonConfig.Worker.TimeoutSeconds)
 				}
 
 			} else {

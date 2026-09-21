@@ -2,18 +2,20 @@ package worker
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
 )
 
 // SpawnWorker forks a child process to execute the requested tool with strict privilege isolation.
-func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, sudoCfg *config.SudoConfig) (string, error) {
+func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, sudoCfg *config.SudoConfig, timeoutSeconds int) (string, error) {
 	u, err := user.Lookup(username)
 	if err != nil {
 		return "", fmt.Errorf("failed to lookup OS user %s: %v", username, err)
@@ -35,7 +37,10 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 		return "", fmt.Errorf("failed to determine executable: %v", err)
 	}
 
-	cmd := exec.Command(exe, "worker", toolName, string(toolArgs))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, exe, "worker", toolName, string(toolArgs))
 	
 	// Enforce strict UID isolation.
 	cmd.SysProcAttr = &syscall.SysProcAttr{}
@@ -47,6 +52,9 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 	cmd.Stderr = &errBuf
 
 	err = cmd.Run()
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", fmt.Errorf("worker execution failed: timeout exceeded (%d seconds). Process was forcefully terminated.", timeoutSeconds)
+	}
 	if err != nil {
 		// Include stderr in the error response if it fails
 		if errBuf.Len() > 0 {
