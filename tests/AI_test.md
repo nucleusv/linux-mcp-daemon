@@ -20,12 +20,10 @@ export DAEMON_URL="http://localhost:9090"
 ./linuxctl -privileged devices usb --output json
 ```
 
-### Method 2: Direct HTTP JSON-RPC via `curl`
-If you want to test the raw MCP protocol over HTTP:
-1. Hit the SSE endpoint to retrieve a session ID: `curl -s -N -H "Authorization: Bearer my-test-token-123" http://localhost:9090/sse`
-2. Extract the `endpoint` URI from the `event: endpoint` payload.
-3. Send a POST request to that URI with standard MCP JSON-RPC payloads (e.g., `tools/call`, `resources/list`, `resources/read`).
-
+### Method 2: Standard MCP Clients (e.g., MCP Inspector)
+If you prefer not to use `linuxctl`, you must connect using a legitimate MCP Client over the SSE transport layer. DO NOT use raw `curl` for JSON-RPC, as it violates the standard MCP streaming paradigms. 
+- Use the official **MCP Inspector** (`npx @modelcontextprotocol/inspector`).
+- Write a quick script using the official `@modelcontextprotocol/sdk` (Node or Python).
 ## AI Task Challenges
 
 Your goal is to complete the following tasks using the MCP Daemon. Do not use standard linux shell utilities (like `ls`, `ps`, `cat`) directly. You MUST retrieve all information exclusively through the MCP daemon tools and resources.
