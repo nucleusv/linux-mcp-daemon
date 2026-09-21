@@ -79,6 +79,22 @@ func main() {
 		}
 	}
 
+	// Apply default commands for groups if no command was specified
+	if command == "" && group != "" {
+		defaults := map[string]string{
+			"disks":     "list",
+			"cpu":       "list",
+			"files":     "list",
+			"processes": "list",
+			"network":   "connections",
+			"memory":    "usage",
+			"system":    "os-release",
+		}
+		if def, ok := defaults[group]; ok {
+			command = def
+		}
+	}
+
 	// 3. Connect to SSE
 	req, err := http.NewRequest("GET", *serverURL+"/sse", nil)
 	if err != nil {
