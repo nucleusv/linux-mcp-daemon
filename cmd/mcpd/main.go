@@ -22,6 +22,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/pci"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/usb"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/kernel/modules"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/routes"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/get/sudo_rules"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/get/info"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/get/load_average"
@@ -197,6 +198,8 @@ func main() {
 			result, err = dmi.ReadDMI(toolArgs)
 		} else if toolName == "read_modules" {
 			result, err = modules.ReadModules(toolArgs)
+		} else if toolName == "read_routes" {
+			result, err = routes.ReadRoutes(toolArgs)
 		} else {
 			log.Fatalf("Unknown tool: %s", toolName)
 		}
@@ -433,6 +436,12 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"mimeType":    "application/json",
 				},
 				map[string]interface{}{
+					"uri":         "network://routes",
+					"name":        "Network Routes",
+					"description": "IPv4 Routing Table (/proc/net/route)",
+					"mimeType":    "application/json",
+				},
+				map[string]interface{}{
 					"uri":         "devices://usb",
 					"name":        "USB Devices",
 					"description": "Connected USB devices (lsusb equivalent)",
@@ -578,6 +587,10 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 				content, readErr = worker.SpawnWorker(session.User, "read_modules", []byte("{}"), isPrivileged, sudoConfig, 30)
 				mimeType = "application/json"
+			} else if params.URI == "network://routes" {
+				isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
+				content, readErr = worker.SpawnWorker(session.User, "read_routes", []byte("{}"), isPrivileged, sudoConfig, 30)
+				mimeType = "application/json"
 			} else {
 				readErr = fmt.Errorf("unsupported resource URI scheme: %s", params.URI)
 			}
@@ -592,8 +605,10 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					resourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
 				} else if params.URI == "os://release" || params.URI == "os://uname" {
 					resourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
-				} else if params.URI == "devices://usb" || params.URI == "kernel://modules" || params.URI == "network://interfaces" {
+				} else if params.URI == "devices://usb" || params.URI == "kernel://modules" {
 					resourceCache.Set(params.URI, content, mimeType, 60*time.Second)
+				} else if params.URI == "network://interfaces" || params.URI == "network://routes" {
+					resourceCache.Set(params.URI, content, mimeType, 5*time.Second)
 				}
 
 				resp.Result = map[string]interface{}{

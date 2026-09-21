@@ -467,6 +467,48 @@ func main() {
 					} else {
 						fmt.Print(text)
 					}
+				} else if outputFormat == "yaml" {
+					var obj interface{}
+					if err := json.Unmarshal([]byte(text), &obj); err == nil {
+						b, _ := yaml.Marshal(obj)
+						fmt.Print(string(b))
+					} else {
+						fmt.Print(text)
+					}
+				} else if outputFormat == "table" || outputFormat == "wide" {
+					var obj interface{}
+					if err := json.Unmarshal([]byte(text), &obj); err == nil {
+						w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+						if arr, ok := obj.([]interface{}); ok && len(arr) > 0 {
+							if first, ok := arr[0].(map[string]interface{}); ok {
+								var keys []string
+								for k := range first {
+									keys = append(keys, k)
+								}
+								fmt.Fprintln(w, strings.ToUpper(strings.Join(keys, "\t")))
+								for _, item := range arr {
+									if m, ok := item.(map[string]interface{}); ok {
+										var vals []string
+										for _, k := range keys {
+											vals = append(vals, fmt.Sprintf("%v", m[k]))
+										}
+										fmt.Fprintln(w, strings.Join(vals, "\t"))
+									}
+								}
+							} else {
+								for _, item := range arr {
+									fmt.Fprintln(w, fmt.Sprintf("%v", item))
+								}
+							}
+						} else if m, ok := obj.(map[string]interface{}); ok {
+							for k, v := range m {
+								fmt.Fprintf(w, "%s\t%v\n", strings.ToUpper(k), v)
+							}
+						}
+						w.Flush()
+					} else {
+						fmt.Print(text)
+					}
 				} else {
 					fmt.Print(text)
 				}
