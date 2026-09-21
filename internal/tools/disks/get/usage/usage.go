@@ -24,9 +24,9 @@ type GetUsageArgs struct {
 }
 
 // GetDiskUsage calculates disk usage by traversing a directory tree (equivalent to du -sh).
-func GetUsage(rawArgs json.RawMessage) (string, error) {
+func Usage(argsJSON []byte) (string, error) {
 	var args GetUsageArgs
-	if err := json.Unmarshal(rawArgs, &args); err != nil {
+	if err := json.Unmarshal(argsJSON, &args); err != nil {
 		return "", fmt.Errorf("failed to parse arguments: %v", err)
 	}
 

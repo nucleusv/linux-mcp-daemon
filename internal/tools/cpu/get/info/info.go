@@ -12,7 +12,7 @@ type GetInfoArgs struct {
 	TopologyOnly bool `json:"topology_only"`
 }
 
-func GetInfo(argsJSON []byte) (string, error) {
+func Info(argsJSON []byte) (string, error) {
 	var args GetInfoArgs
 	if len(argsJSON) > 0 {
 		if err := json.Unmarshal(argsJSON, &args); err != nil {

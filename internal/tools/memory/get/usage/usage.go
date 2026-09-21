@@ -13,7 +13,7 @@ type GetUsageArgs struct {
 	Detailed bool `json:"detailed"`
 }
 
-func GetUsage(argsJSON []byte) (string, error) {
+func Usage(argsJSON []byte) (string, error) {
 	var args GetUsageArgs
 	if len(argsJSON) > 0 {
 		if err := json.Unmarshal(argsJSON, &args); err != nil {

@@ -14,7 +14,7 @@ type GetConnectionsArgs struct {
 	Privileged bool   `json:"privileged"`
 }
 
-func GetConnections(argsJSON []byte) (string, error) {
+func Connections(argsJSON []byte) (string, error) {
 	var args GetConnectionsArgs
 	if len(argsJSON) > 0 {
 		if err := json.Unmarshal(argsJSON, &args); err != nil {

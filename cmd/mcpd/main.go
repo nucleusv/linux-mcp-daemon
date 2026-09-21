@@ -159,17 +159,17 @@ func main() {
 		var err error
 
 		if toolName == "list_files" {
-			result, err = list_of_files.GetListOfFiles(toolArgs)
+			result, err = list_of_files.ListOfFiles(toolArgs)
 		} else if toolName == "get_free" {
-			result, err = free.GetFree(toolArgs)
+			result, err = free.Free(toolArgs)
 		} else if toolName == "get_usage" {
-			result, err = disk_usage.GetUsage(toolArgs)
+			result, err = disk_usage.Usage(toolArgs)
 		} else if toolName == "list_processes" {
-			result, err = processes.GetProcesses(toolArgs)
+			result, err = processes.Processes(toolArgs)
 		} else if toolName == "delete_process" {
 			result, err = process.DeleteProcess(toolArgs)
 		} else if toolName == "list_connections" {
-			result, err = connections.GetConnections(toolArgs)
+			result, err = connections.Connections(toolArgs)
 		} else if toolName == "nslookup" {
 			result, err = nslookup.Nslookup(toolArgs)
 		} else if toolName == "curl" {
@@ -179,15 +179,15 @@ func main() {
 		} else if toolName == "ping" {
 			result, err = ping.Ping(toolArgs)
 		} else if toolName == "memory_usage" {
-			result, err = mem_usage.GetUsage(toolArgs)
+			result, err = mem_usage.Usage(toolArgs)
 		} else if toolName == "get_info" {
-			result, err = info.GetInfo(toolArgs)
+			result, err = info.Info(toolArgs)
 		} else if toolName == "load_average" {
-			result, err = load_average.GetLoadAverage(toolArgs)
+			result, err = load_average.LoadAverage(toolArgs)
 		} else if toolName == "block_devices" {
 			result, err = blockdevices.GetBlockDevices(toolArgs)
 		} else if toolName == "get_os_release" {
-			result, err = os_release.GetOSRelease(toolArgs)
+			result, err = os_release.OSRelease(toolArgs)
 		} else if toolName == "read_file" {
 			result, err = file.ReadFile(toolArgs)
 		} else if toolName == "read_usb" {
@@ -947,7 +947,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 
 			if params.Name == "get_sudo_rules" {
 				// No need to spawn an isolated worker to read our own memory config
-				resultText, execErr = sudo_rules.GetSudoRules(params.Arguments, session.User, sudoConfig)
+				resultText, execErr = sudo_rules.SudoRules(params.Arguments, session.User, sudoConfig)
 
 			} else if params.Name == "list_files" || params.Name == "get_free" || params.Name == "get_usage" || params.Name == "list_processes" || params.Name == "delete_process" || params.Name == "get_interfaces" || params.Name == "list_connections" || params.Name == "nslookup" || params.Name == "curl" || params.Name == "arp" || params.Name == "ping" || params.Name == "memory_usage" || params.Name == "get_info" || params.Name == "load_average" || params.Name == "block_devices" || params.Name == "get_os_release" {
 				

@@ -10,7 +10,7 @@ type GetLoadAverageArgs struct {
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 }
 
-func GetLoadAverage(argsJSON []byte) (string, error) {
+func LoadAverage(argsJSON []byte) (string, error) {
 	var args GetLoadAverageArgs
 	if err := json.Unmarshal(argsJSON, &args); err != nil {
 		return "", fmt.Errorf("failed to parse args: %v", err)

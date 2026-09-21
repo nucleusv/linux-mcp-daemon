@@ -16,9 +16,9 @@ type GetFreeArgs struct {
 }
 
 // GetDiskFree calculates filesystem usage statistics (equivalent to df -h).
-func GetFree(rawArgs json.RawMessage) (string, error) {
+func Free(argsJSON []byte) (string, error) {
 	var args GetFreeArgs
-	if err := json.Unmarshal(rawArgs, &args); err != nil {
+	if err := json.Unmarshal(argsJSON, &args); err != nil {
 		return "", fmt.Errorf("failed to parse arguments: %v", err)
 	}
 

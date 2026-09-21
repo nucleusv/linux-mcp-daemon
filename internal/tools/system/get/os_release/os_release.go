@@ -12,7 +12,7 @@ type GetOSReleaseArgs struct {
 	OutputFormat string `json:"output_format,omitempty"`
 }
 
-func GetOSRelease(argsJSON []byte) (string, error) {
+func OSRelease(argsJSON []byte) (string, error) {
 	var args GetOSReleaseArgs
 	if err := json.Unmarshal(argsJSON, &args); err != nil {
 		return "", fmt.Errorf("failed to parse args: %v", err)

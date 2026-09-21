@@ -13,20 +13,20 @@ type GetSudoRulesArgs struct {
 }
 
 // GetSudoRules returns the subset of mcp-sudo.yaml rules applicable to the authenticated user.
-func GetSudoRules(argsJSON []byte, username string, sudoCfg *config.SudoConfig) (string, error) {
+func SudoRules(argsJSON []byte, username string, sudoConfig *config.SudoConfig) (string, error) {
 	var args GetSudoRulesArgs
 	if err := json.Unmarshal(argsJSON, &args); err != nil && len(argsJSON) > 0 {
 		// Ignore error if it's empty, since args are optional here
 	}
 
-	if sudoCfg == nil {
+	if sudoConfig == nil {
 		if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
 			return `{"error": "No sudo configuration loaded."}`, nil
 		}
 		return "No sudo configuration loaded.", nil
 	}
 
-	if userSudo, ok := sudoCfg.Users[username]; ok {
+	if userSudo, ok := sudoConfig.Users[username]; ok {
 		bytes, err := json.MarshalIndent(userSudo.Privileged, "", "  ")
 		if err != nil {
 			return "", fmt.Errorf("failed to encode rules: %v", err)
