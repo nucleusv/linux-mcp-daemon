@@ -9,6 +9,9 @@ echo "Applying Kubernetes manifests..."
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 
+echo "Force restarting deployment to pick up new image layers..."
+kubectl rollout restart deployment/linux-mcp-daemon
+
 echo "Waiting for deployment to be ready..."
 kubectl rollout status deployment/linux-mcp-daemon
 
