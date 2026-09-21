@@ -1,4 +1,4 @@
-# `get_blocks`
+# disks/list
 
 Lists block devices natively by reading /sys/class/block/.
 

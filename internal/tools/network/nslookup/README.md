@@ -1,4 +1,4 @@
-# nslookup
+# network/nslookup
 
 Query DNS records natively using Go.
 

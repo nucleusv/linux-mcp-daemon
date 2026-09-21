@@ -1,4 +1,4 @@
-# `get_list_of_files`
+# files/list
 
 Lists the contents of a directory natively via os.ReadDir.
 

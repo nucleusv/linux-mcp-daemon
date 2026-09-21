@@ -40,6 +40,7 @@ This document outlines the core architectural principles, naming conventions, an
 *   **Arg Structures**: Every tool's argument struct (e.g. `type Args struct { ... }`) MUST be fully commented. Explain what each field does, what defaults apply if omitted, and document any required input validations.
 *   **GoDoc Standard**: Maintain rigorous GoDoc comments on all exported functions, types, and structs across the codebase to ensure automatic documentation generators provide meaningful output.
 *   **Developer Documentation**: The website documentation (`docs/website/`) is tightly coupled to the codebase. When introducing new tools, behaviors, or privileges, you MUST correspondingly create or update the relevant Markdown documentation in `docs/website/docs/` based on your commits.
+*   **README Requirements**: If you modify tool code, add a new tool, or rename an existing tool, you MUST update the associated `README.md` (both the tool's individual README and the main project README if applicable) to reflect the correct command names, configurations, and arguments.
 
 ## 8. Testing Strategy
 *   **Go Unit Tests**: Standard library `testing` is used for internal business logic and modular components (e.g., `config`, `auth`). Keep tests adjacent to the code they verify (`config_test.go`).

@@ -1,4 +1,4 @@
-# ping
+# network/ping
 
 Measure TCP reachability and latency to a host.
 

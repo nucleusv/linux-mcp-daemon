@@ -1,4 +1,4 @@
-# `delete_process`
+# processes/delete
 
 Sends a signal to a process using syscall.Kill.
 

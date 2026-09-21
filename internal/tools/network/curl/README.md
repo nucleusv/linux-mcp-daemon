@@ -1,4 +1,4 @@
-# curl
+# network/curl
 
 Transfer data from a URL using a native Go HTTP client.
 

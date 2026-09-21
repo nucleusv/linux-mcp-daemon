@@ -1,4 +1,4 @@
-# `get_load_average`
+# cpu/load-average
 
 Returns the 1, 5, and 15 minute system load averages using native syscall.Sysinfo.
 

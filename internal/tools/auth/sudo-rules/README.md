@@ -1,4 +1,4 @@
-# `get_sudo_rules`
+# auth/sudo-rules
 
 Reads the authorized privileged tools for the user from mcp-sudo.yaml.
 

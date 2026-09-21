@@ -1,4 +1,4 @@
-# `get_processes`
+# processes/list
 
 Lists running processes by iterating over /proc natively.
 

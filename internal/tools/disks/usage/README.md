@@ -1,4 +1,4 @@
-# `get_usage`
+# disks/usage
 
 Calculates file space usage natively via filepath.WalkDir.
 

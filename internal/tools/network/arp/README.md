@@ -1,4 +1,4 @@
-# arp
+# network/arp
 
 View the system ARP cache (IP to MAC address mappings).
 

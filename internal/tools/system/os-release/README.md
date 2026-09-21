@@ -1,4 +1,4 @@
-# `get_os_release`
+# system/os-release
 
 Returns system and kernel release info using syscall.Uname and /etc/os-release.
 

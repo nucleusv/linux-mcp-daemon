@@ -1,4 +1,4 @@
-# `get_free`
+# disks/free
 
 Returns filesystem disk space usage for a given path using syscall.Statfs.
 

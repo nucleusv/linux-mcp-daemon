@@ -1,4 +1,4 @@
-# `get_info`
+# cpu/list
 
 Returns native CPU topology and architecture metadata from /proc/cpuinfo.
 

@@ -1,4 +1,4 @@
-# `get_connections`
+# network/connections
 
 Lists active network sockets and connections.
 

@@ -1,4 +1,4 @@
-# `get_memory_usage`
+# memory/usage
 
 Returns detailed memory usage metrics by parsing /proc/meminfo.
 
