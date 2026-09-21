@@ -57,17 +57,20 @@ func main() {
 		}
 	}
 
-	// 2. Extract dynamic verb, group, command, and arguments
+	// 2. Extract dynamic group/command and arguments
 	args := flag.Args()
-	var verb, group, command string
+	var groupCommand string
 	if len(args) > 0 {
-		verb = args[0]
+		groupCommand = args[0]
 	}
-	if len(args) > 1 {
-		group = args[1]
-	}
-	if len(args) > 2 {
-		command = args[2]
+	
+	var group, command string
+	if strings.Contains(groupCommand, "/") {
+		parts := strings.SplitN(groupCommand, "/", 2)
+		group = parts[0]
+		command = parts[1]
+	} else {
+		group = groupCommand
 	}
 
 	// 3. Connect to SSE
@@ -137,7 +140,7 @@ func main() {
 
 	// 5. Route Logic
 	if command == "" {
-		if verb == "ping" {
+		if group == "ping" {
 			fmt.Println("Successfully connected to mcpd daemon!")
 			os.Exit(0)
 		}
@@ -153,8 +156,8 @@ func main() {
 			os.Exit(1)
 		}
 
-		if verb == "" {
-			fmt.Println("Usage: linuxctl [options] <verb> <group> <command> [command-options]")
+		if group == "" {
+			fmt.Println("Usage: linuxctl [options] <group>/<command> [command-options]")
 			fmt.Println("Options:")
 			flag.PrintDefaults()
 			
@@ -171,10 +174,7 @@ func main() {
 			for g := range groups {
 				fmt.Printf("  %s\n", g)
 			}
-			fmt.Println("\nRun 'linuxctl <verb> <group>' to see available commands in that group.")
-			os.Exit(1)
-		} else if group == "" {
-			fmt.Printf("Please specify a group. Run 'linuxctl' to see available groups.\n")
+			fmt.Println("\nRun 'linuxctl <group>' to see available commands in that group.")
 			os.Exit(1)
 		} else {
 			// Print commands matching the group
@@ -186,7 +186,18 @@ func main() {
 					found = true
 					name := tool["name"].(string)
 					desc := tool["description"].(string)
-					fmt.Printf("  %-20s - %s\n", strings.ReplaceAll(name, "_", "-"), desc)
+					
+					// Strip common verbs for display
+					displayName := name
+					displayName = strings.TrimPrefix(displayName, "get_")
+					displayName = strings.TrimPrefix(displayName, "list_")
+					
+					// Unless stripping list makes it empty (e.g. list_directory -> directory makes sense, but we keep the suffix matching logic)
+					if displayName == "" {
+						displayName = name
+					}
+					
+					fmt.Printf("  %-20s - %s\n", strings.ReplaceAll(displayName, "_", "-"), desc)
 				}
 			}
 			if !found {
@@ -197,9 +208,8 @@ func main() {
 	}
 
 	// 6. Dynamic tools/call
-	// Match the CLI command to the backend tool name
+	// Match the CLI command to the backend tool name via suffix matching
 	expectedCommand := strings.ReplaceAll(command, "-", "_")
-	expectedVerbCommand := verb + "_" + expectedCommand
 	
 	// Fetch tools/list to find the exact match
 	tools := callMethod(authToken, "1", "tools/list", nil)
@@ -214,7 +224,7 @@ func main() {
 			tg, _ := tool["tools_group"].(string)
 			name := tool["name"].(string)
 			
-			if tg == group && (name == expectedCommand || name == expectedVerbCommand) {
+			if tg == group && strings.HasSuffix(name, expectedCommand) {
 				actualToolName = name
 				actualTool = tool
 				break
@@ -223,7 +233,7 @@ func main() {
 	}
 	
 	if actualToolName == "" {
-		fmt.Printf("Error: Command '%s %s %s' not found.\n", verb, group, command)
+		fmt.Printf("Error: Command '%s/%s' not found.\n", group, command)
 		os.Exit(1)
 	}
 
@@ -231,7 +241,7 @@ func main() {
 	toolArgs := make(map[string]interface{})
 	var positionalArgs []string
 	
-	for i := 3; i < len(args); i++ {
+	for i := 1; i < len(args); i++ {
 		arg := args[i]
 		if strings.HasPrefix(arg, "--") {
 			key := strings.TrimPrefix(arg, "--")
