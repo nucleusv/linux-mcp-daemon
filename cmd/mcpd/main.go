@@ -98,6 +98,10 @@ func main() {
 
 		if toolName == "list_directory" {
 			result, err = tools.ListDirectory(toolArgs)
+		} else if toolName == "get_disk_space" {
+			result, err = tools.GetDiskSpace(toolArgs)
+		} else if toolName == "get_disk_usage" {
+			result, err = tools.GetDiskUsage(toolArgs)
 		} else {
 			log.Fatalf("Unknown tool: %s", toolName)
 		}
@@ -258,21 +262,56 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 
 	if req.Method == "tools/list" {
 		// Dynamically generate the tools list based on sudo rules.
-		descriptionAppend := ""
+		listDesc := "Lists contents of a directory."
 		if sudoConfig.CanRunAsRoot(session.User, "list_directory") {
-			descriptionAppend = " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
+			listDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
+		}
+		
+		dfDesc := "Returns disk space statistics (df -h)."
+		if sudoConfig.CanRunAsRoot(session.User, "get_disk_space") {
+			dfDesc += " (Authorized for 'privileged: true')"
+		}
+		
+		duDesc := "Calculates the total disk space utilized by a specific directory (du -sh)."
+		if sudoConfig.CanRunAsRoot(session.User, "get_disk_usage") {
+			duDesc += " (Authorized for 'privileged: true' to traverse protected subdirectories)"
 		}
 
 		toolsList := map[string]interface{}{
 			"tools": []interface{}{
 				map[string]interface{}{
 					"name": "list_directory",
-					"description": "Lists contents of a directory." + descriptionAppend,
+					"description": listDesc,
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
 							"path":       map[string]interface{}{"type": "string", "description": "Absolute path to list"},
-							"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root (requires authorization)"},
+							"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						},
+						"required": []string{"path"},
+					},
+				},
+				map[string]interface{}{
+					"name": "get_disk_space",
+					"description": dfDesc,
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"path":       map[string]interface{}{"type": "string", "description": "Absolute path to check"},
+							"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						},
+						"required": []string{"path"},
+					},
+				},
+				map[string]interface{}{
+					"name": "get_disk_usage",
+					"description": duDesc,
+					"inputSchema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"path":       map[string]interface{}{"type": "string", "description": "Target directory to measure"},
+							"max_depth":  map[string]interface{}{"type": "integer", "description": "How deep to recurse (0 for summarize only)"},
+							"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 						},
 						"required": []string{"path"},
 					},
@@ -301,14 +340,16 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				// No need to spawn an isolated worker to read our own memory config
 				resultText, execErr = tools.GetSudoRules(session.User, sudoConfig)
 
-			} else if params.Name == "list_directory" {
+			} else if params.Name == "list_directory" || params.Name == "get_disk_space" || params.Name == "get_disk_usage" {
 				
-				// Parse arguments to check if privileged was requested
-				var listArgs tools.ListDirectoryArgs
-				_ = json.Unmarshal(params.Arguments, &listArgs)
+				// All these tools share the 'privileged' boolean in their arguments
+				var baseArgs struct {
+					Privileged bool `json:"privileged"`
+				}
+				_ = json.Unmarshal(params.Arguments, &baseArgs)
 
 				// Use the Ephemeral Worker Spawner!
-				resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, listArgs.Privileged, sudoConfig)
+				resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig)
 
 			} else {
 				resp.Error = map[string]interface{}{"code": -32601, "message": "Tool not found"}

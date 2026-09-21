@@ -7,3 +7,7 @@ rules:
     tools:
       - name: "list_directory"
         run_as: "root"
+      - name: "get_disk_space"
+        run_as: "root"
+      - name: "get_disk_usage"
+        run_as: "root"
