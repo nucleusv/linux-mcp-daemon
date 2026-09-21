@@ -4,9 +4,9 @@ This document tracks the standard Linux disk utilities and their implementation 
 
 ## Block Devices and Filesystems
 
-- [x] **df** (`disks/disk-free`): Report file system disk space usage.
-- [x] **du** (`disks/disk-usage`): Estimate file space usage.
-- [x] **lsblk** (`disks/list-blocks`): List block devices.
+- [x] **df** (`disks/free`): Report file system disk space usage.
+- [x] **du** (`disks/usage`): Estimate file space usage.
+- [x] **lsblk** (`disks/list`): List block devices.
 - [ ] **findmnt / mount**: Find a filesystem mount, or list mounted filesystems.
 - [ ] **fdisk / parted**: Manipulate disk partition table (view only, probably).
 - [ ] **blkid**: Locate/print block device attributes.

@@ -35,6 +35,12 @@ run_tool() {
     echo "Testing Tool: $name (Table Output)"
     ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" $cmd --output table
     
+    echo "Testing Tool: $name (Wide Output)"
+    ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" $cmd --output wide
+    
+    echo "Testing Tool: $name (YAML Output)"
+    ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" $cmd --output yaml
+    
     echo "Testing Tool: $name (JSON Output)"
     ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" $cmd --output json
 }

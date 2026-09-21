@@ -4,7 +4,7 @@ This document tracks the standard Linux file utilities and their implementation 
 
 ## File Exploration and Status
 
-- [x] **ls** (`files/get_list_of_files`): List directory contents.
+- [x] **ls** (`files/list`): List directory contents.
 - [ ] **lsof** (`files/get_open_files`): List open files.
 - [ ] **stat**: Display file or file system status.
 - [ ] **find**: Search for files in a directory hierarchy.
