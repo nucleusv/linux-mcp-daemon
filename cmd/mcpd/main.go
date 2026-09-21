@@ -31,6 +31,9 @@ type Config struct {
 	Worker struct {
 		TimeoutSeconds int `yaml:"timeout_seconds"`
 	} `yaml:"worker"`
+	Tools map[string]struct {
+		TimeoutSeconds int `yaml:"timeout_seconds"`
+	} `yaml:"tools"`
 	Users []struct {
 		Username string `yaml:"username"`
 		Token    string `yaml:"token"`
@@ -372,6 +375,12 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					Privileged bool `json:"privileged"`
 				}
 				_ = json.Unmarshal(params.Arguments, &baseArgs)
+				
+				// Resolve execution timeout (check tool override, fallback to global worker default)
+				executionTimeout := daemonConfig.Worker.TimeoutSeconds
+				if toolCfg, ok := daemonConfig.Tools[params.Name]; ok && toolCfg.TimeoutSeconds > 0 {
+					executionTimeout = toolCfg.TimeoutSeconds
+				}
 
 				// Use the Ephemeral Worker Spawner with caching for heavy tools
 				if params.Name == "get_disk_usage" {
@@ -385,7 +394,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 						resultText = entry.result
 					} else {
 						v, err, _ := requestGroup.Do(cacheKey, func() (interface{}, error) {
-							res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, daemonConfig.Worker.TimeoutSeconds)
+							res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, executionTimeout)
 							if exErr == nil {
 								cacheMu.Lock()
 								cache[cacheKey] = cacheEntry{
@@ -404,7 +413,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 						}
 					}
 				} else {
-					resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, daemonConfig.Worker.TimeoutSeconds)
+					resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, executionTimeout)
 				}
 
 			} else {

@@ -7,6 +7,10 @@ rate_limits:
 worker:
   timeout_seconds: 30
 
+tools:
+  get_disk_usage:
+    timeout_seconds: 300
+
 users:
   - username: "testuser"
     token: "my-test-token-123"
