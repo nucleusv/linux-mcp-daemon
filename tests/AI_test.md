@@ -107,7 +107,18 @@ The daemon supports granular Role-Based Access Control (RBAC) via the `mcp-sudo.
 1. Execute `processes/list` to find the top 5 CPU-consuming tasks.
 2. Identify a safe, non-critical dummy process (or spawn one like `sleep 1000 &`).
 3. Use the `processes/delete` tool to terminate that process.
-4. **Deliverable**: Confirm successful termination by re-listing the processes.
+4. **Deliverable**: Confirm successful termination by re-listing the processes (the dummy process should be missing) or explain why it failed based on container isolation.
 
+### Task 5: Exhaustive Tool Matrix Validation
+Perform real-world logical checks using the remaining tools. Use different parameters to prove the tools work dynamically.
+1. **`network/nslookup`**: Perform a DNS lookup for `github.com` to verify that the container's nameservers (e.g., CoreDNS) are resolving external domains correctly.
+2. **`network/curl`**: Perform a GET request to `http://ident.me` or `https://api.github.com/zen` to prove external HTTP egress routing is functional. Check the HTTP response status code in the output.
+3. **`network/arp`**: Retrieve the ARP table and identify the MAC address of the default gateway (usually the first `.1` IP in the subnet).
+4. **`cpu/load-average`**: Retrieve the system load average. Compare the 1-minute load against the number of CPU cores (from `cpu/list`) to logically determine if the host is overloaded.
+5. **`memory/usage`**: Retrieve memory statistics. Calculate the exact percentage of RAM currently in use (`(Total - Free) / Total * 100`).
+6. **`disks/free`**: Query the free space specifically on the `/tmp` directory. If it's less than 1GB, flag a logical warning in your final report.
+7. **`files/read`**: Read the contents of `/etc/resolv.conf` to identify exactly which nameservers the container is using.
+8. **`system/os-release`**: Retrieve the OS information to prove whether the daemon is running on Debian, Alpine, or Ubuntu.
+9. **Deliverable**: A comprehensive "Health & Connectivity" dashboard report containing the calculated memory percentage, load status, external IP/egress status, and DNS health.
 ---
 **Agent Instructions:** When the human user asks you to "Run the AI Test Plan", start from Task 1 and work your way through, reporting your findings at each step using beautiful Markdown tables and structured analysis!
