@@ -1,6 +1,6 @@
 # Binaries
-mcpd
-*.exe
+/mcpd
+/linuxctl
 *.exe~
 *.dll
 *.so
