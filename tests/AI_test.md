@@ -13,8 +13,11 @@ The `linuxctl` binary is an MCP client wrapper. You can use it to natively query
 export MCP_TOKEN="my-test-token-123"
 export DAEMON_URL="http://localhost:9090"
 
-# Example: List CPU information
+# Example: List CPU information (Regular User)
 ./linuxctl cpu list --output json
+
+# Example: Read protected USB devices (Privileged User)
+./linuxctl -privileged devices usb --output json
 ```
 
 ### Method 2: Direct HTTP JSON-RPC via `curl`
@@ -39,11 +42,14 @@ Your goal is to complete the following tasks using the MCP Daemon. Do not use st
 3. Execute a `network/ping` via the daemon to verify connectivity to `1.1.1.1`.
 4. **Deliverable**: A summary of network anomalies or active listening services.
 
-### Task 3: Privilege Boundary Testing
-1. Attempt to execute `files/list` on `/root/` using the daemon.
-2. Attempt to read the `devices://usb` resource.
-3. Analyze the `auth/sudo-rules` output to determine exactly why your requests succeeded or failed based on the RBAC configuration.
-4. **Deliverable**: A security audit report of the daemon's current active Sudo rules.
+### Task 3: Privilege Boundary Testing (RBAC)
+The daemon supports granular Role-Based Access Control (RBAC). Your task is to verify that the security boundary holds.
+1. Attempt to execute `files/list` on `/root/` using the daemon as a **regular user** (this should fail with a permission error).
+2. Attempt to execute the exact same command using the `-privileged` flag. Observe if it succeeds or is blocked by `mcp-sudo.yaml`.
+3. Attempt to read the `devices://usb` resource as a **regular user** (should be denied).
+4. Read the `devices://usb` resource again as a **privileged user** (should succeed).
+5. Query `auth/sudo-rules` to retrieve the current active RBAC ruleset and analyze why your requests succeeded or failed.
+6. **Deliverable**: A security audit report of the daemon's current active Sudo rules, detailing the exact results of the unprivileged vs privileged tests.
 
 ### Task 4: Process and Resource Management
 1. Execute `processes/list` to find the top 5 CPU-consuming tasks.
