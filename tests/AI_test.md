@@ -10,14 +10,17 @@ Since you are an AI, you already have the ability to run terminal commands. To t
 The `linuxctl` binary is an MCP client wrapper. You can use it to natively query the daemon.
 ```bash
 # Ensure you are in the project root
-export MCP_TOKEN="my-test-token-123"
 export DAEMON_URL="http://localhost:9090"
 
-# Example: List CPU information (Regular User)
-./linuxctl cpu list --output json
+# The daemon maps tokens to RBAC roles (defined in configs/mcp-sudo.yaml)
+export TOKEN_PRIV="my-test-token-123"           # Maps to 'testuser' (Privileged)
+export TOKEN_UNPRIV="my-unprivileged-token-123" # Maps to 'unpriviliged' (Restricted)
 
-# Example: Read protected files (Privileged Mode via argument)
-./linuxctl files list --path /root/ --privileged true --output json
+# Example: List CPU information (Privileged User)
+./linuxctl -token $TOKEN_PRIV cpu list --output json
+
+# Example: Attempt to read protected USB devices (Unprivileged User)
+./linuxctl -token $TOKEN_UNPRIV resource devices://usb --output json
 ```
 
 ### Method 2: Standard MCP Clients (e.g., MCP Inspector)
@@ -92,11 +95,13 @@ Your goal is to complete the following tasks using the MCP Daemon. Do not use st
 4. **Deliverable**: A summary of network anomalies or active listening services.
 
 ### Task 3: Privilege Boundary Testing (RBAC)
-The daemon supports granular Role-Based Access Control (RBAC) via the `mcp-sudo.yaml` config. Your task is to verify that the security boundary holds.
-1. Attempt to execute `files/list` on `/root/` using the daemon without any flags (this should fail with a permission error because the daemon drops privileges by default).
-2. Attempt to execute the exact same command, but pass the `--privileged true` argument to the tool. Observe that it now succeeds because your test token is authorized.
-3. Query `auth/sudo-rules` to retrieve the current active RBAC ruleset and verify that `files/list` on `/` is allowed for your token.
-4. **Deliverable**: A security audit report of the daemon's current active Sudo rules, detailing the exact results of the unprivileged vs privileged tool executions.
+The daemon supports granular Role-Based Access Control (RBAC) via the `mcp-sudo.yaml` config. Your task is to verify that the security boundary holds between users.
+1. Attempt to execute `files/list` on `/root/` using the daemon with `$TOKEN_UNPRIV` (this should fail).
+2. Attempt to execute the exact same command, but pass the `--privileged true` argument to the tool. Observe that it STILL fails for `$TOKEN_UNPRIV`.
+3. Now switch to `$TOKEN_PRIV`. Execute `files/list` on `/root/` with `--privileged true`. Observe that it succeeds!
+4. Attempt to read the `devices://usb` resource using `$TOKEN_UNPRIV` (should be denied).
+5. Read the `devices://usb` resource again using `$TOKEN_PRIV` (should succeed).
+6. **Deliverable**: A security audit report of the daemon's current active Sudo rules, detailing the exact results of the unprivileged vs privileged tool executions.
 
 ### Task 4: Process and Resource Management
 1. Execute `processes/list` to find the top 5 CPU-consuming tasks.
