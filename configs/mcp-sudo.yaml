@@ -1,13 +1,16 @@
-rules:
-  - user: "admin"
-    tools:
-      - name: "manage_sysctl"
-        run_as: "root"
-  - user: "testuser"
-    tools:
-      - name: "list_directory"
-        run_as: "root"
-      - name: "get_disk_space"
-        run_as: "root"
-      - name: "get_disk_usage"
-        run_as: "root"
+users:
+  admin:
+    privileged:
+      manage_sysctl:
+        allowed: true
+  testuser:
+    privileged:
+      list_directory:
+        allowed: true
+        paths:
+          - /var/log
+          - /etc
+      get_disk_space:
+        allowed: true
+      get_disk_usage:
+        allowed: true

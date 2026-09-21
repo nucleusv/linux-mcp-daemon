@@ -16,14 +16,12 @@ func GetSudoRules(username string, sudoCfg *config.SudoConfig) (string, error) {
 		return "No sudo configuration loaded.", nil
 	}
 
-	for _, rule := range sudoCfg.Rules {
-		if rule.User == username {
-			bytes, err := json.MarshalIndent(rule.Tools, "", "  ")
-			if err != nil {
-				return "", fmt.Errorf("failed to encode rules: %v", err)
-			}
-			return fmt.Sprintf("Your authorized privileged tools:\n%s", string(bytes)), nil
+	if userSudo, ok := sudoCfg.Users[username]; ok {
+		bytes, err := json.MarshalIndent(userSudo.Privileged, "", "  ")
+		if err != nil {
+			return "", fmt.Errorf("failed to encode rules: %v", err)
 		}
+		return fmt.Sprintf("Your authorized privileged tools:\n%s", string(bytes)), nil
 	}
 
 	return "You have no privileged tools authorized in mcp-sudo.yaml.", nil

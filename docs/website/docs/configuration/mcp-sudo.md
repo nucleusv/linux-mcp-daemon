@@ -19,13 +19,22 @@ If authorized, the Ephemeral Worker spawns natively as UID 0. If denied, the req
 ```yaml
 users:
   alice:
-    can_run_as_root:
-      - "get_disk_space"
-      - "list_directory"
+    privileged:
+      get_disk_space:
+        allowed: true
+      list_directory:
+        allowed: true
+        paths:
+          - "/var/log"
+          - "/root"
   bob:
-    can_run_as_root:
-      - "list_directory"
-      - "get_disk_usage"
+    privileged:
+      list_directory:
+        allowed: true
+        paths:
+          - "/var/www"
+      get_disk_usage:
+        allowed: true
 ```
 
 In this example, if the AI is authenticated as `alice`, it can list protected root directories, but it cannot run expensive `get_disk_usage` tree traversals as root!

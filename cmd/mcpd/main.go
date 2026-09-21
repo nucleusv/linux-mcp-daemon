@@ -382,11 +382,26 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 
 			} else if params.Name == "list_directory" || params.Name == "get_disk_space" || params.Name == "get_disk_usage" {
 				
-				// All these tools share the 'privileged' boolean in their arguments
+				// All these tools share the 'privileged' boolean and 'path' string in their arguments
 				var baseArgs struct {
-					Privileged bool `json:"privileged"`
+					Privileged bool   `json:"privileged"`
+					Path       string `json:"path"`
 				}
 				_ = json.Unmarshal(params.Arguments, &baseArgs)
+
+				if params.Name == "list_directory" && baseArgs.Privileged {
+					allowedPaths := sudoConfig.GetAllowedPaths(session.User, "list_directory")
+					allowed := false
+					for _, p := range allowedPaths {
+						if strings.HasPrefix(baseArgs.Path, p) {
+							allowed = true
+							break
+						}
+					}
+					if !allowed {
+						execErr = fmt.Errorf("permission denied: path '%s' is not in your allowed paths for list_directory", baseArgs.Path)
+					}
+				}
 				
 				// Resolve execution timeout (check tool override, fallback to global worker default)
 				executionTimeout := daemonConfig.Worker.TimeoutSeconds
@@ -394,38 +409,40 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					executionTimeout = toolCfg.TimeoutSeconds
 				}
 
-				// Use the Ephemeral Worker Spawner with caching for heavy tools
-				if params.Name == "get_disk_usage" {
-					cacheKey := fmt.Sprintf("%s:%s:%t", session.User, string(params.Arguments), baseArgs.Privileged)
-					
-					cacheMu.RLock()
-					entry, ok := cache[cacheKey]
-					cacheMu.RUnlock()
-
-					if ok && time.Now().Before(entry.expiresAt) {
-						resultText = entry.result
-					} else {
-						v, err, _ := requestGroup.Do(cacheKey, func() (interface{}, error) {
-							res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, executionTimeout)
-							if exErr == nil {
-								cacheMu.Lock()
-								cache[cacheKey] = cacheEntry{
-									result:    res,
-									expiresAt: time.Now().Add(60 * time.Second),
-								}
-								cacheMu.Unlock()
-							}
-							return res, exErr
-						})
+				if execErr == nil {
+					// Use the Ephemeral Worker Spawner with caching for heavy tools
+					if params.Name == "get_disk_usage" {
+						cacheKey := fmt.Sprintf("%s:%s:%t", session.User, string(params.Arguments), baseArgs.Privileged)
 						
-						if err != nil {
-							execErr = err
+						cacheMu.RLock()
+						entry, ok := cache[cacheKey]
+						cacheMu.RUnlock()
+
+						if ok && time.Now().Before(entry.expiresAt) {
+							resultText = entry.result
 						} else {
-							resultText = v.(string)
+							v, err, _ := requestGroup.Do(cacheKey, func() (interface{}, error) {
+								res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, executionTimeout)
+								if exErr == nil {
+									cacheMu.Lock()
+									cache[cacheKey] = cacheEntry{
+										result:    res,
+										expiresAt: time.Now().Add(60 * time.Second),
+									}
+									cacheMu.Unlock()
+								}
+								return res, exErr
+							})
+							
+							if err != nil {
+								execErr = err
+							} else {
+								resultText = v.(string)
+							}
 						}
+					} else {
+						resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, executionTimeout)
 					}
-				} else {
-					resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, executionTimeout)
 				}
 
 			} else {
