@@ -14,6 +14,17 @@ COPY . .
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o mcpd ./cmd/mcpd
 
+# Docs Build Stage
+FROM node:20-alpine AS docs-builder
+WORKDIR /app/docs/website
+# Copy only package files first for better caching
+COPY docs/website/package.json docs/website/package-lock.json* ./
+RUN npm ci || npm install
+# Copy the rest of the documentation files
+COPY docs/website .
+# Build the Docusaurus site
+RUN npm run build
+
 # Use ubuntu instead of alpine for a full environment
 FROM ubuntu:24.04
 
@@ -29,11 +40,11 @@ RUN apt-get update && apt-get install -y \
     && useradd -m -s /bin/bash testuser
 
 # Copy the binary from the builder stage
-COPY --from=builder /app/mcpd .
+COPY --from=builder /app/mcpd /usr/local/bin/
 # Copy configs
 COPY --from=builder /app/configs ./configs
 # Copy compiled documentation website
-COPY --from=builder /app/docs/website/build ./docs/website/build
+COPY --from=docs-builder /app/docs/website/build ./docs/website/build
 # Copy man pages
 COPY --from=builder /app/docs/man/linuxctl.1 /usr/local/share/man/man1/
 COPY --from=builder /app/docs/man/mcpd.8 /usr/local/share/man/man8/
@@ -43,4 +54,4 @@ RUN mandb
 EXPOSE 9090
 
 # Command to run the executable
-CMD ["./mcpd"]
+CMD ["/usr/local/bin/mcpd"]
