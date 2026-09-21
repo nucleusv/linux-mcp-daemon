@@ -461,6 +461,16 @@ func main() {
 						} else if m, ok := obj.(map[string]interface{}); ok {
 							// Single object
 							for k, v := range m {
+								// Format nested arrays/objects nicely as compact JSON instead of Go map strings
+								if v != nil {
+									switch v.(type) {
+									case []interface{}, map[string]interface{}:
+										if b, err := json.Marshal(v); err == nil {
+											fmt.Fprintf(w, "%s\t%s\n", strings.ToUpper(k), string(b))
+											continue
+										}
+									}
+								}
 								fmt.Fprintf(w, "%s\t%v\n", strings.ToUpper(k), v)
 							}
 						}
