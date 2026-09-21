@@ -43,7 +43,7 @@ func ListDirectory(rawArgs json.RawMessage) (string, error) {
 
 		size := info.Size()
 		modTime := info.ModTime().Format("2006-01-02 15:04:05")
-		
+
 		if entry.IsDir() {
 			result += fmt.Sprintf("[DIR]  %s/ (modified: %s)\n", entry.Name(), modTime)
 		} else {

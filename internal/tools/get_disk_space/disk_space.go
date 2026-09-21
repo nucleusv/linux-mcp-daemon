@@ -8,10 +8,10 @@ import (
 
 // GetDiskSpaceArgs defines the parameters for the get_disk_space tool.
 type GetDiskSpaceArgs struct {
-	Path          string `json:"path"`                    // Path is the absolute directory or mount point to check.
-	Inodes        bool   `json:"inodes,omitempty"`        // Inodes requests the total and free inode index counts instead of byte usage.
+	Path          string `json:"path"`                     // Path is the absolute directory or mount point to check.
+	Inodes        bool   `json:"inodes,omitempty"`         // Inodes requests the total and free inode index counts instead of byte usage.
 	HumanReadable bool   `json:"human_readable,omitempty"` // HumanReadable formats the raw byte counts into human-readable strings (e.g. 24.5 GiB).
-	Privileged    bool   `json:"privileged,omitempty"`    // Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
+	Privileged    bool   `json:"privileged,omitempty"`     // Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
 }
 
 // GetDiskSpace calculates filesystem usage statistics (equivalent to df -h).
@@ -50,7 +50,7 @@ func GetDiskSpace(rawArgs json.RawMessage) (string, error) {
 	totalBytes := stat.Blocks * uint64(stat.Bsize)
 	freeBytes := stat.Bavail * uint64(stat.Bsize)
 	usedBytes := totalBytes - freeBytes
-	
+
 	usePercent := float64(0)
 	if totalBytes > 0 {
 		usePercent = float64(usedBytes) / float64(totalBytes) * 100
