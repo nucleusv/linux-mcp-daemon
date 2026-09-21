@@ -21,8 +21,8 @@ if echo "$OUTPUT" | grep -q "Successfully connected to mcpd daemon!"; then
     echo "Running 'linuxctl get auth get-sudo-rules'..."
     ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get auth get-sudo-rules | grep "list_directory" > /dev/null
 
-    echo "Running 'linuxctl get files list-directory --path /var/log --privileged true'..."
-    ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get files list-directory --path /var/log --privileged true | grep "syslog" > /dev/null || echo "Could not find syslog, but command succeeded"
+    echo "Running 'linuxctl get files list-directory /var/log --privileged true' (positional arg test)..."
+    ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get files list-directory /var/log --privileged true | grep "syslog" > /dev/null || echo "Could not find syslog, but command succeeded"
 
     echo "Running 'linuxctl get disks disk-usage --path /var/log --privileged true'..."
     ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get disks disk-usage --path /var/log --privileged true | grep "Total size" > /dev/null

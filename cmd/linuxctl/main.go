@@ -207,6 +207,7 @@ func main() {
 	json.Unmarshal(tools.Result, &resultList)
 	
 	var actualToolName string
+	var actualTool map[string]interface{}
 	if toolList, ok := resultList["tools"].([]interface{}); ok {
 		for _, t := range toolList {
 			tool := t.(map[string]interface{})
@@ -215,6 +216,7 @@ func main() {
 			
 			if tg == group && (name == expectedCommand || name == expectedVerbCommand) {
 				actualToolName = name
+				actualTool = tool
 				break
 			}
 		}
@@ -227,6 +229,8 @@ func main() {
 
 	// Build arguments from CLI args like --path /var/log --privileged true
 	toolArgs := make(map[string]interface{})
+	var positionalArgs []string
+	
 	for i := 3; i < len(args); i++ {
 		arg := args[i]
 		if strings.HasPrefix(arg, "--") {
@@ -243,6 +247,20 @@ func main() {
 				i++ // skip value
 			} else {
 				toolArgs[key] = true // boolean flag
+			}
+		} else {
+			positionalArgs = append(positionalArgs, arg)
+		}
+	}
+
+	// Smart mapping of positional arguments
+	if len(positionalArgs) > 0 {
+		if schema, ok := actualTool["inputSchema"].(map[string]interface{}); ok {
+			if props, ok := schema["properties"].(map[string]interface{}); ok {
+				// If the tool has a "path" property, map the first positional arg to it
+				if _, hasPath := props["path"]; hasPath && toolArgs["path"] == nil {
+					toolArgs["path"] = positionalArgs[0]
+				}
 			}
 		}
 	}
