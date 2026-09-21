@@ -9,6 +9,9 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
+
+	"golang.org/x/sync/singleflight"
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/auth"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
@@ -38,7 +41,16 @@ var (
 	
 	sessions   = make(map[string]*Session)
 	sessionsMu sync.RWMutex
+
+	requestGroup singleflight.Group
+	cache        = make(map[string]cacheEntry)
+	cacheMu      sync.RWMutex
 )
+
+type cacheEntry struct {
+	result    string
+	expiresAt time.Time
+}
 
 type Session struct {
 	ID    string
@@ -312,9 +324,12 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 					"inputSchema": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
-							"path":       map[string]interface{}{"type": "string", "description": "Target directory to measure"},
-							"max_depth":  map[string]interface{}{"type": "integer", "description": "How deep to recurse (0 for summarize only)"},
-							"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+							"path":            map[string]interface{}{"type": "string", "description": "Target directory to measure"},
+							"max_depth":       map[string]interface{}{"type": "integer", "description": "How deep to recurse (0 for summarize only)"},
+							"one_file_system": map[string]interface{}{"type": "boolean", "description": "Skip directories on different file systems (-x)"},
+							"exclude":         map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Patterns to exclude"},
+							"all":             map[string]interface{}{"type": "boolean", "description": "Write counts for all files, not just directories (-a)"},
+							"privileged":      map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 						},
 						"required": []string{"path"},
 					},
@@ -352,8 +367,39 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				}
 				_ = json.Unmarshal(params.Arguments, &baseArgs)
 
-				// Use the Ephemeral Worker Spawner!
-				resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig)
+				// Use the Ephemeral Worker Spawner with caching for heavy tools
+				if params.Name == "get_disk_usage" {
+					cacheKey := fmt.Sprintf("%s:%s:%t", session.User, string(params.Arguments), baseArgs.Privileged)
+					
+					cacheMu.RLock()
+					entry, ok := cache[cacheKey]
+					cacheMu.RUnlock()
+
+					if ok && time.Now().Before(entry.expiresAt) {
+						resultText = entry.result
+					} else {
+						v, err, _ := requestGroup.Do(cacheKey, func() (interface{}, error) {
+							res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig)
+							if exErr == nil {
+								cacheMu.Lock()
+								cache[cacheKey] = cacheEntry{
+									result:    res,
+									expiresAt: time.Now().Add(60 * time.Second),
+								}
+								cacheMu.Unlock()
+							}
+							return res, exErr
+						})
+						
+						if err != nil {
+							execErr = err
+						} else {
+							resultText = v.(string)
+						}
+					}
+				} else {
+					resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig)
+				}
 
 			} else {
 				resp.Error = map[string]interface{}{"code": -32601, "message": "Tool not found"}
