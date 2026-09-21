@@ -281,6 +281,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 			"tools": []interface{}{
 				map[string]interface{}{
 					"name": "list_directory",
+					"tools_group": "file",
 					"description": listDesc,
 					"inputSchema": map[string]interface{}{
 						"type": "object",
@@ -293,6 +294,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				},
 				map[string]interface{}{
 					"name": "get_disk_space",
+					"tools_group": "disk",
 					"description": dfDesc,
 					"inputSchema": map[string]interface{}{
 						"type": "object",
@@ -305,6 +307,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				},
 				map[string]interface{}{
 					"name": "get_disk_usage",
+					"tools_group": "disk",
 					"description": duDesc,
 					"inputSchema": map[string]interface{}{
 						"type": "object",
@@ -318,6 +321,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 				},
 				map[string]interface{}{
 					"name": "get_sudo_rules",
+					"tools_group": "auth",
 					"description": "Returns your authorized tools and privileges from mcp-sudo.yaml.",
 					"inputSchema": map[string]interface{}{
 						"type": "object",
