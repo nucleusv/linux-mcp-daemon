@@ -15,6 +15,7 @@ server:
   port: 8080
   tls:
     enabled: true
+    port: 8443
     cert_file: "/etc/ssl/certs/mcpd.crt"
     key_file: "/etc/ssl/private/mcpd.key"
 
@@ -39,7 +40,7 @@ users:
 ## Settings breakdown
 
 - **`server.port`**: The HTTP port that the daemon listens on for `/sse`, `/message`, and `/docs/` traffic.
-- **`server.tls`**: If `enabled` is true, the daemon natively hosts an HTTPS server using the provided `cert_file` and `key_file`. If false, it serves plain HTTP (which you should place behind a reverse proxy like NGINX).
+- **`server.tls`**: If `enabled` is true, the daemon natively hosts a concurrent HTTPS server on `tls.port` (default `9443`) using the provided `cert_file` and `key_file`. The plain HTTP server will continue to run simultaneously on `server.port`!
 - **`worker.timeout_seconds`**: The global maximum time an Ephemeral Worker is allowed to run before the Master daemon sends a `SIGKILL`. This prevents runaway processes.
 - **`rate_limits`**: Global rate limits applied to every authenticated user to prevent an AI from spamming the server and saturating your I/O.
 - **`tools.<name>.timeout_seconds`**: Tool-specific overrides. Heavy tools like `get_disk_usage` can be granted longer execution windows than lightweight tools.

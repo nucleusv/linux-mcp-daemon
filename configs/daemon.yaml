@@ -2,6 +2,7 @@ server:
   port: 9090
   tls:
     enabled: false
+    port: 9443
     cert_file: "/etc/ssl/certs/mcpd.crt"
     key_file: "/etc/ssl/private/mcpd.key"
 rate_limits:
