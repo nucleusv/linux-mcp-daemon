@@ -435,8 +435,7 @@ func main() {
 					if err := json.Unmarshal([]byte(text), &obj); err == nil {
 						w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 						
-						if arr, ok := obj.([]interface{}); ok && len(arr) > 0 {
-							// Array of objects
+						printArrayAsTable := func(arr []interface{}) {
 							if first, ok := arr[0].(map[string]interface{}); ok {
 								var keys []string
 								for k := range first {
@@ -453,16 +452,28 @@ func main() {
 									}
 								}
 							} else {
-								// Array of primitives
 								for _, item := range arr {
 									fmt.Fprintln(w, fmt.Sprintf("%v", item))
 								}
 							}
+						}
+
+						if arr, ok := obj.([]interface{}); ok && len(arr) > 0 {
+							// Top level array of objects
+							printArrayAsTable(arr)
 						} else if m, ok := obj.(map[string]interface{}); ok {
 							// Single object
+							var nestedArrays []struct{ key string; arr []interface{} }
+							
 							for k, v := range m {
-								// Format nested arrays/objects nicely as compact JSON instead of Go map strings
 								if v != nil {
+									if arr, ok := v.([]interface{}); ok && len(arr) > 0 {
+										if _, isObj := arr[0].(map[string]interface{}); isObj {
+											nestedArrays = append(nestedArrays, struct{ key string; arr []interface{} }{k, arr})
+											continue
+										}
+									}
+									
 									switch v.(type) {
 									case []interface{}, map[string]interface{}:
 										if b, err := json.Marshal(v); err == nil {
@@ -472,6 +483,12 @@ func main() {
 									}
 								}
 								fmt.Fprintf(w, "%s\t%v\n", strings.ToUpper(k), v)
+							}
+							
+							// Print nested arrays as subtables
+							for _, na := range nestedArrays {
+								fmt.Fprintln(w, "\n"+strings.ToUpper(na.key)+":")
+								printArrayAsTable(na.arr)
 							}
 						}
 						w.Flush()
