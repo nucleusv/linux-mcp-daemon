@@ -56,3 +56,5 @@ users:
           - "*"
         network://interfaces:
           - "*"
+        disks://:
+          - "*"

@@ -116,6 +116,12 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
+				"uriTemplate": "disks://{name}/stats",
+				"name":        "Disk I/O Statistics",
+				"description": "Real-time I/O statistics for a specific block device (e.g. sda). Returns JSON.",
+				"mimeType":    "application/json",
+			},
+			map[string]interface{}{
 				"uriTemplate": "process://{pid}/{target}",
 				"name":        "Process Introspection",
 				"description": "Reads process metadata from procfs. Valid targets: status, cmdline, environ. Hint: Find PIDs using the processes/list tool first.",
@@ -285,6 +291,18 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 		case params.URI == "network://routes":
 			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			content, readErr = worker.SpawnWorker(session.User, "read_routes", []byte("{}"), isPrivileged, h.SudoConfig, 30)
+			mimeType = "application/json"
+		case strings.HasPrefix(params.URI, "disks://") && strings.HasSuffix(params.URI, "/stats"):
+			devName := strings.TrimPrefix(params.URI, "disks://")
+			devName = strings.TrimSuffix(devName, "/stats")
+
+			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, "disks://", devName)
+
+			argsJSON, _ := json.Marshal(map[string]interface{}{
+				"device":        devName,
+				"output_format": "json",
+			})
+			content, readErr = worker.SpawnWorker(session.User, "disks/iostat", argsJSON, isPrivileged, h.SudoConfig, 30)
 			mimeType = "application/json"
 		default:
 			readErr = fmt.Errorf("unknown resource: %s", params.URI)
