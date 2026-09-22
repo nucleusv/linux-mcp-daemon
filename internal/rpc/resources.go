@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/interfaces"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/os/hostname"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/os/release"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/system/hostname"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/system/locale"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/system/timezone"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/disks"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/file"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/process"
@@ -46,9 +48,21 @@ func (h *RPCHandler) HandleResourcesList(resp *JSONRPCResponse) {
 				"mimeType":    "text/plain",
 			},
 			map[string]interface{}{
-				"uri":         "os://hostname",
-				"name":        "OS Hostname",
+				"uri":         "system://hostname",
+				"name":        "System Hostname",
 				"description": "Native system network hostname. Hint: To resolve IP addresses use network/nslookup tool.",
+				"mimeType":    "text/plain",
+			},
+			map[string]interface{}{
+				"uri":         "system://timezone",
+				"name":        "System Timezone",
+				"description": "Configured IANA timezone (e.g. America/New_York) plus current local offset and time.",
+				"mimeType":    "text/plain",
+			},
+			map[string]interface{}{
+				"uri":         "system://locale",
+				"name":        "System Locale",
+				"description": "Configured locale settings (LANG, LC_*).",
 				"mimeType":    "text/plain",
 			},
 			map[string]interface{}{
@@ -185,8 +199,12 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 			}
 		case params.URI == "os://release":
 			content, mimeType, readErr = release.Read()
-		case params.URI == "os://hostname":
+		case params.URI == "system://hostname":
 			content, mimeType, readErr = hostname.Read()
+		case params.URI == "system://timezone":
+			content, mimeType, readErr = timezone.Read()
+		case params.URI == "system://locale":
+			content, mimeType, readErr = locale.Read()
 		case strings.HasPrefix(params.URI, "network://interfaces"):
 			targetName := strings.TrimPrefix(params.URI, "network://interfaces")
 			targetName = strings.TrimPrefix(targetName, "/")
@@ -243,7 +261,7 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 			resp.Error = map[string]interface{}{"code": -32603, "message": readErr.Error()}
 		} else {
 			// Cache the result if applicable
-			if params.URI == "devices://dmi" || params.URI == "os://hostname" {
+			if params.URI == "devices://dmi" || params.URI == "system://hostname" {
 				h.ResourceCache.Set(params.URI, content, mimeType, 24*time.Hour)
 			} else if params.URI == "devices://pci" {
 				h.ResourceCache.Set(params.URI, content, mimeType, 1*time.Hour)

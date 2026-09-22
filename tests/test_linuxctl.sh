@@ -82,7 +82,7 @@ run_resource() {
     fi
 }
 
-run_resource "os://hostname"
+run_resource "system://hostname"
 run_resource "os://release"
 run_resource "os://uname"
 run_resource "network://interfaces"

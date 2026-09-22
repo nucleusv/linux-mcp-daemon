@@ -1,5 +1,5 @@
-# OS Hostname
+# System Hostname
 
-**URI**: `os://hostname`
+**URI**: `system://hostname`
 
 Native system network hostname. Hint: To resolve IP addresses use network/nslookup tool.

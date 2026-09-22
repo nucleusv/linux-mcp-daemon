@@ -80,7 +80,11 @@ users:
         users/list:
           allowed: true
       resources:
-        os://hostname:
+        system://hostname:
+          - "*"
+        system://timezone:
+          - "*"
+        system://locale:
           - "*"
         os://release:
           - "*"
@@ -209,7 +213,11 @@ users:
           - "*"
         os://release:
           - "*"
-        os://hostname:
+        system://hostname:
+          - "*"
+        system://timezone:
+          - "*"
+        system://locale:
           - "*"
         network://interfaces:
           - "*"
