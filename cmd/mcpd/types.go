@@ -1,16 +1,15 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"sync"
-	"time"
 
 	"golang.org/x/sync/singleflight"
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/auth"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/cache"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/rpc"
 	"gopkg.in/yaml.v3"
 )
 
@@ -44,67 +43,20 @@ var (
 	daemonConfig   Config
 	sudoConfig     *config.SudoConfig
 	limiterManager *auth.LimiterManager
+	rpcHandler     *rpc.RPCHandler
 
-	sessions       = make(map[string]*Session)
+	sessions       = make(map[string]*rpc.Session)
 	sessionsMu     sync.RWMutex
 	sessionCounter int64
 
 	requestGroup  singleflight.Group
-	rpcCache      = make(map[string]cacheEntry)
+	rpcCache      = make(map[string]rpc.CacheEntry)
 	cacheMu       sync.RWMutex
 	resourceCache = cache.NewTTLCache()
 )
 
-func charsToString(ca []int8) string {
-	s := make([]byte, len(ca))
-	var i int
-	for ; i < len(ca); i++ {
-		if ca[i] == 0 {
-			break
-		}
-		s[i] = uint8(ca[i])
-	}
-	return string(s[:i])
-}
 
-type cacheEntry struct {
-	result    string
-	expiresAt time.Time
-}
 
-type Session struct {
-	ID    string
-	User  string
-	Event chan string
-}
-
-// MCP JSON-RPC Structures
-type JSONRPCRequest struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      interface{}     `json:"id"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params"`
-}
-
-type JSONRPCResponse struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      interface{} `json:"id"`
-	Result  interface{} `json:"result,omitempty"`
-	Error   interface{} `json:"error,omitempty"`
-}
-
-type CallToolParams struct {
-	Name      string          `json:"name"`
-	Arguments json.RawMessage `json:"arguments"`
-}
-
-type ToolResult struct {
-	Content []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
-	} `json:"content"`
-	IsError bool `json:"isError,omitempty"`
-}
 
 func loadConfig(path string) error {
 	data, err := os.ReadFile(path)

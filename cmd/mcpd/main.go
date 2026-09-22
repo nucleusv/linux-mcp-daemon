@@ -13,6 +13,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/usb"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/kernel/modules"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/routes"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/rpc"
 	cpulist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/list"
 	loadaverage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/load-average"
 	disklist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/list"
@@ -129,6 +130,16 @@ func main() {
 	if daemonConfig.Worker.TimeoutSeconds == 0 {
 		daemonConfig.Worker.TimeoutSeconds = 30
 	}
+
+	rpcHandler = rpc.NewRPCHandler(
+		sudoConfig,
+		daemonConfig.Worker.TimeoutSeconds,
+		daemonConfig.Tools,
+		&requestGroup,
+		rpcCache,
+		&cacheMu,
+		resourceCache,
+	)
 
 	http.HandleFunc("/sse", handleSSE)
 	http.HandleFunc("/message", handleMessage)

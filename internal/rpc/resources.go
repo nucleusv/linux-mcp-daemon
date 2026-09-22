@@ -1,4 +1,4 @@
-package main
+package rpc
 
 import (
 	"encoding/json"
@@ -14,7 +14,19 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 )
 
-func handleResourcesList(resp *JSONRPCResponse) {
+func charsToString(ca []int8) string {
+	s := make([]byte, len(ca))
+	var i int
+	for ; i < len(ca); i++ {
+		if ca[i] == 0 {
+			break
+		}
+		s[i] = uint8(ca[i])
+	}
+	return string(s[:i])
+}
+
+func (h *RPCHandler) HandleResourcesList(resp *JSONRPCResponse) {
 	// Enumerate static resources and wildcard templates
 	resp.Result = map[string]interface{}{
 		"resources": []interface{}{
@@ -76,7 +88,7 @@ func handleResourcesList(resp *JSONRPCResponse) {
 	}
 }
 
-func handleResourcesTemplatesList(resp *JSONRPCResponse) {
+func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 	resp.Result = map[string]interface{}{
 		"resourceTemplates": []interface{}{
 			map[string]interface{}{
@@ -113,7 +125,7 @@ func handleResourcesTemplatesList(resp *JSONRPCResponse) {
 	}
 }
 
-func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResponse) {
+func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResponse) {
 	var params struct {
 		URI string `json:"uri"`
 	}
@@ -124,7 +136,7 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 
 		// Pre-authorization check for strictly privileged resources
 		if strings.HasPrefix(params.URI, "devices://") || strings.HasPrefix(params.URI, "kernel://") {
-			if !sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*") {
+			if !h.SudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*") {
 				resp.Error = map[string]interface{}{"code": -32603, "message": fmt.Sprintf("resource %s is strictly accessible only in privileged mode", params.URI)}
 				data, _ := json.Marshal(resp)
 				session.Event <- string(data)
@@ -133,7 +145,7 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 		}
 
 		// 1. Check cache first!
-		if cachedContent, cachedMimeType, hit := resourceCache.Get(params.URI); hit {
+		if cachedContent, cachedMimeType, hit := h.ResourceCache.Get(params.URI); hit {
 			resp.Result = map[string]interface{}{
 				"contents": []interface{}{
 					map[string]interface{}{
@@ -192,25 +204,25 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			}
 
 			// Check mcp-sudo.yaml to see if this user is allowed to read THIS file as root
-			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, "file://", path)
+			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, "file://", path)
 
 			// We map it to the corresponding internal tool for the spawner
 			argsJSON, _ := json.Marshal(map[string]interface{}{
 				"path": path,
 			})
 
-			content, readErr = worker.SpawnWorker(session.User, toolName, argsJSON, isPrivileged, sudoConfig, 30)
+			content, readErr = worker.SpawnWorker(session.User, toolName, argsJSON, isPrivileged, h.SudoConfig, 30)
 		case strings.HasPrefix(params.URI, "service://") && strings.HasSuffix(params.URI, "/status"):
 			// service://kubelet.service/status
 			serviceName := strings.TrimPrefix(params.URI, "service://")
 			serviceName = strings.TrimSuffix(serviceName, "/status")
 
-			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, "service://", serviceName)
+			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, "service://", serviceName)
 			
 			argsJSON, _ := json.Marshal(map[string]interface{}{
 				"service": serviceName,
 			})
-			content, readErr = worker.SpawnWorker(session.User, "services/status", argsJSON, isPrivileged, sudoConfig, 30)
+			content, readErr = worker.SpawnWorker(session.User, "services/status", argsJSON, isPrivileged, h.SudoConfig, 30)
 			mimeType = "application/json"
 		case strings.HasPrefix(params.URI, "process://"):
 			// process://{pid}/status, process://{pid}/cmdline, process://{pid}/environ
@@ -228,51 +240,51 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 				goto SendResponse
 			}
 
-			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, "process://", pidStr)
+			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, "process://", pidStr)
 			
 			argsJSON, _ := json.Marshal(map[string]interface{}{
 				"pid":    pid,
 				"target": target,
 			})
-			content, readErr = worker.SpawnWorker(session.User, "processes/read", argsJSON, isPrivileged, sudoConfig, 30)
+			content, readErr = worker.SpawnWorker(session.User, "processes/read", argsJSON, isPrivileged, h.SudoConfig, 30)
 			if target != "status" {
 				mimeType = "application/json"
 			}
 		case params.URI == "devices://usb":
-			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
+			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
 				readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
 			} else {
-				content, readErr = worker.SpawnWorker(session.User, "read_usb", []byte("{}"), isPrivileged, sudoConfig, 30)
+				content, readErr = worker.SpawnWorker(session.User, "read_usb", []byte("{}"), isPrivileged, h.SudoConfig, 30)
 				mimeType = "application/json"
 			}
 		case params.URI == "devices://pci":
-			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
+			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
 				readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
 			} else {
-				content, readErr = worker.SpawnWorker(session.User, "read_pci", []byte("{}"), isPrivileged, sudoConfig, 30)
+				content, readErr = worker.SpawnWorker(session.User, "read_pci", []byte("{}"), isPrivileged, h.SudoConfig, 30)
 				mimeType = "application/json"
 			}
 		case params.URI == "devices://dmi":
-			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
+			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
 				readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
 			} else {
-				content, readErr = worker.SpawnWorker(session.User, "read_dmi", []byte("{}"), isPrivileged, sudoConfig, 30)
+				content, readErr = worker.SpawnWorker(session.User, "read_dmi", []byte("{}"), isPrivileged, h.SudoConfig, 30)
 				mimeType = "application/json"
 			}
 		case params.URI == "kernel://modules":
-			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
+			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
 				readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
 			} else {
-				content, readErr = worker.SpawnWorker(session.User, "read_modules", []byte("{}"), isPrivileged, sudoConfig, 30)
+				content, readErr = worker.SpawnWorker(session.User, "read_modules", []byte("{}"), isPrivileged, h.SudoConfig, 30)
 				mimeType = "application/json"
 			}
 		case params.URI == "network://routes":
-			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
-			content, readErr = worker.SpawnWorker(session.User, "read_routes", []byte("{}"), isPrivileged, sudoConfig, 30)
+			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
+			content, readErr = worker.SpawnWorker(session.User, "read_routes", []byte("{}"), isPrivileged, h.SudoConfig, 30)
 			mimeType = "application/json"
 		default:
 			readErr = fmt.Errorf("unknown resource: %s", params.URI)
@@ -284,15 +296,15 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 		} else {
 			// Cache the result if applicable
 			if params.URI == "devices://dmi" || params.URI == "os://hostname" {
-				resourceCache.Set(params.URI, content, mimeType, 24*time.Hour)
+				h.ResourceCache.Set(params.URI, content, mimeType, 24*time.Hour)
 			} else if params.URI == "devices://pci" {
-				resourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
+				h.ResourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
 			} else if params.URI == "os://release" || params.URI == "os://uname" {
-				resourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
+				h.ResourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
 			} else if params.URI == "devices://usb" || params.URI == "kernel://modules" {
-				resourceCache.Set(params.URI, content, mimeType, 60*time.Second)
+				h.ResourceCache.Set(params.URI, content, mimeType, 60*time.Second)
 			} else if params.URI == "network://interfaces" || params.URI == "network://routes" {
-				resourceCache.Set(params.URI, content, mimeType, 5*time.Second)
+				h.ResourceCache.Set(params.URI, content, mimeType, 5*time.Second)
 			}
 
 			resp.Result = map[string]interface{}{

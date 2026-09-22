@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/rpc"
 )
 
 func authenticateRequest(r *http.Request) (string, bool) {
@@ -37,7 +39,7 @@ func handleSSE(w http.ResponseWriter, r *http.Request) {
 	sessionCounter++
 	uniqueSessionID := fmt.Sprintf("%s-%d", token, sessionCounter)
 
-	session := &Session{
+	session := &rpc.Session{
 		ID:    uniqueSessionID,
 		User:  sessionUser,
 		Event: make(chan string, 10),
@@ -117,7 +119,7 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req JSONRPCRequest
+	var req rpc.JSONRPCRequest
 	if err := json.Unmarshal(body, &req); err != nil {
 		log.Printf("Failed to unmarshal JSON-RPC: %v", err)
 		http.Error(w, "Invalid JSON-RPC", http.StatusBadRequest)
@@ -126,7 +128,7 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Received JSON-RPC method: %s for session %s", req.Method, sessionID)
 
-	go processJSONRPC(session, req)
+	go rpcHandler.ProcessJSONRPC(session, req)
 
 	w.WriteHeader(http.StatusAccepted)
 }

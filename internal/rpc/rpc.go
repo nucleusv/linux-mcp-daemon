@@ -1,11 +1,11 @@
-package main
+package rpc
 
 import (
 	"encoding/json"
 	"log"
 )
 
-func processJSONRPC(session *Session, req JSONRPCRequest) {
+func (h *RPCHandler) ProcessJSONRPC(session *Session, req JSONRPCRequest) {
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      req.ID,
@@ -13,21 +13,21 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 
 	switch req.Method {
 	case "initialize":
-		handleInitialize(&resp)
+		h.HandleInitialize(&resp)
 	case "notifications/initialized":
 		return
 	case "ping":
 		// Ping is just an empty map, handled implicitly
 	case "resources/list":
-		handleResourcesList(&resp)
+		h.HandleResourcesList(&resp)
 	case "resources/templates/list":
-		handleResourcesTemplatesList(&resp)
+		h.HandleResourcesTemplatesList(&resp)
 	case "resources/read":
-		handleResourcesRead(session, req, &resp)
+		h.HandleResourcesRead(session, req, &resp)
 	case "tools/list":
-		handleToolsList(session, &resp)
+		h.HandleToolsList(session, &resp)
 	case "tools/call":
-		handleToolsCall(session, req, &resp)
+		h.HandleToolsCall(session, req, &resp)
 	default:
 		resp.Error = map[string]interface{}{"code": -32601, "message": "Method not found"}
 	}
@@ -36,7 +36,7 @@ func processJSONRPC(session *Session, req JSONRPCRequest) {
 	session.Event <- string(respBytes)
 }
 
-func handleInitialize(resp *JSONRPCResponse) {
+func (h *RPCHandler) HandleInitialize(resp *JSONRPCResponse) {
 	resp.Result = map[string]interface{}{
 		"protocolVersion": "2024-11-05",
 		"capabilities": map[string]interface{}{
@@ -49,5 +49,3 @@ func handleInitialize(resp *JSONRPCResponse) {
 		},
 	}
 }
-
-

@@ -1,4 +1,4 @@
-package main
+package rpc
 
 import (
 	"encoding/json"
@@ -10,20 +10,20 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 )
 
-func handleToolsList(session *Session, resp *JSONRPCResponse) {
+func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 	// Dynamically generate the tools list based on sudo rules.
 	listDesc := "Lists contents of a directory."
-	if sudoConfig.CanRunAsRoot(session.User, "files/list") {
+	if h.SudoConfig.CanRunAsRoot(session.User, "files/list") {
 		listDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
 	}
 
 	dfDesc := "Returns disk space statistics (df -h)."
-	if sudoConfig.CanRunAsRoot(session.User, "disks/free") {
+	if h.SudoConfig.CanRunAsRoot(session.User, "disks/free") {
 		dfDesc += " (Authorized for 'privileged: true')"
 	}
 
 	duDesc := "Calculates the total disk space utilized by a specific directory (du -sh)."
-	if sudoConfig.CanRunAsRoot(session.User, "disks/usage") {
+	if h.SudoConfig.CanRunAsRoot(session.User, "disks/usage") {
 		duDesc += " (Authorized for 'privileged: true' to traverse protected subdirectories)"
 	}
 
@@ -131,7 +131,7 @@ func handleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/usage",
 				"tools_group": "disks",
-				"description": "Calculates the total disk space utilized by a specific directory (du -sh).",
+				"description": duDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -422,9 +422,10 @@ func handleToolsList(session *Session, resp *JSONRPCResponse) {
 		},
 	}
 	resp.Result = toolsList
+
 }
 
-func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse) {
+func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse) {
 	var params CallToolParams
 	if err := json.Unmarshal(req.Params, &params); err == nil {
 
@@ -460,7 +461,7 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 
 		if params.Name == "auth/sudo-rules" {
 			// No need to spawn an isolated worker to read our own memory config
-			resultText, execErr = sudorules.SudoRules(params.Arguments, session.User, sudoConfig)
+			resultText, execErr = sudorules.SudoRules(params.Arguments, session.User, h.SudoConfig)
 
 		} else if standardWorkers[params.Name] {
 
@@ -472,7 +473,7 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 			_ = json.Unmarshal(params.Arguments, &baseArgs)
 
 			if (params.Name == "files/list" || params.Name == "files/read" || params.Name == "files/create" || params.Name == "files/update" || params.Name == "files/find") && baseArgs.Privileged {
-				allowedPaths := sudoConfig.GetAllowedPaths(session.User, params.Name)
+				allowedPaths := h.SudoConfig.GetAllowedPaths(session.User, params.Name)
 				allowed := false
 				for _, p := range allowedPaths {
 					if strings.HasPrefix(baseArgs.Path, p) {
@@ -486,8 +487,8 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 			}
 
 			// Resolve execution timeout (check tool override, fallback to global worker default)
-			executionTimeout := daemonConfig.Worker.TimeoutSeconds
-			if toolCfg, ok := daemonConfig.Tools[params.Name]; ok && toolCfg.TimeoutSeconds > 0 {
+			executionTimeout := h.WorkerTimeoutSec
+			if toolCfg, ok := h.ToolsConfig[params.Name]; ok && toolCfg.TimeoutSeconds > 0 {
 				executionTimeout = toolCfg.TimeoutSeconds
 			}
 
@@ -496,22 +497,22 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 				if params.Name == "disks/usage" {
 					cacheKey := fmt.Sprintf("%s:%s:%t", session.User, string(params.Arguments), baseArgs.Privileged)
 
-					cacheMu.RLock()
-					entry, ok := rpcCache[cacheKey]
-					cacheMu.RUnlock()
+					h.CacheMu.RLock()
+					entry, ok := h.RpcCache[cacheKey]
+					h.CacheMu.RUnlock()
 
-					if ok && time.Now().Before(entry.expiresAt) {
-						resultText = entry.result
+					if ok && time.Now().Before(entry.ExpiresAt) {
+						resultText = entry.Result
 					} else {
-						v, err, _ := requestGroup.Do(cacheKey, func() (interface{}, error) {
-							res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, executionTimeout)
+						v, err, _ := h.RequestGroup.Do(cacheKey, func() (interface{}, error) {
+							res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, h.SudoConfig, executionTimeout)
 							if exErr == nil {
-								cacheMu.Lock()
-								rpcCache[cacheKey] = cacheEntry{
-									result:    res,
-									expiresAt: time.Now().Add(60 * time.Second),
+								h.CacheMu.Lock()
+								h.RpcCache[cacheKey] = CacheEntry{
+									Result:    res,
+									ExpiresAt: time.Now().Add(60 * time.Second),
 								}
-								cacheMu.Unlock()
+								h.CacheMu.Unlock()
 							}
 							return res, exErr
 						})
@@ -523,7 +524,7 @@ func handleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse
 						}
 					}
 				} else {
-					resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoConfig, executionTimeout)
+					resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, h.SudoConfig, executionTimeout)
 				}
 			}
 
