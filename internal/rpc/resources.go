@@ -51,7 +51,7 @@ func (h *RPCHandler) HandleResourcesList(resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"uri":         "network://interfaces",
 				"name":        "Network Interfaces",
-				"description": "Network interfaces and assigned IP addresses (ip addr equivalent)",
+				"description": "Network interfaces, assigned IP addresses, and detailed RX/TX traffic statistics for all interfaces.",
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
@@ -94,7 +94,7 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"uriTemplate": "file:///{path}",
 				"name":        "File Reader",
-				"description": "Reads any file on the system (subject to worker isolation and mcp-sudo.yaml permissions).",
+				"description": "Reads any file on the system. Append /stat for file metadata, /content for contents, or /type for file type.",
 				"mimeType":    "text/plain",
 			},
 			map[string]interface{}{
@@ -106,7 +106,7 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"uriTemplate": "network://interfaces/{name}",
 				"name":        "Network Interface Detail",
-				"description": "Detailed properties of a specific network interface.",
+				"description": "Detailed properties and RX/TX traffic statistics of a specific network interface.",
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
