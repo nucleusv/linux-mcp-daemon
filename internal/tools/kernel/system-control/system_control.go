@@ -1,4 +1,4 @@
-package sysctl
+package system_control
 
 import (
 	"bytes"
@@ -7,15 +7,15 @@ import (
 	"os/exec"
 )
 
-// SysctlArgs defines the parameters for the kernel/sysctl tool.
-type SysctlArgs struct {
+// SystemControlArgs defines the parameters for the kernel/sysctl tool.
+type SystemControlArgs struct {
 	Key     string `json:"key"`               // Key is the kernel parameter to read or write (e.g. "net.ipv4.ip_forward"). Required unless ReadAll is true.
 	Value   string `json:"value,omitempty"`   // Value is the value to write to the parameter. If provided, writes the value.
 	ReadAll bool   `json:"read_all,omitempty"`// ReadAll reads all kernel parameters (sysctl -a).
 }
 
-func Sysctl(argsJSON []byte) (string, error) {
-	var args SysctlArgs
+func SystemControl(argsJSON []byte) (string, error) {
+	var args SystemControlArgs
 	if len(argsJSON) > 0 {
 		if err := json.Unmarshal(argsJSON, &args); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)

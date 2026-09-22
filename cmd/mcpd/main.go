@@ -31,9 +31,9 @@ import (
 	stat "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/stat"
 	updatefile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/update"
 	mem_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/memory/usage"
-	sysctl "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/kernel/sysctl"
+	system_control "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/kernel/system-control"
 	dmesg "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/dmesg"
-	journalctl "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/journalctl"
+	journal_control "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/journal-control"
 	manage_service "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/manage"
 	status_service "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/status"
 	process_read "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/read"
@@ -96,9 +96,9 @@ func main() {
 			"read_routes":         routes.ReadRoutes,
 			"services/manage":     manage_service.Manage,
 			"services/status":     status_service.Status,
-			"logs/journalctl":     journalctl.Journalctl,
+			"logs/journal-control": journal_control.JournalControl,
 			"logs/dmesg":          dmesg.Dmesg,
-			"kernel/sysctl":       sysctl.Sysctl,
+			"kernel/system-control": system_control.SystemControl,
 			"processes/read":      process_read.Read,
 		}
 

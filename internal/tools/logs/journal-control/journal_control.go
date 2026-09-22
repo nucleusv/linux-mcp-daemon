@@ -1,4 +1,4 @@
-package journalctl
+package journal_control
 
 import (
 	"bytes"
@@ -7,16 +7,16 @@ import (
 	"os/exec"
 )
 
-// JournalctlArgs defines the parameters for the logs/journalctl tool.
-type JournalctlArgs struct {
+// JournalControlArgs defines the parameters for the logs/journalctl tool.
+type JournalControlArgs struct {
 	Unit         string `json:"unit,omitempty"`          // Unit filters by systemd unit (e.g., "kubelet.service").
 	Lines        int    `json:"lines,omitempty"`         // Lines specifies the number of most recent lines to return. Defaults to 100.
 	Since        string `json:"since,omitempty"`         // Since filters logs on or newer than the specified date/time (e.g., "1 hour ago", "yesterday").
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 }
 
-func Journalctl(argsJSON []byte) (string, error) {
-	var args JournalctlArgs
+func JournalControl(argsJSON []byte) (string, error) {
+	var args JournalControlArgs
 	if len(argsJSON) > 0 {
 		if err := json.Unmarshal(argsJSON, &args); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)

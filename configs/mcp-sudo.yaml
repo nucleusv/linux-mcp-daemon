@@ -2,7 +2,7 @@ users:
   admin:
     privileged:
       tools:
-        kernel/sysctl:
+        kernel/system-control:
           allowed: true
   unpriviliged:
     privileged:
@@ -15,6 +15,22 @@ users:
           allowed: true
           paths:
             - /
+        files/create:
+          allowed: true
+        files/update:
+          allowed: true
+        files/filetype:
+          allowed: true
+        kernel/system-control:
+          allowed: true
+        logs/dmesg:
+          allowed: true
+        logs/journal-control:
+          allowed: true
+        services/status:
+          allowed: true
+        services/manage:
+          allowed: true
         disks/free:
           allowed: true
         disks/usage:
@@ -50,17 +66,17 @@ users:
         system/os-release:
           allowed: true
       resources:
-        devices://usb:
-          - "*"
-        devices://pci:
-          - "*"
-        devices://dmi:
-          - "*"
-        kernel://modules:
-          - "*"
-        network://routes:
-          - "*"
-        network://interfaces:
-          - "*"
-        disks://:
-          - "*"
+        os/hostname:
+          allowed: true
+        os/release:
+          allowed: true
+        devices/dmi:
+          allowed: true
+        devices/cpu:
+          allowed: true
+        devices/usb:
+          allowed: true
+        network/interfaces:
+          allowed: true
+        network/routes:
+          allowed: true
