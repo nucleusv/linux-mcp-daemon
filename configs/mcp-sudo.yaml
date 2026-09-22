@@ -17,19 +17,25 @@ users:
             - /
         files/create:
           allowed: true
+          paths:
+            - /
         files/update:
           allowed: true
+          paths:
+            - /
         files/filetype:
           allowed: true
+          paths:
+            - /
         kernel/system-control:
           allowed: true
         logs/dmesg:
           allowed: true
         logs/journal-control:
           allowed: true
-        services/status:
-          allowed: true
         services/manage:
+          allowed: true
+        services/list:
           allowed: true
         disks/free:
           allowed: true
@@ -65,14 +71,14 @@ users:
           allowed: true
         system/os-release:
           allowed: true
+        system/packages:
+          allowed: true
       resources:
         os://hostname:
           - "*"
         os://release:
           - "*"
         devices://dmi:
-          - "*"
-        devices://cpu:
           - "*"
         devices://usb:
           - "*"
@@ -84,3 +90,137 @@ users:
           - "*"
         network://routes:
           - "*"
+
+  # Reference/example user: every tool and every resource this daemon
+  # currently exposes, fully granted. Not meant to represent a real-world
+  # least-privilege user (see testuser/admin/unpriviliged above for that) -
+  # this is living documentation of the complete authorization surface, kept
+  # in sync with internal/rpc/tools.go and internal/rpc/resources.go.
+  #
+  # MAINTENANCE: whenever a tool or resource is added, renamed, or removed in
+  # those files, update this block in the same change. This is intentionally
+  # the single place that must always list every tool/resource name, so a
+  # missing entry here is immediately visible as staleness.
+  privileged:
+    privileged:
+      tools:
+        auth/sudo-rules:
+          allowed: true
+        cpu/list:
+          allowed: true
+        cpu/load-average:
+          allowed: true
+        disks/free:
+          allowed: true
+        disks/health:
+          allowed: true
+        disks/list:
+          allowed: true
+        disks/partitions:
+          allowed: true
+        disks/performance:
+          allowed: true
+        disks/usage:
+          allowed: true
+        files/create:
+          allowed: true
+          paths:
+            - /
+        files/filetype:
+          allowed: true
+          paths:
+            - /
+        files/find:
+          allowed: true
+          paths:
+            - /
+        files/list:
+          allowed: true
+          paths:
+            - /
+        files/read:
+          allowed: true
+          paths:
+            - /
+        files/update:
+          allowed: true
+          paths:
+            - /
+        kernel/system-control:
+          allowed: true
+        logs/dmesg:
+          allowed: true
+        logs/journal-control:
+          allowed: true
+        memory/usage:
+          allowed: true
+        network/arp:
+          allowed: true
+        network/connections:
+          allowed: true
+        network/curl:
+          allowed: true
+        network/nslookup:
+          allowed: true
+        network/ping:
+          allowed: true
+        network/trace-path:
+          allowed: true
+        processes/delete:
+          allowed: true
+        processes/list:
+          allowed: true
+        services/list:
+          allowed: true
+        services/manage:
+          allowed: true
+        # These three are never callable directly via tools/call (they're
+        # not in tools.go's schema/standardWorkers) - they're the internal
+        # worker names behind service://, file://, and process:// resource
+        # templates. SpawnWorker independently re-checks CanRunAsRoot()
+        # against this exact name whenever a resource template requests
+        # privileged access, so these entries are required for privileged
+        # reads of those resources to work, even though the name itself is
+        # never a valid tools/call target.
+        services/status:
+          allowed: true
+        files/content:
+          allowed: true
+        processes/read:
+          allowed: true
+        system/os-release:
+          allowed: true
+        system/packages:
+          allowed: true
+      resources:
+        os://uname:
+          - "*"
+        os://release:
+          - "*"
+        os://hostname:
+          - "*"
+        network://interfaces:
+          - "*"
+        network://routes:
+          - "*"
+        devices://usb:
+          - "*"
+        devices://pci:
+          - "*"
+        devices://dmi:
+          - "*"
+        kernel://modules:
+          - "*"
+        # Unlike the exact-match resources above (where the code always
+        # compares against the literal sentinel "*"), these are genuinely
+        # prefix-matched against a real value (a path, a service name, a
+        # PID) - so "grant everything" means an empty-string prefix, which
+        # every value starts with. A literal "*" here would only grant
+        # access to a resource actually named "*", never allowing any real
+        # value through.
+        file://:
+          - ""
+        service://:
+          - ""
+        process://:
+          - ""

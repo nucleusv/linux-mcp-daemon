@@ -43,3 +43,11 @@ users:
 ```
 
 In this example, if the AI is authenticated as `alice`, it can list protected root directories, but it cannot run expensive `disks/usage` tree traversals as root!
+
+## Full reference example
+
+The daemon's own `configs/mcp-sudo.yaml` includes a `privileged` user with every tool and every resource this daemon currently exposes granted. It isn't meant to represent a real least-privilege user (see `admin`/`testuser`/`unpriviliged` in that same file for that) - it exists purely as living documentation of the complete authorization surface, and is kept in sync with `internal/rpc/tools.go`/`resources.go` whenever a tool or resource is added, renamed, or removed.
+
+## Host filesystem access
+
+When this daemon runs containerized (see [Master Daemon Configuration](./daemon.md)'s `worker.containerized` setting), `privileged: true` means more than root-in-container: every privileged worker call automatically also joins the real host's mount namespace and chroots into it, so tools like `system/packages` or `services/manage` see the actual host filesystem and the actual host's systemd, not the daemon's own container image. This is entirely a daemon-startup setting - there's nothing to configure per-tool here, and no second flag alongside `privileged: true` to authorize. If `mcpd` runs directly on the host instead (no container boundary), the same `privileged: true` grant just runs as root normally, since there's nothing else to cross into.

@@ -7,7 +7,7 @@ mcpd \- Linux Model Context Protocol Daemon
 .B mcpd
 is a background daemon designed to securely bridge AI agents directly with the Linux operating system using the Model Context Protocol (MCP). It allows AI agents to introspect and interact with the host system via raw syscalls and the Virtual File System (/proc, /sys).
 .PP
-The daemon listens on a configurable port (default 9090) for HTTP Server-Sent Events (SSE) and JSON-RPC messages. It enforces rate limiting and requires Bearer token authentication.
+The daemon listens on a configurable port (default 9091) for HTTP Server-Sent Events (SSE) and JSON-RPC messages. It enforces rate limiting and requires Bearer token authentication.
 .SH CONFIGURATION
 .B mcpd
 reads its primary configuration from \fBconfigs/daemon.yaml\fR upon startup. The configuration file defines the server port, rate limits, and allowed users with their authentication tokens.

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-DAEMON_URL=${DAEMON_URL:-"http://localhost:9090"}
+DAEMON_URL=${DAEMON_URL:-"http://localhost:9091"}
 TOKEN=${TOKEN:-"my-test-token-123"}
 LOG_FILE="sse.log"
 

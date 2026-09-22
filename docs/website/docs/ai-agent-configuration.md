@@ -10,7 +10,7 @@ You can connect almost any modern AI agent or IDE (such as Antigravity IDE, Curs
 
 ## Connecting via SSE (Server-Sent Events)
 
-To connect an AI agent to the daemon, you must use an MCP SSE client that connects to the `http://localhost:9090/sse` endpoint and provides the necessary Bearer token.
+To connect an AI agent to the daemon, you must use an MCP SSE client that connects to the `http://localhost:9091/sse` endpoint and provides the necessary Bearer token.
 
 ### Example: Antigravity IDE / Generic Config
 If your agent supports standard `mcp_config.json` structures, you can use the official `@modelcontextprotocol/client-sse` package via `npx`:
@@ -24,7 +24,7 @@ If your agent supports standard `mcp_config.json` structures, you can use the of
         "-y",
         "@modelcontextprotocol/client-sse",
         "--url",
-        "http://localhost:9090/sse",
+        "http://localhost:9091/sse",
         "--header",
         "Authorization: Bearer my-test-token-123"
       ]
@@ -46,7 +46,7 @@ For Claude Desktop, update your `claude_desktop_config.json`:
         "-y",
         "@modelcontextprotocol/client-sse",
         "--url",
-        "http://localhost:9090/sse",
+        "http://localhost:9091/sse",
         "--header",
         "Authorization: Bearer my-test-token-123"
       ]

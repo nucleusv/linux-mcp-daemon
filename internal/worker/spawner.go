@@ -15,6 +15,17 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
 )
 
+// Containerized indicates this daemon process itself runs inside a
+// container with its own private root filesystem (e.g. Kubernetes), as
+// opposed to running directly on the host with no container boundary. Set
+// once at daemon startup from configs/daemon.yaml's worker.containerized
+// field. When true, every privileged worker call also joins the real host's
+// mount namespace (see JoinHostMountNamespace) - there is no separate,
+// weaker "root inside the container only" tier, since nothing in this
+// daemon's actual usage wants that distinction: a privileged caller asking
+// for root always means root on the real host being administered.
+var Containerized bool
+
 // SpawnWorker forks a child process to execute the requested tool with strict privilege isolation.
 func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, sudoCfg *config.SudoConfig, timeoutSeconds int) (string, error) {
 	u, err := user.Lookup(username)
@@ -44,7 +55,10 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, exe, "worker", toolName, string(toolArgs))
-	
+	if privileged && Containerized {
+		cmd.Env = append(os.Environ(), "MCPD_HOST_ROOT=1")
+	}
+
 	// Enforce strict UID isolation.
 	cmd.SysProcAttr = &syscall.SysProcAttr{}
 	cmd.SysProcAttr.Credential = &syscall.Credential{Uid: targetUID}

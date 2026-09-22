@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-DAEMON_URL=${DAEMON_URL:-"http://localhost:9090"}
+DAEMON_URL=${DAEMON_URL:-"http://localhost:9091"}
 TOKEN=${TOKEN:-"my-test-token-123"}
 
 echo "Testing linuxctl CLI..."
@@ -53,7 +53,7 @@ run_tool "disks list" "disks/list"
 run_tool "processes list --limit 5" "processes/list"
 run_tool "network connections" "network/connections"
 run_tool "network nslookup --host google.com" "network/nslookup"
-run_tool "network curl --url http://127.0.0.1:9090/ping" "network/curl"
+run_tool "network curl --url http://127.0.0.1:9091/ping" "network/curl"
 run_tool "network arp" "network/arp"
 run_tool "network ping --host 127.0.0.1" "network/ping"
 run_tool "memory usage" "memory/usage"

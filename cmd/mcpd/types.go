@@ -29,6 +29,14 @@ type Config struct {
 	} `yaml:"rate_limits"`
 	Worker struct {
 		TimeoutSeconds int `yaml:"timeout_seconds"`
+		// Containerized indicates this daemon process itself runs inside a
+		// container with its own private root filesystem (e.g. Kubernetes),
+		// as opposed to running directly on the host with no container
+		// boundary. When true, every privileged (root) worker call also
+		// joins the real host's mount namespace before running - see
+		// internal/worker/hostns.go. Set false when mcpd runs directly on
+		// the host.
+		Containerized bool `yaml:"containerized"`
 	} `yaml:"worker"`
 	Tools map[string]struct {
 		TimeoutSeconds int `yaml:"timeout_seconds"`

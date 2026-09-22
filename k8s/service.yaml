@@ -2,11 +2,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: linux-mcp-daemon-service
+  namespace: linux-mcp-daemon-by-claude
 spec:
   type: LoadBalancer
   selector:
     app: linux-mcp-daemon
   ports:
     - protocol: TCP
-      port: 9090
-      targetPort: 9090
+      port: 9091
+      targetPort: 9091

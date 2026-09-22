@@ -46,5 +46,5 @@ Verifies that the `linuxctl` CLI compiles cleanly and successfully connects to t
 
 You can optionally override environment variables:
 ```bash
-DAEMON_URL="http://localhost:9090" TOKEN="my-test-token-123" ./test_mcp.sh
+DAEMON_URL="http://localhost:9091" TOKEN="my-test-token-123" ./test_mcp.sh
 ```

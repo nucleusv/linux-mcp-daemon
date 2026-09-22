@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DAEMON_URL=${DAEMON_URL:-"http://localhost:9090"}
+DAEMON_URL=${DAEMON_URL:-"http://localhost:9091"}
 
 echo "Waiting for Documentation server to come online..."
 

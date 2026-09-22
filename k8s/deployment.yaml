@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: linux-mcp-daemon
+  namespace: linux-mcp-daemon-by-claude
   labels:
     app: linux-mcp-daemon
 spec:
@@ -21,24 +22,27 @@ spec:
       hostPID: true
       containers:
       - name: daemon
-        image: linux-mcp-daemon:local
+        image: linux-mcp-daemon-by-claude:local
         imagePullPolicy: IfNotPresent # Allows K8s to pull dynamic local image tags
         securityContext:
           privileged: true # Required to perform root-level operations via mcp-sudo
         ports:
-        - containerPort: 9090
+        - containerPort: 9091
           name: http
         volumeMounts:
-        - name: host-proc
-          mountPath: /host/proc
+        # A single mount of the host's real root covers /proc and /sys too
+        # (as /host/proc, /host/sys) - no Go code ever referenced the old
+        # dedicated host-proc/host-sys mounts directly (the daemon reads
+        # plain /proc, /sys, relying on hostPID/hostNetwork namespace
+        # sharing instead), so keeping them separately was dead config.
+        - name: host-root
+          mountPath: /host
           readOnly: true
-        - name: host-sys
-          mountPath: /host/sys
-          readOnly: true
+          # Without this, mounts created on the host after the pod starts (e.g.
+          # containerd's per-container overlayfs snapshots) show up as empty
+          # directories under /host - HostToContainer propagates them in.
+          mountPropagation: HostToContainer
       volumes:
-      - name: host-proc
+      - name: host-root
         hostPath:
-          path: /proc
-      - name: host-sys
-        hostPath:
-          path: /sys
+          path: /

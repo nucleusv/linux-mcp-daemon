@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	serverURL = flag.String("server", "http://localhost:9090", "The URL of the mcpd server")
+	serverURL = flag.String("server", "http://localhost:9091", "The URL of the mcpd server")
 	token     = flag.String("token", "", "Bearer token for authentication")
 )
 

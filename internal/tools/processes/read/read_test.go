@@ -45,4 +45,29 @@ func TestRead(t *testing.T) {
 	if res3 == "{}" || res3 == "" {
 		t.Errorf("Empty or invalid environ result: %s", res3)
 	}
+
+	// 4. Limits
+	args4 := ProcessReadArgs{PID: pid, Target: "limits"}
+	argsJSON4, _ := json.Marshal(args4)
+	res4, err := Read(argsJSON4)
+	if err != nil {
+		t.Fatalf("Read limits failed: %v", err)
+	}
+	if res4 == "[]" || res4 == "" || res4 == "null" {
+		t.Errorf("Empty or invalid limits result: %s", res4)
+	}
+	if !strings.Contains(res4, "\"name\"") || !strings.Contains(res4, "\"soft\"") {
+		t.Errorf("Limits result missing expected fields: %s", res4)
+	}
+
+	// 5. Open files
+	args5 := ProcessReadArgs{PID: pid, Target: "open_files"}
+	argsJSON5, _ := json.Marshal(args5)
+	res5, err := Read(argsJSON5)
+	if err != nil {
+		t.Fatalf("Read open_files failed: %v", err)
+	}
+	if !strings.Contains(res5, "\"fd\"") || !strings.Contains(res5, "\"target\"") {
+		t.Errorf("Open files result missing expected fields: %s", res5)
+	}
 }

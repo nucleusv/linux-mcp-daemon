@@ -113,13 +113,20 @@ func Usage(argsJSON []byte) (string, error) {
 		if !info.IsDir() {
 			totalSize += size
 
-			// Accumulate sizes for parent directories up to max_depth
-			currentDepth := strings.Count(path, string(os.PathSeparator)) - rootDepth
-
-			if args.MaxDepth > 0 && currentDepth <= args.MaxDepth {
+			// Accumulate this file's size into every ancestor directory at or
+			// above max_depth (each ancestor's total must include everything
+			// beneath it, however deep - max_depth only controls which
+			// directories get a printed line, not what gets summed into
+			// them). We still walk past deeper ancestors without recording
+			// them, both to reach the shallower ones and to keep dirSizes
+			// bounded to only the depths we'll ever print.
+			if args.MaxDepth > 0 {
 				parent := filepath.Dir(path)
 				for strings.HasPrefix(parent, cleanPath) {
-					dirSizes[parent] += size
+					parentDepth := strings.Count(parent, string(os.PathSeparator)) - rootDepth
+					if parentDepth <= args.MaxDepth {
+						dirSizes[parent] += size
+					}
 					if args.SeparateDirs {
 						break // only add to immediate parent
 					}

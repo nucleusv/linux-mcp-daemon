@@ -6,7 +6,7 @@ A high-performance, Go-based Model Context Protocol (MCP) daemon designed to sec
 
 This project implements a zero-dependency (kernel-first) philosophy. It allows AI agents to introspect and interact with the host Linux system directly via raw syscalls and the Virtual File System (`/proc`, `/sys`) without requiring bloated third-party parsing libraries.
 
-Communication happens directly between the AI agent and the daemon via HTTP Server-Sent Events (SSE) and JSON-RPC over port 9090.
+Communication happens directly between the AI agent and the daemon via HTTP Server-Sent Events (SSE) and JSON-RPC over port 9091.
 
 ## Features
 
@@ -40,7 +40,7 @@ You can build the CLI client directly on your host machine (e.g. macOS):
 
 ### 3. Usage
 
-The daemon runs on port `9090`. You can connect via your AI client using SSE, or use the `linuxctl` CLI tool:
+The daemon runs on port `9091`. You can connect via your AI client using SSE, or use the `linuxctl` CLI tool:
 
 ```bash
 # Set your token as an environment variable

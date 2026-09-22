@@ -6,7 +6,7 @@
         "-y",
         "@modelcontextprotocol/client-sse",
         "--url",
-        "http://localhost:9090/sse",
+        "http://localhost:9091/sse",
         "--header",
         "Authorization: Bearer my-test-token-123"
       ]

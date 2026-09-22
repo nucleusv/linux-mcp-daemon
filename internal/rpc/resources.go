@@ -84,7 +84,7 @@ func (h *RPCHandler) HandleResourcesList(resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"uri":         "kernel://modules",
 				"name":        "Kernel Modules",
-				"description": "Loaded kernel drivers (lsmod equivalent). Hint: You can adjust kernel parameters via the kernel/sysctl tool.",
+				"description": "Loaded kernel drivers (lsmod equivalent). Hint: You can adjust kernel parameters via the kernel/system-control tool.",
 				"mimeType":    "application/json",
 			},
 		},
@@ -127,7 +127,7 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"uriTemplate": "process://{pid}/{target}",
 				"name":        "Process Introspection",
-				"description": "Reads process metadata from procfs. Valid targets: status, cmdline, environ. Hint: Find PIDs using the processes/list tool first.",
+				"description": "Reads process metadata from procfs. Valid targets: status, cmdline, environ, limits (rlimits, e.g. max open files), open_files (fd table - files, sockets, pipes). Hint: Find PIDs using the processes/list tool first.",
 				"mimeType":    "application/json",
 			},
 		},

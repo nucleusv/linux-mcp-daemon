@@ -30,7 +30,9 @@ FROM ubuntu:24.04
 
 WORKDIR /root/
 
-# Install some basic tools and certificates, and create testuser
+# Install some basic tools and certificates, and create OS accounts matching
+# configs/daemon.yaml's users (SpawnWorker does user.Lookup() against the OS
+# passwd db for every tool call, privileged or not, to resolve a UID)
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     sudo \
@@ -42,8 +44,11 @@ RUN apt-get update && apt-get install -y \
     net-tools \
     smartmontools \
     traceroute \
+    file \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd -m -s /bin/bash testuser
+    && useradd -m -s /bin/bash testuser \
+    && useradd -m -s /bin/bash unpriviliged \
+    && useradd -m -s /bin/bash privileged
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/mcpd /usr/local/bin/
@@ -57,7 +62,7 @@ COPY --from=builder /app/docs/man/mcpd.8 /usr/local/share/man/man8/
 RUN mandb
 
 # Expose the default port
-EXPOSE 9090
+EXPOSE 9091
 
 # Command to run the executable
 CMD ["/usr/local/bin/mcpd"]

@@ -1,5 +1,5 @@
 server:
-  port: 9090
+  port: 9091
   tls:
     enabled: false
     port: 9443
@@ -11,9 +11,14 @@ rate_limits:
 
 worker:
   timeout_seconds: 30
+  # This daemon runs inside a Kubernetes pod with its own private rootfs
+  # (see k8s/deployment.yaml) - true here means every privileged worker call
+  # also joins the real host's mount namespace, so "privileged: true" means
+  # root on the actual host, not just root inside this container's image.
+  containerized: true
 
 tools:
-  get_disk_usage:
+  disks/usage:
     timeout_seconds: 300
 
 users:
@@ -21,3 +26,5 @@ users:
     token: "my-test-token-123"
   - username: "unpriviliged"
     token: "my-unprivileged-token-123"
+  - username: "privileged"
+    token: "my-privileged-token-123"

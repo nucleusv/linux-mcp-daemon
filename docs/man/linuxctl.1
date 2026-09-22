@@ -16,7 +16,7 @@ is the client utility for interacting with the Linux Model Context Protocol (MCP
 .SH OPTIONS
 .TP
 .BR \-server \ \fIURL\fR
-The URL of the mcpd server to connect to. Defaults to http://localhost:9090.
+The URL of the mcpd server to connect to. Defaults to http://localhost:9091.
 .TP
 .BR \-token \ \fITOKEN\fR
 Bearer token for authentication. If not provided via this flag, the client will look for the \fBMCP_TOKEN\fR environment variable.
@@ -32,10 +32,10 @@ Fetches and lists all statically available resources and resource templates from
 Reads the exact contents of an MCP resource. Use \fB--output\fR to optionally format JSON output as \fBtable\fR or \fBjson\fR.
 .TP
 .B <group>/<command>
-Dynamically executes an MCP tool exposed by the daemon. For example, \fBfiles/list-directory\fR or \fBdisks/disk-free\fR. Run \fBlinuxctl\fR without arguments to see available groups, or \fBlinuxctl <group>\fR to see available commands within a group.
+Dynamically executes an MCP tool exposed by the daemon. For example, \fBfiles/list\fR or \fBdisks/free\fR. Run \fBlinuxctl\fR without arguments to see available groups, or \fBlinuxctl <group>\fR to see available commands within a group.
 .TP
 .B [command-options]
-Arguments specific to the command being executed. You can provide these either positionally (e.g., \fBlinuxctl files/list-directory /var/log\fR) or as explicit flags (e.g., \fB--path /var/log --privileged true\fR). You can also use \fB--output table\fR or \fB--output json\fR to format structural data.
+Arguments specific to the command being executed. You can provide these either positionally (e.g., \fBlinuxctl files/list /var/log\fR) or as explicit flags (e.g., \fB--path /var/log --privileged true\fR). You can also use \fB--output table\fR or \fB--output json\fR to format structural data.
 .SH ENVIRONMENT
 .TP
 .B MCP_TOKEN
@@ -66,11 +66,11 @@ Read connected USB devices as a formatted table:
 .PP
 Execute a dynamic command with positional arguments:
 .IP
-.B linuxctl files/list-directory /var/log
+.B linuxctl files/list /var/log
 .PP
 Execute a dynamic command with explicit flags:
 .IP
-.B linuxctl disks/disk-free --path / --privileged true
+.B linuxctl disks/free --path / --privileged true
 .SH AUTHOR
 Antigravity
 .SH SEE ALSO

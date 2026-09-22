@@ -17,7 +17,7 @@ linuxctl [OPTIONS] <group>/<command> [command-options]
 ## Options
 
 - `-server URL`
-  The URL of the `mcpd` server to connect to. Defaults to `http://localhost:9090`.
+  The URL of the `mcpd` server to connect to. Defaults to `http://localhost:9091`.
 
 - `-token TOKEN`
   Bearer token for authentication. If not provided via this flag, the client will automatically look for the `MCP_TOKEN` environment variable.

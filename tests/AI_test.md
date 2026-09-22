@@ -10,7 +10,7 @@ Since you are an AI, you already have the ability to run terminal commands. To t
 The `linuxctl` binary is an MCP client wrapper. You can use it to natively query the daemon.
 ```bash
 # Ensure you are in the project root
-export DAEMON_URL="http://localhost:9090"
+export DAEMON_URL="http://localhost:9091"
 
 # The daemon maps tokens to RBAC roles (defined in configs/mcp-sudo.yaml)
 export TOKEN_PRIV="my-test-token-123"           # Maps to 'testuser' (Privileged)
@@ -44,7 +44,7 @@ You can use the official MCP SSE client proxy in your config file:
         "-y",
         "@modelcontextprotocol/client-sse",
         "--url",
-        "http://<LINUX_MCP_HOST_IP>:9090/sse",
+        "http://<LINUX_MCP_HOST_IP>:9091/sse",
         "--header",
         "Authorization: Bearer my-test-token-123"
       ]
@@ -64,7 +64,7 @@ Antigravity IDE uses the exact same universal `mcpServers` format:
         "-y",
         "@modelcontextprotocol/client-sse",
         "--url",
-        "http://<LINUX_MCP_HOST_IP>:9090/sse",
+        "http://<LINUX_MCP_HOST_IP>:9091/sse",
         "--header",
         "Authorization: Bearer my-test-token-123"
       ]
@@ -76,7 +76,7 @@ Antigravity IDE uses the exact same universal `mcpServers` format:
 ### Claude Code CLI
 If you are using the terminal-based **Claude Code**, you can dynamically add the remote server using the `mcp add` command:
 ```bash
-claude mcp add linux-remote npx -y @modelcontextprotocol/client-sse --url http://<LINUX_MCP_HOST_IP>:9090/sse --header "Authorization: Bearer my-test-token-123"
+claude mcp add linux-remote npx -y @modelcontextprotocol/client-sse --url http://<LINUX_MCP_HOST_IP>:9091/sse --header "Authorization: Bearer my-test-token-123"
 ```
 ## AI Task Challenges
 
@@ -90,7 +90,7 @@ Your goal is to complete the following tasks using the MCP Daemon. Do not use st
 
 ### Task 2: Network Forensics
 1. Execute the `network/connections` tool to find all active listening ports.
-2. Identify the process ID running the `mcpd` daemon on port `9090`.
+2. Identify the process ID running the `mcpd` daemon on port `9091`.
 3. Execute a `network/ping` via the daemon to verify connectivity to `1.1.1.1`.
 4. **Deliverable**: A summary of network anomalies or active listening services.
 

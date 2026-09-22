@@ -2,7 +2,7 @@ const EventSource = require('eventsource');
 const fetch = require('node-fetch');
 
 const token = "my-test-token-123";
-const sseUrl = "http://localhost:9090/sse";
+const sseUrl = "http://localhost:9091/sse";
 let messageUrl = "";
 
 const es = new EventSource(sseUrl, { headers: { "Authorization": `Bearer ${token}` } });

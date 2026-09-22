@@ -3,6 +3,7 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -25,6 +26,16 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 	duDesc := "Calculates the total disk space utilized by a specific directory (du -sh). Use disks/free for overall partition stats."
 	if h.SudoConfig.CanRunAsRoot(session.User, "disks/usage") {
 		duDesc += " (Authorized for 'privileged: true' to traverse protected subdirectories)"
+	}
+
+	filetypeDesc := "Determines a file's MIME type (equivalent to `file -b --mime-type`). Use files/stat for size/permissions/ownership instead."
+	if h.SudoConfig.CanRunAsRoot(session.User, "files/filetype") {
+		filetypeDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
+	}
+
+	pkgDesc := "Lists installed packages, auto-detecting the package manager (dpkg, apk; rpm-based systems aren't supported natively yet)."
+	if h.SudoConfig.CanRunAsRoot(session.User, "system/packages") {
+		pkgDesc += " (Authorized for 'privileged: true' - when this daemon runs containerized, that automatically queries the real host's packages, not this container's own image.)"
 	}
 
 	toolsList := map[string]interface{}{
@@ -110,6 +121,19 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to search as root"},
 					},
 					"required": []string{},
+				},
+			},
+			map[string]interface{}{
+				"name":        "files/filetype",
+				"tools_group": "files",
+				"description": filetypeDesc,
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"path":       map[string]interface{}{"type": "string", "description": "Absolute path to the file"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+					},
+					"required": []string{"path"},
 				},
 			},
 			map[string]interface{}{
@@ -261,7 +285,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "services/manage",
 				"tools_group": "system",
-				"description": "Control systemd services (start, stop, restart, enable, disable). To get detailed service properties and state, read the service://{name}/status resource. To view service logs, use the logs/journalctl tool.",
+				"description": "Control systemd services (start, stop, restart, enable, disable). To get detailed service properties and state, read the service://{name}/status resource. To view service logs, use the logs/journal-control tool.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -423,6 +447,18 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
+				"name":        "system/packages",
+				"tools_group": "system",
+				"description": pkgDesc,
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+					},
+				},
+			},
+			map[string]interface{}{
 				"name":        "auth/sudo-rules",
 				"tools_group": "auth",
 				"description": "Returns your authorized tools and privileges from mcp-sudo.yaml.",
@@ -432,66 +468,45 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"}},
 				},
 			},
-			map[string]interface{}{
-				"name":        "nslookup",
-				"tools_group": "network",
-				"description": "Resolves a hostname to an IP address.",
-				"inputSchema": map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{
-						"host":          map[string]interface{}{"type": "string", "description": "Hostname to resolve"},
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format"},
-					},
-					"required": []string{"host"},
-				},
-			},
-			map[string]interface{}{
-				"name":        "curl",
-				"tools_group": "network",
-				"description": "Executes an HTTP GET request.",
-				"inputSchema": map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{
-						"url":           map[string]interface{}{"type": "string", "description": "URL to fetch"},
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format"},
-					},
-					"required": []string{"url"},
-				},
-			},
-			map[string]interface{}{
-				"name":        "arp",
-				"tools_group": "network",
-				"description": "Displays the ARP cache.",
-				"inputSchema": map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format"},
-					},
-				},
-			},
-			map[string]interface{}{
-				"name":        "ping",
-				"tools_group": "network",
-				"description": "Sends ICMP echo requests.",
-				"inputSchema": map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{
-						"host":          map[string]interface{}{"type": "string", "description": "Host to ping"},
-						"count":         map[string]interface{}{"type": "integer", "description": "Number of packets"},
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format"},
-					},
-					"required": []string{"host"},
-				},
-			},
 		},
 	}
 	resp.Result = toolsList
 
 }
 
+// redactArgs returns a JSON representation of tool call arguments with
+// sensitive-looking fields masked, so the [TOOL CALL] log line can't leak
+// secrets or raw file content (e.g. files/create content, network/curl
+// Authorization headers) into the daemon's plaintext logs.
+func redactArgs(raw json.RawMessage) string {
+	var args map[string]interface{}
+	if err := json.Unmarshal(raw, &args); err != nil {
+		return string(raw)
+	}
+
+	sensitiveSubstrings := []string{"password", "token", "secret", "authorization", "content", "body", "key"}
+	for k := range args {
+		lk := strings.ToLower(k)
+		for _, s := range sensitiveSubstrings {
+			if strings.Contains(lk, s) {
+				args[k] = "<redacted>"
+				break
+			}
+		}
+	}
+
+	redacted, err := json.Marshal(args)
+	if err != nil {
+		return string(raw)
+	}
+	return string(redacted)
+}
+
 func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse) {
 	var params CallToolParams
 	if err := json.Unmarshal(req.Params, &params); err == nil {
+
+		log.Printf("[TOOL CALL] user=%s tool=%s args=%s", session.User, params.Name, redactArgs(params.Arguments))
 
 		toolRes := ToolResult{}
 		var resultText string
@@ -503,6 +518,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"files/create":        true,
 			"files/update":        true,
 			"files/find":          true,
+			"files/filetype":      true,
 			"services/manage":     true,
 			"services/list":       true,
 			"logs/journal-control":  true,
@@ -526,6 +542,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"cpu/list":            true,
 			"cpu/load-average":    true,
 			"system/os-release":   true,
+			"system/packages":     true,
 		}
 
 		if params.Name == "auth/sudo-rules" {
@@ -541,7 +558,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			}
 			_ = json.Unmarshal(params.Arguments, &baseArgs)
 
-			if (params.Name == "files/list" || params.Name == "files/read" || params.Name == "files/create" || params.Name == "files/update" || params.Name == "files/find") && baseArgs.Privileged {
+			if (params.Name == "files/list" || params.Name == "files/read" || params.Name == "files/create" || params.Name == "files/update" || params.Name == "files/find" || params.Name == "files/filetype") && baseArgs.Privileged {
 				allowedPaths := h.SudoConfig.GetAllowedPaths(session.User, params.Name)
 				allowed := false
 				for _, p := range allowedPaths {
