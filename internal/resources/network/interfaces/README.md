@@ -20,3 +20,6 @@ The response is always `application/json`.
 - `mtu` (int): Maximum Transmission Unit.
 - `flags` (string): Pipe-separated list of state flags (e.g. `up|broadcast|multicast|running`).
 - `addresses` (array of string): List of CIDR IP addresses assigned to this interface.
+- `statistics` (object): Network traffic statistics (only available on Linux hosts via sysfs). Fields include:
+  - `rx_bytes`, `rx_packets`, `rx_errors`, `rx_dropped`
+  - `tx_bytes`, `tx_packets`, `tx_errors`, `tx_dropped`
