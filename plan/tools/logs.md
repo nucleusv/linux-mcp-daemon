@@ -4,5 +4,5 @@ This document tracks the standard Linux logging utilities and their implementati
 
 ## System and Application Logs
 
-- [ ] **journalctl**: Query the systemd journal.
-- [ ] **dmesg**: Print or control the kernel ring buffer.
+- [x] **journalctl** (`logs/journalctl`): Query the systemd journal.
+- [x] **dmesg** (`logs/dmesg`): Print or control the kernel ring buffer.

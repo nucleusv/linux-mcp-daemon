@@ -4,6 +4,6 @@ This document tracks the standard Linux process metadata exposed as resources in
 
 ## Process Introspection (procfs)
 
-- [ ] **process status** (`process://{pid}/status`): Expose the `/proc/[pid]/status` file (memory, thread count, state).
-- [ ] **process cmdline** (`process://{pid}/cmdline`): Expose the raw command line of the process.
-- [ ] **process environ** (`process://{pid}/environ`): Expose the environment variables of the process.
+- [x] **process status** (`process://{pid}/status`): Expose the `/proc/[pid]/status` file (memory, thread count, state).
+- [x] **process cmdline** (`process://{pid}/cmdline`): Expose the raw command line of the process.
+- [x] **process environ** (`process://{pid}/environ`): Expose the environment variables of the process.
