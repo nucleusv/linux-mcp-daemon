@@ -302,7 +302,7 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 				"device":        devName,
 				"output_format": "json",
 			})
-			content, readErr = worker.SpawnWorker(session.User, "disks/iostat", argsJSON, isPrivileged, h.SudoConfig, 30)
+			content, readErr = worker.SpawnWorker(session.User, "disks/performance", argsJSON, isPrivileged, h.SudoConfig, 30)
 			mimeType = "application/json"
 		default:
 			readErr = fmt.Errorf("unknown resource: %s", params.URI)

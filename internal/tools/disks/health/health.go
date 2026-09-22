@@ -1,4 +1,4 @@
-package smartctl
+package health
 
 import (
 	"encoding/json"
@@ -6,12 +6,12 @@ import (
 	"os/exec"
 )
 
-type SmartctlArgs struct {
+type HealthArgs struct {
 	Device string `json:"device"`
 }
 
-func Smartctl(args []byte) (string, error) {
-	var params SmartctlArgs
+func Health(args []byte) (string, error) {
+	var params HealthArgs
 	if len(args) == 0 {
 		return "", fmt.Errorf("missing arguments: device is required")
 	}

@@ -16,10 +16,11 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/rpc"
 	cpulist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/list"
 	loadaverage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/load-average"
-	disklist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/list"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/free"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/iostat"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/smartctl"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/health"
+	disklist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/list"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/partitions"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/performance"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/usage"
 	content "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/content"
 	createfile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/create"
@@ -41,7 +42,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/curl"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/nslookup"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/ping"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/traceroute"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/trace-path"
 	deleteprocess "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/delete"
 	listprocesses "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/list"
 	osrelease "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/system/os-release"
@@ -72,13 +73,14 @@ func main() {
 			"network/curl":        curl.Curl,
 			"network/arp":         arp.ARP,
 			"network/ping":        ping.Ping,
-			"network/traceroute":  traceroute.Traceroute,
+			"network/trace-path":  tracepath.TracePath,
 			"memory/usage":        mem_usage.Usage,
 			"cpu/list":            cpulist.List,
 			"cpu/load-average":    loadaverage.LoadAverage,
 			"disks/list":          disklist.List,
-			"disks/iostat":        iostat.Iostat,
-			"disks/smartctl":      smartctl.Smartctl,
+			"disks/performance":   performance.Performance,
+			"disks/health":        health.Health,
+			"disks/partitions":    partitions.Partitions,
 			"system/os-release":   osrelease.OSRelease,
 			"files/stat":          stat.Stat,
 			"files/content":       content.Content,

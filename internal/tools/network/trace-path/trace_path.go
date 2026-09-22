@@ -1,4 +1,4 @@
-package traceroute
+package tracepath
 
 import (
 	"encoding/json"
@@ -7,13 +7,13 @@ import (
 	"strconv"
 )
 
-type TracerouteArgs struct {
+type TracePathArgs struct {
 	Host    string `json:"host"`
 	MaxHops int    `json:"max_hops,omitempty"`
 }
 
-func Traceroute(args []byte) (string, error) {
-	var params TracerouteArgs
+func TracePath(args []byte) (string, error) {
+	var params TracePathArgs
 	if len(args) == 0 {
 		return "", fmt.Errorf("missing arguments: host is required")
 	}

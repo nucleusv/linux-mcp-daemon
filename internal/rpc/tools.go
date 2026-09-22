@@ -349,7 +349,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "disks/iostat",
+				"name":        "disks/performance",
 				"tools_group": "disks",
 				"description": "Retrieves block device I/O statistics (iostat equivalent) from /proc/diskstats.",
 				"inputSchema": map[string]interface{}{
@@ -360,11 +360,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 					},
 				},
 			},
-
 			map[string]interface{}{
-				"name":        "disks/smartctl",
+				"name":        "disks/health",
 				"tools_group": "disks",
-				"description": "Retrieves SMART health data for a drive (smartctl -j -a). Must be run as root (privileged: true).",
+				"description": "Retrieves SMART health data for a drive. Must be run as root (privileged: true).",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -374,9 +373,9 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "disks/fdisk",
+				"name":        "disks/partitions",
 				"tools_group": "disks",
-				"description": "Retrieves partition tables for a drive (fdisk -l). Must be run as root (privileged: true).",
+				"description": "Retrieves partition tables for a drive. Must be run as root (privileged: true).",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -385,7 +384,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "network/traceroute",
+				"name":        "network/trace-path",
 				"tools_group": "network",
 				"description": "Traces the network path to a host.",
 				"inputSchema": map[string]interface{}{
@@ -495,9 +494,9 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"disks/free":          true,
 			"disks/usage":         true,
 			"disks/list":          true,
-			"disks/iostat":        true,
-			"disks/smartctl":      true,
-			"disks/fdisk":         true,
+			"disks/performance":   true,
+			"disks/health":        true,
+			"disks/partitions":    true,
 			"processes/list":      true,
 			"processes/delete":    true,
 			"network/connections": true,
@@ -505,7 +504,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"network/curl":        true,
 			"network/arp":         true,
 			"network/ping":        true,
-			"network/traceroute":  true,
+			"network/trace-path":  true,
 			"memory/usage":        true,
 			"cpu/list":            true,
 			"cpu/load-average":    true,

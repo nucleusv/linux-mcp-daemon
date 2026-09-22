@@ -1,4 +1,4 @@
-package fdisk
+package partitions
 
 import (
 	"encoding/json"
@@ -6,12 +6,12 @@ import (
 	"os/exec"
 )
 
-type FdiskArgs struct {
+type PartitionsArgs struct {
 	Device string `json:"device,omitempty"`
 }
 
-func Fdisk(args []byte) (string, error) {
-	var params FdiskArgs
+func Partitions(args []byte) (string, error) {
+	var params PartitionsArgs
 	if len(args) > 0 {
 		if err := json.Unmarshal(args, &params); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)

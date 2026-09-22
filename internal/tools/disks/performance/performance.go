@@ -1,4 +1,4 @@
-package iostat
+package performance
 
 import (
 	"bufio"
@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type IOStatArgs struct {
+type PerformanceArgs struct {
 	Device       string `json:"device,omitempty"`
 	OutputFormat string `json:"output_format,omitempty"`
 }
@@ -33,8 +33,8 @@ type DeviceStat struct {
 	WeightedTimeIosMs uint64 `json:"weighted_time_ios_ms" yaml:"weighted_time_ios_ms"`
 }
 
-func Iostat(args []byte) (string, error) {
-	var params IOStatArgs
+func Performance(args []byte) (string, error) {
+	var params PerformanceArgs
 	if len(args) > 0 {
 		if err := json.Unmarshal(args, &params); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)
