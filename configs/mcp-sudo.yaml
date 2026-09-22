@@ -66,17 +66,21 @@ users:
         system/os-release:
           allowed: true
       resources:
-        os/hostname:
+        os://hostname:
           - "*"
-        os/release:
+        os://release:
           - "*"
-        devices/dmi:
+        devices://dmi:
           - "*"
-        devices/cpu:
+        devices://cpu:
           - "*"
-        devices/usb:
+        devices://usb:
           - "*"
-        network/interfaces:
+        devices://pci:
           - "*"
-        network/routes:
+        kernel://modules:
+          - "*"
+        network://interfaces:
+          - "*"
+        network://routes:
           - "*"

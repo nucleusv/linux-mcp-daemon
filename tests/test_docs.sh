@@ -14,6 +14,7 @@ while IFS= read -r file; do
     # Remove .md suffix
     route_path="${rel_path%.md}"
     
+    
     # Docusaurus maps index.md to the root of its folder
     if [[ "$route_path" == *"/index" ]]; then
         route_path="${route_path%/index}"
@@ -54,7 +55,9 @@ echo "✅ Server is online! Validating individual documentation pages..."
 FAILED=0
 
 for PAGE in "${EXPECTED_PAGES[@]}"; do
-    STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" "$DAEMON_URL$PAGE" || echo "000")
+    # URL encode spaces
+    ENCODED_PAGE="${PAGE// /%20}"
+    STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" "$DAEMON_URL$ENCODED_PAGE" || echo "000")
     if [ "$STATUS" -eq 200 ]; then
         echo "  [OK] $PAGE"
     else
