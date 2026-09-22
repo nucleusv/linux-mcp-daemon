@@ -17,12 +17,12 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 		listDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
 	}
 
-	dfDesc := "Returns disk space statistics (df -h)."
+	dfDesc := "Returns disk space statistics (df -h). Use disks/list to see all block devices."
 	if h.SudoConfig.CanRunAsRoot(session.User, "disks/free") {
 		dfDesc += " (Authorized for 'privileged: true')"
 	}
 
-	duDesc := "Calculates the total disk space utilized by a specific directory (du -sh)."
+	duDesc := "Calculates the total disk space utilized by a specific directory (du -sh). Use disks/free for overall partition stats."
 	if h.SudoConfig.CanRunAsRoot(session.User, "disks/usage") {
 		duDesc += " (Authorized for 'privileged: true' to traverse protected subdirectories)"
 	}
@@ -152,7 +152,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "processes/list",
 				"tools_group": "processes",
-				"description": "Lists running processes on the system.",
+				"description": "Lists running processes on the system. Use this to find a PID, then use the process://{pid}/{target} resource for deep metrics or processes/delete to kill it.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -235,7 +235,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "network/connections",
 				"tools_group": "network",
-				"description": "Lists active network connections and listening ports.",
+				"description": "Lists active network connections and listening ports. Hint: For physical network links and IPs, use the network://interfaces resource.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -249,7 +249,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "memory/usage",
 				"tools_group": "memory",
-				"description": "Returns memory and swap utilization information.",
+				"description": "Returns memory and swap utilization information. Use cpu/load-average to check compute load.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -261,7 +261,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "services/manage",
 				"tools_group": "system",
-				"description": "Control systemd services (start, stop, restart, enable, disable).",
+				"description": "Control systemd services (start, stop, restart, enable, disable). To get detailed service properties and state, read the service://{name}/status resource. To view service logs, use the logs/journalctl tool.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -317,7 +317,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "cpu/list",
 				"tools_group": "cpu",
-				"description": "Retrieves CPU topology and architecture.",
+				"description": "Retrieves CPU topology and architecture. See cpu/load-average for current utilization.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -329,7 +329,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "cpu/load-average",
 				"tools_group": "cpu",
-				"description": "Retrieves system load averages (1m, 5m, 15m).",
+				"description": "Retrieves system load averages (1m, 5m, 15m). See cpu/list for hardware topology.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -339,7 +339,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/list",
 				"tools_group": "disks",
-				"description": "Lists block devices.",
+				"description": "Lists block devices and partitions. To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{

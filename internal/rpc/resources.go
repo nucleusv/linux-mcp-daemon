@@ -33,19 +33,19 @@ func (h *RPCHandler) HandleResourcesList(resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"uri":         "os://uname",
 				"name":        "OS Uname",
-				"description": "Native system uname information",
+				"description": "Native system uname information (kernel version, node name). Hint: For CPU hardware architecture use cpu/list tool.",
 				"mimeType":    "text/plain",
 			},
 			map[string]interface{}{
 				"uri":         "os://release",
 				"name":        "OS Release",
-				"description": "/etc/os-release information",
+				"description": "/etc/os-release information (distribution, version).",
 				"mimeType":    "text/plain",
 			},
 			map[string]interface{}{
 				"uri":         "os://hostname",
 				"name":        "OS Hostname",
-				"description": "Native system network hostname",
+				"description": "Native system network hostname. Hint: To resolve IP addresses use network/nslookup tool.",
 				"mimeType":    "text/plain",
 			},
 			map[string]interface{}{
@@ -57,31 +57,31 @@ func (h *RPCHandler) HandleResourcesList(resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"uri":         "network://routes",
 				"name":        "Network Routes",
-				"description": "IPv4 Routing Table (/proc/net/route)",
+				"description": "IPv4 Routing Table (/proc/net/route). Hint: Use network/ping to test reachability.",
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
 				"uri":         "devices://usb",
 				"name":        "USB Devices",
-				"description": "Connected USB devices (lsusb equivalent)",
+				"description": "Connected USB devices (lsusb equivalent). Lists vendors, products, and bus mapping.",
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
 				"uri":         "devices://pci",
 				"name":        "PCI Devices",
-				"description": "Connected PCI devices (lspci equivalent)",
+				"description": "Connected PCI devices (lspci equivalent). Includes network cards, GPUs, and controllers.",
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
 				"uri":         "devices://dmi",
 				"name":        "DMI Hardware Info",
-				"description": "Desktop Management Interface info (lshw/hwinfo equivalent)",
+				"description": "Desktop Management Interface info (lshw/hwinfo equivalent). Detailed hardware specifications (RAM banks, BIOS, chassis).",
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
 				"uri":         "kernel://modules",
 				"name":        "Kernel Modules",
-				"description": "Loaded kernel drivers (lsmod equivalent)",
+				"description": "Loaded kernel drivers (lsmod equivalent). Hint: You can adjust kernel parameters via the kernel/sysctl tool.",
 				"mimeType":    "application/json",
 			},
 		},
@@ -100,7 +100,7 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"uriTemplate": "devices://{type}",
 				"name":        "Hardware Devices",
-				"description": "Hardware device metadata. Valid types: usb, pci, dmi",
+				"description": "Hardware device metadata. Valid types: usb, pci, dmi. Useful for inspecting attached physical hardware.",
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
@@ -112,13 +112,13 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"uriTemplate": "service://{name}/status",
 				"name":        "Service Status",
-				"description": "Exposes DBus service properties (ActiveState, LoadState, SubState).",
+				"description": "Exposes DBus service properties (ActiveState, LoadState, SubState). Best used alongside the services/manage tool to check if a service actually started.",
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
 				"uriTemplate": "process://{pid}/{target}",
 				"name":        "Process Introspection",
-				"description": "Reads process metadata from procfs. Valid targets: status, cmdline, environ",
+				"description": "Reads process metadata from procfs. Valid targets: status, cmdline, environ. Hint: Find PIDs using the processes/list tool first.",
 				"mimeType":    "application/json",
 			},
 		},
