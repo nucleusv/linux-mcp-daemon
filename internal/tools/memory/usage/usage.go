@@ -9,7 +9,7 @@ import (
 )
 
 type GetUsageArgs struct {
-	OutputFormat string `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
+	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 	Detailed bool `json:"detailed"`
 }
 

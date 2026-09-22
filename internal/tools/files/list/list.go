@@ -9,7 +9,7 @@ import (
 
 // GetListOfFilesArgs defines the parameters for the list_directory tool.
 type GetListOfFilesArgs struct {
-	OutputFormat string `json:\"output_format,omitempty\"` // OutputFormat specifies the desired output format (e.g. \"json\"). Defaults to text.
+	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 	Path       string `json:"path"`                 // Path is the absolute path of the directory to list.
 	Privileged bool   `json:"privileged,omitempty"` // Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
 }
