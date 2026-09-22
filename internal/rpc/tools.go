@@ -351,7 +351,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/performance",
 				"tools_group": "disks",
-				"description": "Retrieves block device I/O statistics (iostat equivalent) from /proc/diskstats.",
+				"description": "Retrieves granular block device I/O performance metrics (equivalent to iostat). Provides read/write sectors, merged operations, and I/O wait times in milliseconds. Use disks/list first to find valid block devices. If you want static capacity instead, use disks/free.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -363,7 +363,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/health",
 				"tools_group": "disks",
-				"description": "Retrieves SMART health data for a drive. Must be run as root (privileged: true).",
+				"description": "Retrieves detailed SMART health data for a drive (equivalent to smartctl -j -a). Returns JSON containing self-assessment test results, temperature, wear leveling, and sector errors. Must be run as root (privileged: true). Use this to diagnose failing hardware.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -375,7 +375,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/partitions",
 				"tools_group": "disks",
-				"description": "Retrieves partition tables for a drive. Must be run as root (privileged: true).",
+				"description": "Retrieves detailed partition tables for a drive (equivalent to fdisk -l). Returns raw text. Must be run as root (privileged: true). Use this to understand the low-level geometry and partition boundaries of a disk.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -386,7 +386,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "network/trace-path",
 				"tools_group": "network",
-				"description": "Traces the network path to a host.",
+				"description": "Traces the network path to a host (equivalent to traceroute). Useful for debugging routing issues, identifying where packets are dropped, or measuring network latency across hops. Hint: Use network/ping for basic reachability before tracing the path.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
