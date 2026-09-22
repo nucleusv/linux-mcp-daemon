@@ -138,6 +138,12 @@ func handleResourcesTemplatesList(resp *JSONRPCResponse) {
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
+				"uriTemplate": "network://interfaces/{name}",
+				"name":        "Network Interface Detail",
+				"description": "Detailed properties of a specific network interface.",
+				"mimeType":    "application/json",
+			},
+			map[string]interface{}{
 				"uriTemplate": "service://{name}/status",
 				"name":        "Service Status",
 				"description": "Exposes DBus service properties (ActiveState, LoadState, SubState).",
@@ -215,13 +221,18 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			} else {
 				content = hostname
 			}
-		} else if params.URI == "network://interfaces" {
+		} else if strings.HasPrefix(params.URI, "network://interfaces") {
+			targetName := strings.TrimPrefix(params.URI, "network://interfaces")
+			targetName = strings.TrimPrefix(targetName, "/")
 			ifaces, err := net.Interfaces()
 			if err != nil {
 				readErr = fmt.Errorf("net.Interfaces failed: %v", err)
 			} else {
 				var resultList []map[string]interface{}
 				for _, iface := range ifaces {
+					if targetName != "" && iface.Name != targetName {
+						continue
+					}
 					addrs, _ := iface.Addrs()
 					var addrList []string
 					for _, addr := range addrs {
@@ -236,9 +247,20 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 						"addresses": addrList,
 					})
 				}
-				b, _ := json.MarshalIndent(resultList, "", "  ")
-				content = string(b)
-				mimeType = "application/json"
+				
+				if targetName != "" {
+					if len(resultList) == 0 {
+						readErr = fmt.Errorf("interface %s not found", targetName)
+					} else {
+						b, _ := json.MarshalIndent(resultList[0], "", "  ")
+						content = string(b)
+						mimeType = "application/json"
+					}
+				} else {
+					b, _ := json.MarshalIndent(resultList, "", "  ")
+					content = string(b)
+					mimeType = "application/json"
+				}
 			}
 		} else if strings.HasPrefix(params.URI, "file://") {
 			// Handle dynamic URN via Isolated Worker!
