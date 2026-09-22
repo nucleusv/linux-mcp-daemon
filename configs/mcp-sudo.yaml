@@ -67,16 +67,16 @@ users:
           allowed: true
       resources:
         os/hostname:
-          allowed: true
+          - "*"
         os/release:
-          allowed: true
+          - "*"
         devices/dmi:
-          allowed: true
+          - "*"
         devices/cpu:
-          allowed: true
+          - "*"
         devices/usb:
-          allowed: true
+          - "*"
         network/interfaces:
-          allowed: true
+          - "*"
         network/routes:
-          allowed: true
+          - "*"
