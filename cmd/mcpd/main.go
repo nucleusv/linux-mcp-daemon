@@ -34,6 +34,7 @@ import (
 	system_control "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/kernel/system-control"
 	dmesg "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/dmesg"
 	journal_control "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/journal-control"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/list"
 	manage_service "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/manage"
 	status_service "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/status"
 	process_read "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/read"
@@ -94,6 +95,7 @@ func main() {
 			"read_dmi":            dmi.ReadDMI,
 			"read_modules":        modules.ReadModules,
 			"read_routes":         routes.ReadRoutes,
+			"services/list":       list.List,
 			"services/manage":     manage_service.Manage,
 			"services/status":     status_service.Status,
 			"logs/journal-control": journal_control.JournalControl,

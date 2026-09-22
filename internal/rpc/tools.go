@@ -273,6 +273,23 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
+				"name":        "services/list",
+				"tools_group": "system",
+				"description": "Lists systemd services with optional filtering. Output includes ActiveState, LoadState, and SubState.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"pattern":       map[string]interface{}{"type": "string", "description": "Wildcard pattern to match service names (e.g., 'kube*', '*ssh*')"},
+						"active_state":  map[string]interface{}{"type": "string", "description": "Filter by active state (e.g., 'active', 'failed', 'inactive')"},
+						"load_state":    map[string]interface{}{"type": "string", "description": "Filter by load state (e.g., 'loaded', 'not-found')"},
+						"sub_state":     map[string]interface{}{"type": "string", "description": "Filter by sub state (e.g., 'running', 'exited', 'dead')"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, table, wide). Defaults to text"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root (may be required depending on policies)"},
+					},
+					"required": []string{},
+				},
+			},
+			map[string]interface{}{
 				"name":        "logs/journal-control",
 				"tools_group": "logs",
 				"description": "Queries the systemd journal (journalctl equivalent).",
@@ -487,6 +504,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"files/update":        true,
 			"files/find":          true,
 			"services/manage":     true,
+			"services/list":       true,
 			"logs/journal-control":  true,
 			"logs/dmesg":          true,
 			"kernel/system-control": true,
