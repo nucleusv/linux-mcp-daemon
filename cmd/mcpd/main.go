@@ -18,6 +18,7 @@ import (
 	loadaverage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/load-average"
 	disklist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/list"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/free"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/iostat"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/usage"
 	content "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/content"
 	createfile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/create"
@@ -73,6 +74,7 @@ func main() {
 			"cpu/list":            cpulist.List,
 			"cpu/load-average":    loadaverage.LoadAverage,
 			"disks/list":          disklist.List,
+			"disks/iostat":        iostat.Iostat,
 			"system/os-release":   osrelease.OSRelease,
 			"files/stat":          stat.Stat,
 			"files/content":       content.Content,

@@ -39,6 +39,8 @@ users:
           allowed: true
         disks/list:
           allowed: true
+        disks/iostat:
+          allowed: true
         system/os-release:
           allowed: true
       resources:

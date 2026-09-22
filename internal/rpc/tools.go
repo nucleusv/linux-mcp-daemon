@@ -349,6 +349,18 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
+				"name":        "disks/iostat",
+				"tools_group": "disks",
+				"description": "Retrieves block device I/O statistics (iostat equivalent) from /proc/diskstats.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table). Defaults to text"},
+						"device":        map[string]interface{}{"type": "string", "description": "Optional specific block device to query (e.g., 'sda')"},
+					},
+				},
+			},
+			map[string]interface{}{
 				"name":        "system/os-release",
 				"tools_group": "system",
 				"description": "Retrieves Linux distribution and kernel version.",
@@ -445,6 +457,8 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"kernel/sysctl":       true,
 			"disks/free":          true,
 			"disks/usage":         true,
+			"disks/list":          true,
+			"disks/iostat":        true,
 			"processes/list":      true,
 			"processes/delete":    true,
 			"network/connections": true,
@@ -455,7 +469,6 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"memory/usage":        true,
 			"cpu/list":            true,
 			"cpu/load-average":    true,
-			"disks/list":          true,
 			"system/os-release":   true,
 		}
 
