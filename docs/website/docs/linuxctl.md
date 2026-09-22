@@ -1,3 +1,7 @@
+---
+sidebar_label: 'CLI / linuxctl'
+---
+
 # linuxctl CLI
 
 The `linuxctl` command-line interface allows users and AI agents to seamlessly interact with the Linux Model Context Protocol (MCP) Daemon (`mcpd`) running in the background.
