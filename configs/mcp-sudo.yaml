@@ -31,6 +31,8 @@ users:
           allowed: true
         network/ping:
           allowed: true
+        network/traceroute:
+          allowed: true
         memory/usage:
           allowed: true
         cpu/list:
@@ -40,6 +42,12 @@ users:
         disks/list:
           allowed: true
         disks/iostat:
+          allowed: true
+        disks/lsblk:
+          allowed: true
+        disks/smartctl:
+          allowed: true
+        disks/fdisk:
           allowed: true
         system/os-release:
           allowed: true

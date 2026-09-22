@@ -19,6 +19,7 @@ import (
 	disklist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/list"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/free"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/iostat"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/smartctl"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/usage"
 	content "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/content"
 	createfile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/create"
@@ -40,6 +41,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/curl"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/nslookup"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/ping"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/traceroute"
 	deleteprocess "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/delete"
 	listprocesses "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/list"
 	osrelease "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/system/os-release"
@@ -70,11 +72,13 @@ func main() {
 			"network/curl":        curl.Curl,
 			"network/arp":         arp.ARP,
 			"network/ping":        ping.Ping,
+			"network/traceroute":  traceroute.Traceroute,
 			"memory/usage":        mem_usage.Usage,
 			"cpu/list":            cpulist.List,
 			"cpu/load-average":    loadaverage.LoadAverage,
 			"disks/list":          disklist.List,
 			"disks/iostat":        iostat.Iostat,
+			"disks/smartctl":      smartctl.Smartctl,
 			"system/os-release":   osrelease.OSRelease,
 			"files/stat":          stat.Stat,
 			"files/content":       content.Content,
