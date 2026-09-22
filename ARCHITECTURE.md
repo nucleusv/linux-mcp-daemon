@@ -34,6 +34,10 @@ To ensure long-term maintainability, AI agents working on this repo must follow 
 2. **When to Update Public Docs**
    - If a new tool requires root privileges, you **must** update `configs/mcp-sudo.yaml` and document it in `docs/website/docs/configuration/mcp-sudo.md`.
    - If you add or rename tools, ensure the `description` in `internal/rpc/tools.go` is rich and explicitly cross-references related tools.
+   - **Whenever you modify, add, or rename tools/resources in the registries (`tools.go` or `resources.go`), you MUST regenerate the Docusaurus website documentation by running:**
+     ```bash
+     python3 scripts/generate_docs.py
+     ```
 
 3. **Check Native Replacements First**
    - Before wrapping a bash command (like `lsblk`), always check if a native Go implementation reading `/proc` or `/sys` already exists (like `disks/list`).

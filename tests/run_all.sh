@@ -4,6 +4,14 @@ set -e
 # Change to the tests directory
 cd "$(dirname "$0")"
 
+# Parse arguments
+MANUAL_REVIEW="no"
+for arg in "$@"; do
+    if [[ "$arg" == "manual_review=yes" ]]; then
+        MANUAL_REVIEW="yes"
+    fi
+done
+
 # Colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -25,6 +33,11 @@ run_test() {
         echo -e "${RED}✗ Failed: ${name}${NC}\n"
         echo -e "${RED}Test suite aborted due to failure.${NC}"
         exit 1
+    fi
+
+    if [[ "$MANUAL_REVIEW" == "yes" ]]; then
+        echo -e "${BLUE}Manual review mode: Press Enter to continue to the next test...${NC}"
+        read -r
     fi
 }
 
