@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -134,6 +135,18 @@ func handleResourcesTemplatesList(resp *JSONRPCResponse) {
 				"uriTemplate": "devices://{type}",
 				"name":        "Hardware Devices",
 				"description": "Hardware device metadata. Valid types: usb, pci, dmi",
+				"mimeType":    "application/json",
+			},
+			map[string]interface{}{
+				"uriTemplate": "service://{name}/status",
+				"name":        "Service Status",
+				"description": "Exposes DBus service properties (ActiveState, LoadState, SubState).",
+				"mimeType":    "application/json",
+			},
+			map[string]interface{}{
+				"uriTemplate": "process://{pid}/{target}",
+				"name":        "Process Introspection",
+				"description": "Reads process metadata from procfs. Valid targets: status, cmdline, environ",
 				"mimeType":    "application/json",
 			},
 		},
@@ -269,6 +282,32 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			})
 			content, readErr = worker.SpawnWorker(session.User, "services/status", argsJSON, isPrivileged, sudoConfig, 30)
 			mimeType = "application/json"
+		} else if strings.HasPrefix(params.URI, "process://") {
+			// process://{pid}/status, process://{pid}/cmdline, process://{pid}/environ
+			rawPath := strings.TrimPrefix(params.URI, "process://")
+			parts := strings.SplitN(rawPath, "/", 2)
+			if len(parts) != 2 {
+				readErr = fmt.Errorf("invalid process URI format, expected process://{pid}/{target}")
+				goto SendResponse
+			}
+			
+			pidStr, target := parts[0], parts[1]
+			pid, err := strconv.Atoi(pidStr)
+			if err != nil {
+				readErr = fmt.Errorf("invalid PID: %v", err)
+				goto SendResponse
+			}
+
+			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, "process://", pidStr)
+			
+			argsJSON, _ := json.Marshal(map[string]interface{}{
+				"pid":    pid,
+				"target": target,
+			})
+			content, readErr = worker.SpawnWorker(session.User, "processes/read", argsJSON, isPrivileged, sudoConfig, 30)
+			if target != "status" {
+				mimeType = "application/json"
+			}
 		} else if params.URI == "devices://usb" {
 			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {

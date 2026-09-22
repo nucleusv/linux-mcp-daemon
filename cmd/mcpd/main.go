@@ -32,6 +32,7 @@ import (
 	journalctl "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/journalctl"
 	manage_service "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/manage"
 	status_service "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/status"
+	process_read "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/read"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/arp"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/connections"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/network/curl"
@@ -89,6 +90,7 @@ func main() {
 			"logs/journalctl":     journalctl.Journalctl,
 			"logs/dmesg":          dmesg.Dmesg,
 			"kernel/sysctl":       sysctl.Sysctl,
+			"processes/read":      process_read.Read,
 		}
 
 		if handler, exists := handlers[toolName]; exists {
