@@ -20,6 +20,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/free"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/health"
 	disklist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/list"
+	diskmounts "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/mounts"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/partitions"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/performance"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/usage"
@@ -35,6 +36,7 @@ import (
 	system_control "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/kernel/system-control"
 	dmesg "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/dmesg"
 	journal_control "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/journal-control"
+	logins "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/logs/logins"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/list"
 	manage_service "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/manage"
 	status_service "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/services/status"
@@ -49,6 +51,7 @@ import (
 	listprocesses "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/processes/list"
 	osrelease "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/system/os-release"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/system/packages"
+	userslist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/users/list"
 )
 
 func main() {
@@ -88,11 +91,13 @@ func main() {
 			"cpu/list":            cpulist.List,
 			"cpu/load-average":    loadaverage.LoadAverage,
 			"disks/list":          disklist.List,
+			"disks/mounts":        diskmounts.List,
 			"disks/performance":   performance.Performance,
 			"disks/health":        health.Health,
 			"disks/partitions":    partitions.Partitions,
 			"system/os-release":   osrelease.OSRelease,
 			"system/packages":     packages.List,
+			"users/list":          userslist.List,
 			"files/stat":          stat.Stat,
 			"files/content":       content.Content,
 			"files/read":          readfile.Read,
@@ -109,6 +114,7 @@ func main() {
 			"services/manage":     manage_service.Manage,
 			"services/status":     status_service.Status,
 			"logs/journal-control": journal_control.JournalControl,
+			"logs/logins":         logins.List,
 			"logs/dmesg":          dmesg.Dmesg,
 			"kernel/system-control": system_control.SystemControl,
 			"processes/read":      process_read.Read,

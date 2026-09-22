@@ -31,6 +31,8 @@ users:
           allowed: true
         logs/dmesg:
           allowed: true
+        logs/logins:
+          allowed: true
         logs/journal-control:
           allowed: true
         services/manage:
@@ -63,6 +65,8 @@ users:
           allowed: true
         disks/list:
           allowed: true
+        disks/mounts:
+          allowed: true
         disks/performance:
           allowed: true
         disks/health:
@@ -72,6 +76,8 @@ users:
         system/os-release:
           allowed: true
         system/packages:
+          allowed: true
+        users/list:
           allowed: true
       resources:
         os://hostname:
@@ -116,6 +122,8 @@ users:
           allowed: true
         disks/list:
           allowed: true
+        disks/mounts:
+          allowed: true
         disks/partitions:
           allowed: true
         disks/performance:
@@ -149,6 +157,8 @@ users:
         kernel/system-control:
           allowed: true
         logs/dmesg:
+          allowed: true
+        logs/logins:
           allowed: true
         logs/journal-control:
           allowed: true
@@ -191,6 +201,8 @@ users:
         system/os-release:
           allowed: true
         system/packages:
+          allowed: true
+        users/list:
           allowed: true
       resources:
         os://uname:

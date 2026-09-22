@@ -38,6 +38,21 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 		pkgDesc += " (Authorized for 'privileged: true' - when this daemon runs containerized, that automatically queries the real host's packages, not this container's own image.)"
 	}
 
+	mountsDesc := "Lists mounted filesystems (device, mount point, type, options) - equivalent to `mount`/`findmnt`'s basic view. Use disks/list for block devices instead."
+	if h.SudoConfig.CanRunAsRoot(session.User, "disks/mounts") {
+		mountsDesc += " (Authorized for 'privileged: true' - when this daemon runs containerized, that automatically shows the real host's mount table, not this container's own.)"
+	}
+
+	usersDesc := "Lists user accounts from /etc/passwd (uid, gid, home, shell, group memberships). Never reads /etc/shadow - this reports account identity, not credentials."
+	if h.SudoConfig.CanRunAsRoot(session.User, "users/list") {
+		usersDesc += " (Authorized for 'privileged: true' - when this daemon runs containerized, that automatically lists the real host's users, not this container's own.)"
+	}
+
+	loginsDesc := "Lists login history (wraps `last`) or failed login attempts (`type: \"failed\"`, wraps `lastb`). Returns raw text, not JSON - last/lastb's output isn't safe to hand-parse into structured data reliably."
+	if h.SudoConfig.CanRunAsRoot(session.User, "logs/logins") {
+		loginsDesc += " (Authorized for 'privileged: true' - typically required for type: \"failed\", since btmp is usually root-only readable. When this daemon runs containerized, privileged also automatically reads the real host's login history.)"
+	}
+
 	toolsList := map[string]interface{}{
 		"tools": []interface{}{
 			map[string]interface{}{
@@ -342,6 +357,20 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
+				"name":        "logs/logins",
+				"tools_group": "logs",
+				"description": loginsDesc,
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"type":       map[string]interface{}{"type": "string", "description": "\"success\" (default, wraps `last`) or \"failed\" (wraps `lastb`)"},
+						"limit":      map[string]interface{}{"type": "integer", "description": "Only return this many most recent entries"},
+						"user":       map[string]interface{}{"type": "string", "description": "Only return entries for this username"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - typically required for type: \"failed\""},
+					},
+				},
+			},
+			map[string]interface{}{
 				"name":        "kernel/system-control",
 				"tools_group": "kernel",
 				"description": "Reads or writes kernel parameters (sysctl equivalent) at runtime.",
@@ -385,6 +414,19 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 					"properties": map[string]interface{}{
 						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 						"all":           map[string]interface{}{"type": "boolean", "description": "Include empty devices"},
+					},
+				},
+			},
+			map[string]interface{}{
+				"name":        "disks/mounts",
+				"tools_group": "disks",
+				"description": mountsDesc,
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
+						"fs_type":       map[string]interface{}{"type": "string", "description": "Only include mounts of this filesystem type (e.g. 'ext4', 'overlay', 'tmpfs')"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root"},
 					},
 				},
 			},
@@ -459,6 +501,19 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
+				"name":        "users/list",
+				"tools_group": "users",
+				"description": usersDesc,
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
+						"min_uid":       map[string]interface{}{"type": "integer", "description": "Only include users with UID >= this value (e.g. 1000 to exclude system accounts)"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+					},
+				},
+			},
+			map[string]interface{}{
 				"name":        "auth/sudo-rules",
 				"tools_group": "auth",
 				"description": "Returns your authorized tools and privileges from mcp-sudo.yaml.",
@@ -523,10 +578,12 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"services/list":       true,
 			"logs/journal-control":  true,
 			"logs/dmesg":          true,
+			"logs/logins":         true,
 			"kernel/system-control": true,
 			"disks/free":          true,
 			"disks/usage":         true,
 			"disks/list":          true,
+			"disks/mounts":        true,
 			"disks/performance":   true,
 			"disks/health":        true,
 			"disks/partitions":    true,
@@ -543,6 +600,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"cpu/load-average":    true,
 			"system/os-release":   true,
 			"system/packages":     true,
+			"users/list":          true,
 		}
 
 		if params.Name == "auth/sudo-rules" {
