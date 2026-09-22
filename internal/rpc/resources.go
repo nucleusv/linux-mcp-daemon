@@ -3,7 +3,6 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -11,6 +10,10 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/interfaces"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/os/hostname"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/os/release"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/disks"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/file"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/process"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/service"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 )
 
@@ -189,73 +192,11 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 			targetName = strings.TrimPrefix(targetName, "/")
 			content, mimeType, readErr = interfaces.Read(targetName)
 		case strings.HasPrefix(params.URI, "file://"):
-			// Handle dynamic URN via Isolated Worker!
-			rawPath := strings.TrimPrefix(params.URI, "file://")
-
-			var path string
-			var toolName string
-
-			if strings.HasSuffix(rawPath, "/stat") {
-				path = strings.TrimSuffix(rawPath, "/stat")
-				toolName = "files/stat"
-			} else if strings.HasSuffix(rawPath, "/content") {
-				path = strings.TrimSuffix(rawPath, "/content")
-				toolName = "files/content"
-			} else if strings.HasSuffix(rawPath, "/type") {
-				path = strings.TrimSuffix(rawPath, "/type")
-				toolName = "files/filetype"
-			} else {
-				readErr = fmt.Errorf("invalid file URI: must end in /stat, /content, or /type")
-				goto SendResponse
-			}
-
-			// Check mcp-sudo.yaml to see if this user is allowed to read THIS file as root
-			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, "file://", path)
-
-			// We map it to the corresponding internal tool for the spawner
-			argsJSON, _ := json.Marshal(map[string]interface{}{
-				"path": path,
-			})
-
-			content, readErr = worker.SpawnWorker(session.User, toolName, argsJSON, isPrivileged, h.SudoConfig, 30)
+			content, mimeType, readErr = file.Handle(params.URI, session.User, h.SudoConfig)
 		case strings.HasPrefix(params.URI, "service://") && strings.HasSuffix(params.URI, "/status"):
-			// service://kubelet.service/status
-			serviceName := strings.TrimPrefix(params.URI, "service://")
-			serviceName = strings.TrimSuffix(serviceName, "/status")
-
-			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, "service://", serviceName)
-			
-			argsJSON, _ := json.Marshal(map[string]interface{}{
-				"service": serviceName,
-			})
-			content, readErr = worker.SpawnWorker(session.User, "services/status", argsJSON, isPrivileged, h.SudoConfig, 30)
-			mimeType = "application/json"
+			content, mimeType, readErr = service.Handle(params.URI, session.User, h.SudoConfig)
 		case strings.HasPrefix(params.URI, "process://"):
-			// process://{pid}/status, process://{pid}/cmdline, process://{pid}/environ
-			rawPath := strings.TrimPrefix(params.URI, "process://")
-			parts := strings.SplitN(rawPath, "/", 2)
-			if len(parts) != 2 {
-				readErr = fmt.Errorf("invalid process URI format, expected process://{pid}/{target}")
-				goto SendResponse
-			}
-			
-			pidStr, target := parts[0], parts[1]
-			pid, err := strconv.Atoi(pidStr)
-			if err != nil {
-				readErr = fmt.Errorf("invalid PID: %v", err)
-				goto SendResponse
-			}
-
-			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, "process://", pidStr)
-			
-			argsJSON, _ := json.Marshal(map[string]interface{}{
-				"pid":    pid,
-				"target": target,
-			})
-			content, readErr = worker.SpawnWorker(session.User, "processes/read", argsJSON, isPrivileged, h.SudoConfig, 30)
-			if target != "status" {
-				mimeType = "application/json"
-			}
+			content, mimeType, readErr = process.Handle(params.URI, session.User, h.SudoConfig)
 		case params.URI == "devices://usb":
 			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
@@ -293,23 +234,12 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 			content, readErr = worker.SpawnWorker(session.User, "read_routes", []byte("{}"), isPrivileged, h.SudoConfig, 30)
 			mimeType = "application/json"
 		case strings.HasPrefix(params.URI, "disks://") && strings.HasSuffix(params.URI, "/stats"):
-			devName := strings.TrimPrefix(params.URI, "disks://")
-			devName = strings.TrimSuffix(devName, "/stats")
-
-			isPrivileged := h.SudoConfig.CanReadResourceAsRoot(session.User, "disks://", devName)
-
-			argsJSON, _ := json.Marshal(map[string]interface{}{
-				"device":        devName,
-				"output_format": "json",
-			})
-			content, readErr = worker.SpawnWorker(session.User, "disks/performance", argsJSON, isPrivileged, h.SudoConfig, 30)
-			mimeType = "application/json"
+			content, mimeType, readErr = disks.Handle(params.URI, session.User, h.SudoConfig)
 		default:
 			readErr = fmt.Errorf("unknown resource: %s", params.URI)
 		}
 
-	SendResponse:
-		if readErr != nil {
+	if readErr != nil {
 			resp.Error = map[string]interface{}{"code": -32603, "message": readErr.Error()}
 		} else {
 			// Cache the result if applicable
