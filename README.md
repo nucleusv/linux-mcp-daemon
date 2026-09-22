@@ -50,6 +50,37 @@ export MCP_TOKEN="your_token_here"
 ./linuxctl ping
 ```
 
+#### linuxctl examples
+
+`linuxctl` dynamically discovers every tool and resource from the running daemon - there's no separate client-side command list to keep in sync. Full reference: [`docs/website/docs/linuxctl.md`](docs/website/docs/linuxctl.md) or `man linuxctl`.
+
+```bash
+# List files in a directory, as a table
+$ ./linuxctl files list --path /var/log --output table
+MODIFIED              NAME               SIZE     IS_DIR
+2026-09-22 18:38:14   alternatives.log   6522     false
+2026-09-22 18:38:10   apt                4096     true
+...
+
+# Read a static resource (resource URIs always use scheme://path)
+$ ./linuxctl resource os://uname
+Sysname: Linux
+Nodename: desktop-control-plane
+Release: 7.0.12-linuxkit
+...
+
+# Native partition geometry - parsed from /sys/class/block, no fdisk dependency
+$ ./linuxctl disks partitions --device vda --output json
+[{"device": "vda1", "parent_disk": "vda", "number": 1, "start_sector": 2048, "size_sectors": 124997632, "size_bytes": 63998787584}]
+
+# Run a privileged tool (requires a root rule in configs/mcp-sudo.yaml)
+./linuxctl disks free --path / --privileged true
+
+# Query the systemd journal for the current boot only
+# (requires --privileged true in containerized deployments - journalctl only exists on the host)
+./linuxctl logs journal-control --unit kubelet.service --boot true --privileged true
+```
+
 ## Project Structure
 
 - `cmd/mcpd/`: Main server application entrypoint.

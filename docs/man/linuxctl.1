@@ -71,6 +71,33 @@ Execute a dynamic command with positional arguments:
 Execute a dynamic command with explicit flags:
 .IP
 .B linuxctl disks/free --path / --privileged true
+.PP
+Native partition geometry, parsed from /sys/class/block (no fdisk dependency), with real output:
+.IP
+.B linuxctl disks partitions --device vda --output json
+.nf
+[
+  {
+    "device": "vda1",
+    "parent_disk": "vda",
+    "number": 1,
+    "start_sector": 2048,
+    "size_sectors": 124997632,
+    "size_bytes": 63998787584
+  }
+]
+.fi
+.PP
+Read a kernel parameter (sysctl equivalent):
+.IP
+.B linuxctl kernel system-control --key net.ipv4.ip_forward
+.nf
+net.ipv4.ip_forward = 1
+.fi
+.PP
+Query the systemd journal for the current boot only (requires \fB\-\-privileged true\fR in containerized deployments, since journalctl only exists on the host):
+.IP
+.B linuxctl logs journal-control --unit kubelet.service --boot true --privileged true
 .SH AUTHOR
 Antigravity
 .SH SEE ALSO

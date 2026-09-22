@@ -12,6 +12,10 @@ type JournalControlArgs struct {
 	Unit         string `json:"unit,omitempty"`          // Unit filters by systemd unit (e.g., "kubelet.service").
 	Lines        int    `json:"lines,omitempty"`         // Lines specifies the number of most recent lines to return. Defaults to 100.
 	Since        string `json:"since,omitempty"`         // Since filters logs on or newer than the specified date/time (e.g., "1 hour ago", "yesterday").
+	Until        string `json:"until,omitempty"`         // Until filters logs on or older than the specified date/time (e.g., "yesterday", "12:00").
+	Reverse      bool   `json:"reverse,omitempty"`       // Reverse outputs newest entries first.
+	Boot         bool   `json:"boot,omitempty"`          // Boot restricts output to the current boot.
+	BootOffset   int    `json:"boot_offset,omitempty"`   // BootOffset selects a prior boot relative to the current one (e.g. -1 for the previous boot). Implies Boot.
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 }
 
@@ -36,6 +40,20 @@ func JournalControl(argsJSON []byte) (string, error) {
 
 	if args.Since != "" {
 		cmdArgs = append(cmdArgs, "--since", args.Since)
+	}
+
+	if args.Until != "" {
+		cmdArgs = append(cmdArgs, "--until", args.Until)
+	}
+
+	if args.Reverse {
+		cmdArgs = append(cmdArgs, "--reverse")
+	}
+
+	if args.BootOffset != 0 {
+		cmdArgs = append(cmdArgs, "-b", fmt.Sprintf("%d", args.BootOffset))
+	} else if args.Boot {
+		cmdArgs = append(cmdArgs, "-b")
 	}
 
 	if args.OutputFormat == "json" {

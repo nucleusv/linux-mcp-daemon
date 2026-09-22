@@ -58,6 +58,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "files/list",
 				"tools_group": "files",
+				"linuxctl_verb": "list",
 				"description": listDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -74,6 +75,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "files/read",
 				"tools_group": "files",
+				"linuxctl_verb": "get",
 				"description": "Precision reading of file contents with chunking/streaming support.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -91,6 +93,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "files/create",
 				"tools_group": "files",
+				"linuxctl_verb": "create",
 				"description": "Create a new file or replace file contents.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -105,6 +108,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "files/update",
 				"tools_group": "files",
+				"linuxctl_verb": "update",
 				"description": "Programmatically edit a file by appending text or replacing specific line ranges.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -122,6 +126,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "files/find",
 				"tools_group": "files",
+				"linuxctl_verb": "find",
 				"description": "Search for files in a directory hierarchy.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -141,6 +146,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "files/filetype",
 				"tools_group": "files",
+				"linuxctl_verb": "filetype",
 				"description": filetypeDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -154,6 +160,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/free",
 				"tools_group": "disks",
+				"linuxctl_verb": "free",
 				"description": dfDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -170,6 +177,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/usage",
 				"tools_group": "disks",
+				"linuxctl_verb": "usage",
 				"description": duDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -191,6 +199,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "processes/list",
 				"tools_group": "processes",
+				"linuxctl_verb": "list",
 				"description": "Lists running processes on the system. Use this to find a PID, then use the process://{pid}/{target} resource for deep metrics or processes/delete to kill it.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -206,6 +215,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "processes/delete",
 				"tools_group": "processes",
+				"linuxctl_verb": "delete",
 				"description": "Terminates a specific process by PID.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -221,6 +231,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "network/nslookup",
 				"tools_group": "network",
+				"linuxctl_verb": "nslookup",
 				"description": "Query DNS records natively.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -234,6 +245,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "network/curl",
 				"tools_group": "network",
+				"linuxctl_verb": "curl",
 				"description": "Transfer data from a URL using native HTTP client.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -249,6 +261,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "network/arp",
 				"tools_group": "network",
+				"linuxctl_verb": "arp",
 				"description": "View the system ARP cache (IP to MAC address mappings).",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -260,6 +273,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "network/ping",
 				"tools_group": "network",
+				"linuxctl_verb": "ping",
 				"description": "Measure TCP reachability and latency to a host.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -274,6 +288,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "network/connections",
 				"tools_group": "network",
+				"linuxctl_verb": "connections",
 				"description": "Lists active network connections and listening ports. Hint: For physical network links and IPs, use the network://interfaces resource.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -288,6 +303,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "memory/usage",
 				"tools_group": "memory",
+				"linuxctl_verb": "usage",
 				"description": "Returns memory and swap utilization information. Use cpu/load-average to check compute load.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -300,6 +316,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "services/manage",
 				"tools_group": "system",
+				"linuxctl_verb": "manage",
 				"description": "Control systemd services (start, stop, restart, enable, disable). To get detailed service properties and state, read the service://{name}/status resource. To view service logs, use the logs/journal-control tool.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -314,6 +331,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "services/list",
 				"tools_group": "system",
+				"linuxctl_verb": "list",
 				"description": "Lists systemd services with optional filtering. Output includes ActiveState, LoadState, and SubState.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -331,15 +349,19 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "logs/journal-control",
 				"tools_group": "logs",
-				"description": "Queries the systemd journal (journalctl equivalent).",
+				"description": "Queries the systemd journal (journalctl equivalent). Requires privileged: true in containerized deployments, since journalctl only exists on the host, never in this daemon's own image.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"unit":    map[string]interface{}{"type": "string", "description": "Filter by systemd unit (e.g., 'kubelet.service')"},
-						"lines":   map[string]interface{}{"type": "integer", "description": "Number of lines to tail (default: 100)"},
-						"since":   map[string]interface{}{"type": "string", "description": "Filter logs since a specific time (e.g., '1 hour ago', 'today')"},
-						"until":   map[string]interface{}{"type": "string", "description": "Filter logs until a specific time (e.g., 'yesterday', '12:00')"},
-						"reverse": map[string]interface{}{"type": "boolean", "description": "Output newest entries first"},
+						"unit":          map[string]interface{}{"type": "string", "description": "Filter by systemd unit (e.g., 'kubelet.service')"},
+						"lines":         map[string]interface{}{"type": "integer", "description": "Number of lines to tail (default: 100)"},
+						"since":         map[string]interface{}{"type": "string", "description": "Filter logs since a specific time (e.g., '1 hour ago', 'today')"},
+						"until":         map[string]interface{}{"type": "string", "description": "Filter logs until a specific time (e.g., 'yesterday', '12:00')"},
+						"reverse":       map[string]interface{}{"type": "boolean", "description": "Output newest entries first"},
+						"boot":          map[string]interface{}{"type": "boolean", "description": "Restrict output to the current boot (journalctl -b)"},
+						"boot_offset":   map[string]interface{}{"type": "integer", "description": "Select a prior boot relative to the current one, e.g. -1 for the previous boot (implies boot)"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json). Defaults to text"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root and join the host mount namespace - required in containerized deployments"},
 					},
 				},
 			},
@@ -457,7 +479,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/partitions",
 				"tools_group": "disks",
-				"description": "Retrieves detailed partition tables for a drive (equivalent to fdisk -l). Returns raw text. Must be run as root (privileged: true). Use this to understand the low-level geometry and partition boundaries of a disk.",
+				"description": "Retrieves partition boundaries for a drive (start/size, in sectors and bytes), parsed natively from /sys/class/block - no fdisk dependency. Use this to understand the low-level geometry and partition boundaries of a disk.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{

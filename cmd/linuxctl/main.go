@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -446,14 +447,14 @@ func main() {
 									if m, ok := item.(map[string]interface{}); ok {
 										var vals []string
 										for _, k := range keys {
-											vals = append(vals, fmt.Sprintf("%v", m[k]))
+									vals = append(vals, formatCell(m[k]))
 										}
 										fmt.Fprintln(w, strings.Join(vals, "\t"))
 									}
 								}
 							} else {
 								for _, item := range arr {
-									fmt.Fprintln(w, fmt.Sprintf("%v", item))
+								fmt.Fprintln(w, formatCell(item))
 								}
 							}
 						}
@@ -482,7 +483,7 @@ func main() {
 										}
 									}
 								}
-								fmt.Fprintf(w, "%s\t%v\n", strings.ToUpper(k), v)
+							fmt.Fprintf(w, "%s\t%s\n", strings.ToUpper(k), formatCell(v))
 							}
 							
 							// Print nested arrays as subtables
@@ -536,19 +537,19 @@ func main() {
 									if m, ok := item.(map[string]interface{}); ok {
 										var vals []string
 										for _, k := range keys {
-											vals = append(vals, fmt.Sprintf("%v", m[k]))
+									vals = append(vals, formatCell(m[k]))
 										}
 										fmt.Fprintln(w, strings.Join(vals, "\t"))
 									}
 								}
 							} else {
 								for _, item := range arr {
-									fmt.Fprintln(w, fmt.Sprintf("%v", item))
+								fmt.Fprintln(w, formatCell(item))
 								}
 							}
 						} else if m, ok := obj.(map[string]interface{}); ok {
 							for k, v := range m {
-								fmt.Fprintf(w, "%s\t%v\n", strings.ToUpper(k), v)
+							fmt.Fprintf(w, "%s\t%s\n", strings.ToUpper(k), formatCell(v))
 							}
 						}
 						w.Flush()
@@ -568,6 +569,18 @@ func main() {
 		b, _ := json.MarshalIndent(respRPC.Result, "", "  ")
 		fmt.Println(string(b))
 	}
+}
+
+// formatCell renders a JSON-decoded value for table/wide output. Go's default
+// %v on a float64 (every JSON number decodes as float64) switches to
+// scientific notation past a certain magnitude (e.g. disk byte counts render
+// as "6.2671097856e+10" instead of "62671097856") - this keeps whole numbers
+// in plain decimal instead.
+func formatCell(v interface{}) string {
+	if f, ok := v.(float64); ok && f == math.Trunc(f) {
+		return strconv.FormatFloat(f, 'f', -1, 64)
+	}
+	return fmt.Sprintf("%v", v)
 }
 
 func callMethod(authToken string, id string, method string, params interface{}) JSONRPCResponse {

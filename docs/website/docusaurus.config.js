@@ -97,7 +97,7 @@ const config = {
             label: 'Documentation',
           },
           {
-            href: 'https://github.com/nucleusv/linux-mcp-daemon-by-antigravity',
+            href: 'https://github.com/nucleusv/linux-mcp-daemon',
             label: 'GitHub',
             position: 'right',
           },

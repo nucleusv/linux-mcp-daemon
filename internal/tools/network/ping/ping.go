@@ -45,7 +45,7 @@ func Ping(argsJSON []byte) (string, error) {
 		timeoutSecs = 5
 	}
 
-	target := fmt.Sprintf("%s:%d", args.Host, port)
+	target := net.JoinHostPort(args.Host, fmt.Sprintf("%d", port))
 	timeout := time.Duration(timeoutSecs) * time.Second
 
 	start := time.Now()

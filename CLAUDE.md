@@ -31,7 +31,8 @@ This is a **Linux-only** binary (raw `syscall.Utsname`, `syscall.Sysinfo_t`, etc
 
 ## Known stale spots (don't trust blindly)
 - `plan/*.md` roadmap docs use pre-rename tool names (e.g. `network/list-interfaces`, `system/get-os-release`) that don't match the current `<group>/<command>` convention. Verify actual tool names against `internal/rpc/tools.go` / `cmd/mcpd/main.go`, not `plan/`.
-- `go.mod` module path is still `github.com/nucleusv/linux-mcp-daemon-by-antigravity` even though the repo/remote was renamed to `linux-mcp-daemon-by-claude`. Renaming it means touching every import in the codebase — don't do it opportunistically as a drive-by change.
+- `go.mod` module path is still `github.com/nucleusv/linux-mcp-daemon-by-antigravity` even though the GitHub remote has since been renamed twice (first to `linux-mcp-daemon-by-claude`, now to `linux-mcp-daemon` - see `git remote -v`). Renaming the module path means touching every import in the codebase — don't do it opportunistically as a drive-by change.
+- The local working directory, Docker image tag, and Kubernetes namespace/deployment/service names (`k8s/*.yaml`, `scripts/build.sh`, `scripts/deploy.sh`, the `Dockerfile`) still say `linux-mcp-daemon-by-claude` - this is a separate, independent naming choice from the GitHub remote and hasn't been renamed to match it. Don't rename these opportunistically either; it would mean tearing down and recreating the live namespace.
 
 ## Testing
 - Go unit tests adjacent to code (`*_test.go`).
