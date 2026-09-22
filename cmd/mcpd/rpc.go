@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
-	"os"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	sudorules "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/sudo-rules"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/interfaces"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/os/hostname"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/os/release"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 )
 
@@ -208,60 +209,13 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 				)
 			}
 		} else if params.URI == "os://release" {
-			data, err := os.ReadFile("/etc/os-release")
-			if err != nil {
-				readErr = fmt.Errorf("failed to read /etc/os-release: %v", err)
-			} else {
-				content = string(data)
-			}
+			content, mimeType, readErr = release.Read()
 		} else if params.URI == "os://hostname" {
-			hostname, err := os.Hostname()
-			if err != nil {
-				readErr = fmt.Errorf("os.Hostname failed: %v", err)
-			} else {
-				content = hostname
-			}
+			content, mimeType, readErr = hostname.Read()
 		} else if strings.HasPrefix(params.URI, "network://interfaces") {
 			targetName := strings.TrimPrefix(params.URI, "network://interfaces")
 			targetName = strings.TrimPrefix(targetName, "/")
-			ifaces, err := net.Interfaces()
-			if err != nil {
-				readErr = fmt.Errorf("net.Interfaces failed: %v", err)
-			} else {
-				var resultList []map[string]interface{}
-				for _, iface := range ifaces {
-					if targetName != "" && iface.Name != targetName {
-						continue
-					}
-					addrs, _ := iface.Addrs()
-					var addrList []string
-					for _, addr := range addrs {
-						addrList = append(addrList, addr.String())
-					}
-					resultList = append(resultList, map[string]interface{}{
-						"index":     iface.Index,
-						"name":      iface.Name,
-						"mac":       iface.HardwareAddr.String(),
-						"mtu":       iface.MTU,
-						"flags":     iface.Flags.String(),
-						"addresses": addrList,
-					})
-				}
-				
-				if targetName != "" {
-					if len(resultList) == 0 {
-						readErr = fmt.Errorf("interface %s not found", targetName)
-					} else {
-						b, _ := json.MarshalIndent(resultList[0], "", "  ")
-						content = string(b)
-						mimeType = "application/json"
-					}
-				} else {
-					b, _ := json.MarshalIndent(resultList, "", "  ")
-					content = string(b)
-					mimeType = "application/json"
-				}
-			}
+			content, mimeType, readErr = interfaces.Read(targetName)
 		} else if strings.HasPrefix(params.URI, "file://") {
 			// Handle dynamic URN via Isolated Worker!
 			rawPath := strings.TrimPrefix(params.URI, "file://")
