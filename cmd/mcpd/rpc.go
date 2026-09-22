@@ -195,7 +195,8 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			return
 		}
 
-		if params.URI == "os://uname" {
+		switch {
+		case params.URI == "os://uname":
 			var uts syscall.Utsname
 			if err := syscall.Uname(&uts); err != nil {
 				readErr = fmt.Errorf("syscall.Uname failed: %v", err)
@@ -208,15 +209,15 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 					charsToString(uts.Machine[:]),
 				)
 			}
-		} else if params.URI == "os://release" {
+		case params.URI == "os://release":
 			content, mimeType, readErr = release.Read()
-		} else if params.URI == "os://hostname" {
+		case params.URI == "os://hostname":
 			content, mimeType, readErr = hostname.Read()
-		} else if strings.HasPrefix(params.URI, "network://interfaces") {
+		case strings.HasPrefix(params.URI, "network://interfaces"):
 			targetName := strings.TrimPrefix(params.URI, "network://interfaces")
 			targetName = strings.TrimPrefix(targetName, "/")
 			content, mimeType, readErr = interfaces.Read(targetName)
-		} else if strings.HasPrefix(params.URI, "file://") {
+		case strings.HasPrefix(params.URI, "file://"):
 			// Handle dynamic URN via Isolated Worker!
 			rawPath := strings.TrimPrefix(params.URI, "file://")
 
@@ -246,7 +247,7 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			})
 
 			content, readErr = worker.SpawnWorker(session.User, toolName, argsJSON, isPrivileged, sudoConfig, 30)
-		} else if strings.HasPrefix(params.URI, "service://") && strings.HasSuffix(params.URI, "/status") {
+		case strings.HasPrefix(params.URI, "service://") && strings.HasSuffix(params.URI, "/status"):
 			// service://kubelet.service/status
 			serviceName := strings.TrimPrefix(params.URI, "service://")
 			serviceName = strings.TrimSuffix(serviceName, "/status")
@@ -258,7 +259,7 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			})
 			content, readErr = worker.SpawnWorker(session.User, "services/status", argsJSON, isPrivileged, sudoConfig, 30)
 			mimeType = "application/json"
-		} else if strings.HasPrefix(params.URI, "process://") {
+		case strings.HasPrefix(params.URI, "process://"):
 			// process://{pid}/status, process://{pid}/cmdline, process://{pid}/environ
 			rawPath := strings.TrimPrefix(params.URI, "process://")
 			parts := strings.SplitN(rawPath, "/", 2)
@@ -284,7 +285,7 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 			if target != "status" {
 				mimeType = "application/json"
 			}
-		} else if params.URI == "devices://usb" {
+		case params.URI == "devices://usb":
 			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
 				readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
@@ -292,7 +293,7 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 				content, readErr = worker.SpawnWorker(session.User, "read_usb", []byte("{}"), isPrivileged, sudoConfig, 30)
 				mimeType = "application/json"
 			}
-		} else if params.URI == "devices://pci" {
+		case params.URI == "devices://pci":
 			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
 				readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
@@ -300,7 +301,7 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 				content, readErr = worker.SpawnWorker(session.User, "read_pci", []byte("{}"), isPrivileged, sudoConfig, 30)
 				mimeType = "application/json"
 			}
-		} else if params.URI == "devices://dmi" {
+		case params.URI == "devices://dmi":
 			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
 				readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
@@ -308,7 +309,7 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 				content, readErr = worker.SpawnWorker(session.User, "read_dmi", []byte("{}"), isPrivileged, sudoConfig, 30)
 				mimeType = "application/json"
 			}
-		} else if params.URI == "kernel://modules" {
+		case params.URI == "kernel://modules":
 			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			if !isPrivileged {
 				readErr = fmt.Errorf("resource %s is strictly accessible only in privileged mode", params.URI)
@@ -316,11 +317,11 @@ func handleResourcesRead(session *Session, req JSONRPCRequest, resp *JSONRPCResp
 				content, readErr = worker.SpawnWorker(session.User, "read_modules", []byte("{}"), isPrivileged, sudoConfig, 30)
 				mimeType = "application/json"
 			}
-		} else if params.URI == "network://routes" {
+		case params.URI == "network://routes":
 			isPrivileged := sudoConfig.CanReadResourceAsRoot(session.User, params.URI, "*")
 			content, readErr = worker.SpawnWorker(session.User, "read_routes", []byte("{}"), isPrivileged, sudoConfig, 30)
 			mimeType = "application/json"
-		} else {
+		default:
 			readErr = fmt.Errorf("unknown resource: %s", params.URI)
 		}
 
