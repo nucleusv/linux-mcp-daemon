@@ -100,7 +100,6 @@ users:
           - "*"
         network://routes:
           - "*"
-
   # Reference/example user: every tool and every resource this daemon
   # currently exposes, fully granted. Not meant to represent a real-world
   # least-privilege user (see testuser/admin/unpriviliged above for that) -

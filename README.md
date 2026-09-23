@@ -79,6 +79,10 @@ $ ./linuxctl disks partitions --device vda --output json
 # Query the systemd journal for the current boot only
 # (requires --privileged true in containerized deployments - journalctl only exists on the host)
 ./linuxctl logs journal-control --unit kubelet.service --boot true --privileged true
+
+# Manage daemon users/tokens - local-only, never touches the network (see docs/website/docs/configuration/daemon.md)
+./linuxctl create mcpd user alice   # generates a token, prints it once
+./linuxctl list mcpd users
 ```
 
 ## Project Structure

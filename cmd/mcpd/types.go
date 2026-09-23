@@ -43,7 +43,14 @@ type Config struct {
 	} `yaml:"tools"`
 	Users []struct {
 		Username string `yaml:"username"`
-		Token    string `yaml:"token"`
+		// Token is the legacy plaintext field. New/rotated users
+		// (via `linuxctl create|update mcpd user`) use TokenSalt+TokenHash
+		// instead - see authenticateRequest in http.go. Both are supported
+		// simultaneously so migration doesn't require a hard cutover.
+		Token     string `yaml:"token,omitempty"`
+		TokenSalt string `yaml:"token_salt,omitempty"`
+		TokenHash string `yaml:"token_hash,omitempty"`
+		CreatedAt string `yaml:"created_at,omitempty"`
 	} `yaml:"users"`
 }
 

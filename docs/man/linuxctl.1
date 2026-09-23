@@ -36,6 +36,9 @@ Dynamically executes an MCP tool exposed by the daemon. For example, \fBfiles/li
 .TP
 .B [command-options]
 Arguments specific to the command being executed. You can provide these either positionally (e.g., \fBlinuxctl files/list /var/log\fR) or as explicit flags (e.g., \fB--path /var/log --privileged true\fR). You can also use \fB--output table\fR or \fB--output json\fR to format structural data.
+.TP
+.B <verb> mcpd user <username>
+Local-only user/token administration: create, delete, update (rotate token), list, or describe an mcpd bearer-token user. Unlike every other command, this never talks to the daemon over the network - it reads and writes \fBconfigs/daemon.yaml\fR and \fBconfigs/mcp-sudo.yaml\fR directly on disk (path set by \fB\-\-config\-path\fR, default \fB./configs\fR), and needs no \fB\-token\fR/\fB\-server\fR flag. A newly created user's token is printed once, to the terminal only, and is never stored in plaintext - only its salted hash is written to \fBdaemon.yaml\fR.
 .SH ENVIRONMENT
 .TP
 .B MCP_TOKEN
@@ -98,6 +101,16 @@ net.ipv4.ip_forward = 1
 Query the systemd journal for the current boot only (requires \fB\-\-privileged true\fR in containerized deployments, since journalctl only exists on the host):
 .IP
 .B linuxctl logs journal-control --unit kubelet.service --boot true --privileged true
+.PP
+Create a new mcpd user (local-only, prints the token once):
+.IP
+.B linuxctl create mcpd user alice
+.nf
+Created mcpd user "alice".
+
+Token (shown once - not stored in plaintext anywhere, save it now):
+  863953e1c3a24cee64c4c2306af990da5fd9041bb8c9db5f0d48d478df5d860d
+.fi
 .SH AUTHOR
 Antigravity
 .SH SEE ALSO

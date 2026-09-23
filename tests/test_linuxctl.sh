@@ -80,7 +80,7 @@ run_tool "logs journal-control --lines 3 --boot true --privileged true" "logs/jo
 run_tool "logs logins --privileged true" "logs/logins" "yes"
 run_tool "system os-release" "system/os-release"
 run_tool "system packages" "system/packages"
-run_tool "users list --min-uid 1000" "users/list"
+run_tool "users list --min_uid 1000" "users/list"
 run_tool "services list --pattern *" "services/list"
 
 echo "==========================================="
@@ -114,6 +114,10 @@ run_resource "os://release"
 run_resource "os://uname"
 run_resource "network://interfaces"
 run_resource "network://routes"
+run_resource "network://interfaces/eth0"
+run_resource "file:///etc/hosts"
+run_resource "file:///etc/hosts/stat"
+run_resource "file:///etc/hosts/type"
 run_resource "devices://usb"
 run_resource "devices://pci"
 run_resource "devices://dmi"
@@ -127,6 +131,14 @@ if ./linuxctl -token "$UNPRIV_TOKEN" -server "$DAEMON_URL" resource "devices://u
 else
     echo "✅ SUCCESS: unpriviliged user was correctly denied access to devices://usb"
 fi
+
+# service://{name}/status needs the host systemd dbus socket, only reachable
+# privileged - testuser has no service:// grant in mcp-sudo.yaml (only the
+# "privileged" reference account does), so this checks it with that token
+# rather than expanding testuser's grants just for test coverage.
+PRIV_TOKEN="my-privileged-token-123"
+echo "Testing Resource: service://kubelet.service/status (privileged token, JSON Output)"
+./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" resource "service://kubelet.service/status" --output json
 
 echo "✅ SUCCESS: linuxctl successfully dynamically executed all tools and resources over SSE with format parsers!"
 # Clean up the binary

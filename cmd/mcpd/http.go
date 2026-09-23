@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -106,7 +108,21 @@ func authenticateRequest(r *http.Request) (string, bool) {
 	}
 	providedToken := strings.TrimPrefix(authHeader, "Bearer ")
 	for _, user := range daemonConfig.Users {
-		if user.Token == providedToken {
+		if user.TokenHash != "" {
+			// Salted-hash accounts (created or rotated via `linuxctl create|update
+			// mcpd user`) - compare hash(salt+provided) against the stored hash
+			// in constant time so a timing side-channel can't leak how many
+			// hex characters matched.
+			sum := sha256.Sum256([]byte(user.TokenSalt + providedToken))
+			computedHash := hex.EncodeToString(sum[:])
+			if subtle.ConstantTimeCompare([]byte(computedHash), []byte(user.TokenHash)) == 1 {
+				return user.Username, true
+			}
+			continue
+		}
+		// Legacy plaintext accounts not yet migrated - still constant-time,
+		// since a plaintext token is exactly as sensitive as a hash match.
+		if subtle.ConstantTimeCompare([]byte(user.Token), []byte(providedToken)) == 1 && user.Token != "" {
 			return user.Username, true
 		}
 	}

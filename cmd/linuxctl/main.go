@@ -18,8 +18,9 @@ import (
 )
 
 var (
-	serverURL = flag.String("server", "http://localhost:9091", "The URL of the mcpd server")
-	token     = flag.String("token", "", "Bearer token for authentication")
+	serverURL  = flag.String("server", "http://localhost:9091", "The URL of the mcpd server")
+	token      = flag.String("token", "", "Bearer token for authentication")
+	configPath = flag.String("config-path", "./configs", "Local path to the daemon's configs/ directory (used only by the local-only 'mcpd' admin group)")
 )
 
 type JSONRPCRequest struct {
@@ -49,6 +50,14 @@ var (
 
 func main() {
 	flag.Parse()
+
+	// The "mcpd" group is local-only admin (user/token management) - it never
+	// talks to the daemon over the network, so it's handled before any auth
+	// token or server connection is set up, and works with no token at all.
+	if adminArgs := flag.Args(); len(adminArgs) >= 2 && adminArgs[1] == "mcpd" {
+		handleMcpdAdmin(append([]string{adminArgs[0]}, adminArgs[2:]...))
+		return
+	}
 
 	// 1. Get auth token
 	authToken := *token

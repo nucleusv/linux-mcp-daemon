@@ -45,6 +45,7 @@ run_test() {
 run_test "test_docs.sh" "Documentation Server Test"
 run_test "test_mcp.sh" "MCP SSE Protocol End-to-End Test"
 run_test "test_linuxctl.sh" "Linuxctl CLI Ping Test"
+run_test "test_mcpd_admin.sh" "Linuxctl mcpd Local-Only Admin Test"
 
 echo -e "${GREEN}===========================================${NC}"
 echo -e "${GREEN}   All tests completed successfully! 🎉      ${NC}"

@@ -113,10 +113,11 @@ linuxctl get disks usage /var/log
 linuxctl list disks mounts
 linuxctl get disks health sda
 linuxctl list disks partitions vda
-linuxctl list disks performance
+linuxctl list disks performance          # all devices (many results)
+linuxctl get disks performance vda       # one device (one result)
 linuxctl describe disks sda
 
-linuxctl list processes --sort mem
+linuxctl list processes --sort_by mem
 linuxctl top processes
 linuxctl describe processes 1234
 linuxctl delete processes 1234
@@ -159,7 +160,7 @@ linuxctl get system release
 linuxctl get system uname
 linuxctl list system packages
 
-linuxctl list users --min-uid 1000
+linuxctl list users --min_uid 1000
 linuxctl list cpu
 linuxctl get cpu load-average
 linuxctl get memory usage
