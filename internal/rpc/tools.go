@@ -210,7 +210,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"limit":         map[string]interface{}{"type": "integer", "description": "Maximum processes to list (default: all)"},
 						"user":          map[string]interface{}{"type": "string", "description": "Only this user's processes"},
 						"interval_ms":   map[string]interface{}{"type": "integer", "description": "%CPU sampling interval in milliseconds (default 1000, max 10000)"},
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to top-style text"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Default/table: top's own layout. wide: adds PPID, THR and full command lines (like top -c). json/yaml: structured {summary, processes}"},
 						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 					},
 				},

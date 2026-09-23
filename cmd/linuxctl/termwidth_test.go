@@ -1,14 +1,50 @@
 package main
 
-import "testing"
+import (
+	"io"
+	"os"
+	"strings"
+	"testing"
+)
 
-func TestJSONKeyOrder(t *testing.T) {
-	order := jsonKeyOrder([]byte(`[{"pid":1,"user":"root","nested":{"z":1,"a":[1,"x"]},"cmdline":"init"},{"pid":2,"user":"x","nested":{},"cmdline":""}]`))
-	want := []string{"pid", "user", "nested", "z", "a", "cmdline"}
-	for i, k := range want {
-		if order[k] != i {
-			t.Errorf("order[%q] = %d, want %d (full: %v)", k, order[k], i, order)
-		}
+func TestObjectKeys(t *testing.T) {
+	got := objectKeys([]byte(`{"pid":1,"user":"root","nested":{"z":1,"a":[1,"x"]},"cmdline":"init"}`))
+	if strings.Join(got, ",") != "pid,user,nested,cmdline" {
+		t.Errorf("objectKeys = %v", got)
+	}
+	if objectKeys([]byte(`[1,2]`)) != nil {
+		t.Error("objectKeys on an array must be nil")
+	}
+}
+
+// captureStdout runs f and returns what it printed.
+func captureStdout(t *testing.T, f func()) string {
+	t.Helper()
+	r, w, _ := os.Pipe()
+	old := os.Stdout
+	os.Stdout = w
+	f()
+	w.Close()
+	os.Stdout = old
+	b, _ := io.ReadAll(r)
+	return string(b)
+}
+
+func TestTableColumnsFollowEachArraysOwnOrder(t *testing.T) {
+	// Regression: "ni" and "cpu_percent" appear in the summary before the
+	// processes array, and a document-wide key order put them first.
+	doc := `{"summary":{"cpu_percent":{"us":1,"ni":0},"users":1},"processes":[{"pid":7,"user":"root","ni":0,"cpu_percent":2.5,"cmdline":"x"},{"pid":8,"user":"u","ni":5,"cpu_percent":0}]}`
+	out := captureStdout(t, func() { printFormatted(doc, "wide") })
+	lines := strings.Split(out, "\n")
+	if !strings.HasPrefix(lines[0], "SUMMARY") || !strings.Contains(lines[0], `{"cpu_percent":{"us":1,"ni":0},"users":1}`) {
+		t.Errorf("summary line keeps server order: %q", lines[0])
+	}
+	header := strings.Fields(lines[3])
+	if strings.Join(header, " ") != "PID USER NI CPU_PERCENT CMDLINE" {
+		t.Errorf("columns = %v", header)
+	}
+	if strings.Contains(out, "<nil>") {
+		t.Errorf("missing field rendered as <nil>:\n%s", out)
 	}
 }
 

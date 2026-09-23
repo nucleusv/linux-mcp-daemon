@@ -141,12 +141,16 @@ func Top(argsJSON []byte) (string, error) {
 	}
 
 	switch args.OutputFormat {
-	case "json", "yaml", "table", "wide":
+	case "json", "yaml":
 		b, err := json.Marshal(snap)
 		if err != nil {
 			return "", err
 		}
 		return string(b), nil
+	case "wide":
+		// top's own layout already is the table; wide adds PPID/THR and
+		// the full command line, like `top -c`.
+		return FormatWide(snap), nil
 	}
 	return Format(snap), nil
 }
@@ -381,7 +385,14 @@ func scaleKiB(kib uint64, width int) string {
 }
 
 // Format renders the snapshot like `top -b -n 1`.
-func Format(s Snapshot) string {
+func Format(s Snapshot) string { return format(s, false) }
+
+// FormatWide adds PPID and thread-count columns and shows each process's
+// full command line (kernel threads, which have none, as [name]) - like
+// `top -c` with extra fields.
+func FormatWide(s Snapshot) string { return format(s, true) }
+
+func format(s Snapshot, wide bool) string {
 	var b strings.Builder
 	sm := s.Summary
 	users := "users"
@@ -400,16 +411,33 @@ func Format(s Snapshot) string {
 	fmt.Fprintf(&b, "MiB Swap: %8.1f total, %8.1f free, %8.1f used. %8.1f avail Mem\n\n",
 		sm.SwapMiB.Total, sm.SwapMiB.Free, sm.SwapMiB.Used, sm.SwapMiB.AvailMem)
 
-	fmt.Fprintf(&b, "%7s %-8s %3s %3s %7s %6s %6s %1s %5s %5s %9s %s\n",
-		"PID", "USER", "PR", "NI", "VIRT", "RES", "SHR", "S", "%CPU", "%MEM", "TIME+", "COMMAND")
+	// top truncates USER to 8 columns ("privile+"); wide shows full names,
+	// so size the column to the longest one to keep everything aligned.
+	userW, extraHead := 8, ""
+	if wide {
+		extraHead = fmt.Sprintf(" %7s %4s", "PPID", "THR")
+		for _, r := range s.Processes {
+			userW = max(userW, len(r.User))
+		}
+	}
+	fmt.Fprintf(&b, "%7s %-*s %3s %3s %7s %6s %6s %1s %5s %5s %9s%s %s\n",
+		"PID", userW, "USER", "PR", "NI", "VIRT", "RES", "SHR", "S", "%CPU", "%MEM", "TIME+", extraHead, "COMMAND")
 	for _, r := range s.Processes {
 		user := r.User
-		if len(user) > 8 {
+		if len(user) > 8 && !wide {
 			user = user[:7] + "+" // top's truncation marker
 		}
-		fmt.Fprintf(&b, "%7d %-8s %3s %3d %7s %6s %6s %1s %5.1f %5.1f %9s %s\n",
-			r.PID, user, r.PR, r.NI, scaleKiB(r.VirtKiB, 7), scaleKiB(r.ResKiB, 6), scaleKiB(r.ShrKiB, 6),
-			r.State, r.CPUPercent, r.MemPercent, r.TimePlus, r.Command)
+		command, extra := r.Command, ""
+		if wide {
+			extra = fmt.Sprintf(" %7d %4d", r.PPID, r.Threads)
+			command = r.Cmdline
+			if command == "" {
+				command = "[" + r.Command + "]" // kernel thread, as top -c shows it
+			}
+		}
+		fmt.Fprintf(&b, "%7d %-*s %3s %3d %7s %6s %6s %1s %5.1f %5.1f %9s%s %s\n",
+			r.PID, userW, user, r.PR, r.NI, scaleKiB(r.VirtKiB, 7), scaleKiB(r.ResKiB, 6), scaleKiB(r.ShrKiB, 6),
+			r.State, r.CPUPercent, r.MemPercent, r.TimePlus, extra, command)
 	}
 	return b.String()
 }

@@ -47,48 +47,32 @@ func truncateLine(line string, width int) string {
 	return out
 }
 
-// jsonKeyOrder maps each object key in a JSON document to the position it
-// first appears at, so table columns can follow the server's field order
-// (decoding into map[string]interface{} loses it).
-func jsonKeyOrder(data []byte) map[string]int {
-	type frame struct{ isObject, expectKey bool }
-	order := map[string]int{}
-	var stack []frame
-	// valueDone marks that the enclosing object's next token is a key.
-	valueDone := func() {
-		if n := len(stack); n > 0 && stack[n-1].isObject {
-			stack[n-1].expectKey = true
-		}
-	}
-	dec := json.NewDecoder(bytes.NewReader(data))
-	for {
-		tok, err := dec.Token()
-		if err != nil {
-			return order
-		}
-		switch v := tok.(type) {
-		case json.Delim:
-			if v == '{' || v == '[' {
-				stack = append(stack, frame{isObject: v == '{', expectKey: v == '{'})
-			} else {
-				stack = stack[:len(stack)-1]
-				valueDone()
-			}
-		case string:
-			if n := len(stack); n > 0 && stack[n-1].isObject && stack[n-1].expectKey {
-				if _, seen := order[v]; !seen {
-					order[v] = len(order)
-				}
-				stack[n-1].expectKey = false
-			} else {
-				valueDone()
-			}
-		default:
-			valueDone()
-		}
-	}
-}
-
 // yaml11Ambiguous matches plain scalars YAML 1.1 resolves to non-strings:
 // sexagesimal numbers (8:0, 1:30:00) and the extended booleans.
 var yaml11Ambiguous = regexp.MustCompile(`^([-+]?[0-9][0-9_]*(:[0-5]?[0-9])+(\.[0-9_]*)?|[yY]|[nN]|[yY]es|YES|[nN]o|NO|[oO]n|ON|[oO]ff|OFF)$`)
+
+// objectKeys returns the keys of a JSON object in document order (nil if
+// data isn't an object) - decoding into a Go map would lose that order.
+func objectKeys(data []byte) []string {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
+		return nil
+	}
+	var keys []string
+	for dec.More() {
+		tok, err := dec.Token()
+		if err != nil {
+			return keys
+		}
+		key, ok := tok.(string)
+		if !ok {
+			return keys
+		}
+		keys = append(keys, key)
+		var skip json.RawMessage
+		if err := dec.Decode(&skip); err != nil {
+			return keys
+		}
+	}
+	return keys
+}

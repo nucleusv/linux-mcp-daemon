@@ -591,6 +591,9 @@ func splitFlagsAndPositional(args []string) (map[string]interface{}, []string, s
 // as "6.2671097856e+10" instead of "62671097856") - this keeps whole numbers
 // in plain decimal instead.
 func formatCell(v interface{}) string {
+	if v == nil {
+		return "" // a field absent or null for this row, not the text "<nil>"
+	}
 	if f, ok := v.(float64); ok && f == math.Trunc(f) {
 		return strconv.FormatFloat(f, 'f', -1, 64)
 	}
@@ -668,78 +671,6 @@ func printFormatted(text, outputFormat string) {
 			fmt.Print(text)
 		}
 	case "table", "wide":
-		var obj interface{}
-		if err := json.Unmarshal([]byte(text), &obj); err != nil {
-			fmt.Print(text)
-			return
-		}
-		var buf bytes.Buffer
-		w := tabwriter.NewWriter(&buf, 0, 0, 3, ' ', 0)
-		keyOrder := jsonKeyOrder([]byte(text))
-
-		printArrayAsTable := func(arr []interface{}) {
-			if len(arr) == 0 {
-				return
-			}
-			if first, ok := arr[0].(map[string]interface{}); ok {
-				var keys []string
-				for k := range first {
-					keys = append(keys, k)
-				}
-				// Columns in the order the server sent them - Go map
-				// iteration is random, which reshuffled columns every run.
-				sort.Slice(keys, func(i, j int) bool { return keyOrder[keys[i]] < keyOrder[keys[j]] })
-				fmt.Fprintln(w, strings.ToUpper(strings.Join(keys, "\t")))
-				for _, item := range arr {
-					if m, ok := item.(map[string]interface{}); ok {
-						var vals []string
-						for _, k := range keys {
-							vals = append(vals, formatCell(m[k]))
-						}
-						fmt.Fprintln(w, strings.Join(vals, "\t"))
-					}
-				}
-			} else {
-				for _, item := range arr {
-					fmt.Fprintln(w, formatCell(item))
-				}
-			}
-		}
-
-		if arr, ok := obj.([]interface{}); ok && len(arr) > 0 {
-			printArrayAsTable(arr)
-		} else if m, ok := obj.(map[string]interface{}); ok {
-			var nestedArrays []struct {
-				key string
-				arr []interface{}
-			}
-			for k, v := range m {
-				if v != nil {
-					if arr, ok := v.([]interface{}); ok && len(arr) > 0 {
-						if _, isObj := arr[0].(map[string]interface{}); isObj {
-							nestedArrays = append(nestedArrays, struct {
-								key string
-								arr []interface{}
-							}{k, arr})
-							continue
-						}
-					}
-					switch v.(type) {
-					case []interface{}, map[string]interface{}:
-						if b, err := json.Marshal(v); err == nil {
-							fmt.Fprintf(w, "%s\t%s\n", strings.ToUpper(k), string(b))
-							continue
-						}
-					}
-				}
-				fmt.Fprintf(w, "%s\t%s\n", strings.ToUpper(k), formatCell(v))
-			}
-			for _, na := range nestedArrays {
-				fmt.Fprintln(w, "\n"+strings.ToUpper(na.key)+":")
-				printArrayAsTable(na.arr)
-			}
-		}
-		w.Flush()
 		// "table" fits the terminal, cutting long trailing columns (a
 		// process's cmdline, ...) the way ps does; "wide" never truncates,
 		// mirroring kubectl's -o wide.
@@ -747,9 +678,99 @@ func printFormatted(text, outputFormat string) {
 		if outputFormat == "table" {
 			width = terminalWidth()
 		}
-		for _, line := range strings.SplitAfter(buf.String(), "\n") {
-			fmt.Print(truncateLine(line, width))
+		printLines := func(out string) {
+			for _, line := range strings.SplitAfter(out, "\n") {
+				fmt.Print(truncateLine(line, width))
+			}
 		}
+
+		var obj interface{}
+		if err := json.Unmarshal([]byte(text), &obj); err != nil {
+			// Already a text table (e.g. processes/top's own top-style
+			// layout) - print it, still fitted to the terminal.
+			printLines(text)
+			return
+		}
+		var buf bytes.Buffer
+		w := tabwriter.NewWriter(&buf, 0, 0, 3, ' ', 0)
+
+		// Column order comes from the JSON itself, per array - the server
+		// sends fields in a meaningful order, and Go maps would randomize
+		// it. It must be per array, not document-wide: in a document like
+		// {"summary": {"ni": ...}, "processes": [{"pid": ..., "ni": ...}]}
+		// a document-wide first-seen order would put "ni" before "pid".
+		printArrayAsTable := func(arr []interface{}, raw json.RawMessage) {
+			if len(arr) == 0 {
+				return
+			}
+			first, ok := arr[0].(map[string]interface{})
+			if !ok {
+				for _, item := range arr {
+					fmt.Fprintln(w, formatCell(item))
+				}
+				return
+			}
+			var keys []string
+			var rawElems []json.RawMessage
+			if json.Unmarshal(raw, &rawElems) == nil && len(rawElems) > 0 {
+				keys = objectKeys(rawElems[0])
+			}
+			if len(keys) != len(first) { // fallback: anything unparsed, sorted
+				keys = keys[:0]
+				for k := range first {
+					keys = append(keys, k)
+				}
+				sort.Strings(keys)
+			}
+			fmt.Fprintln(w, strings.ToUpper(strings.Join(keys, "\t")))
+			for _, item := range arr {
+				if m, ok := item.(map[string]interface{}); ok {
+					var vals []string
+					for _, k := range keys {
+						vals = append(vals, formatCell(m[k]))
+					}
+					fmt.Fprintln(w, strings.Join(vals, "\t"))
+				}
+			}
+		}
+
+		if arr, ok := obj.([]interface{}); ok && len(arr) > 0 {
+			printArrayAsTable(arr, json.RawMessage(text))
+		} else if m, ok := obj.(map[string]interface{}); ok {
+			var rawFields map[string]json.RawMessage
+			json.Unmarshal([]byte(text), &rawFields)
+			type nested struct {
+				key string
+				arr []interface{}
+			}
+			var nestedArrays []nested
+			for _, k := range objectKeys([]byte(text)) {
+				v := m[k]
+				if arr, ok := v.([]interface{}); ok && len(arr) > 0 {
+					if _, isObj := arr[0].(map[string]interface{}); isObj {
+						nestedArrays = append(nestedArrays, nested{k, arr})
+						continue
+					}
+				}
+				switch v.(type) {
+				case []interface{}, map[string]interface{}:
+					// Nested scalars/objects: compact JSON, keeping the
+					// server's field order (a map round-trip would sort it).
+					var compact bytes.Buffer
+					if json.Compact(&compact, rawFields[k]) == nil {
+						fmt.Fprintf(w, "%s\t%s\n", strings.ToUpper(k), compact.String())
+						continue
+					}
+				}
+				fmt.Fprintf(w, "%s\t%s\n", strings.ToUpper(k), formatCell(v))
+			}
+			for _, na := range nestedArrays {
+				fmt.Fprintln(w, "\n"+strings.ToUpper(na.key)+":")
+				printArrayAsTable(na.arr, rawFields[na.key])
+			}
+		}
+		w.Flush()
+		printLines(buf.String())
 	default:
 		fmt.Print(text)
 	}

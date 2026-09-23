@@ -31,7 +31,7 @@ Header: time; uptime from `/proc/uptime`; logged-in users counted from `/var/run
 - `limit` (integer, optional): maximum processes to list; default all.
 - `user` (string, optional): only this user's processes.
 - `interval_ms` (integer, optional): `%CPU` sampling interval, default 1000, max 10000.
-- `output_format` (string, optional): `json`/`yaml`/`table`/`wide` return `{"summary": {...}, "processes": [...]}`, with each process's full `cmdline`, `ppid` and `threads` too.
+- `output_format` (string, optional): default and `table` are top's own layout (it already is a table). `wide` adds `PPID` and `THR` columns and shows each full command line (kernel threads as `[name]`), like `top -c`. `json`/`yaml` return `{"summary": {...}, "processes": [...]}`, with each process's `cmdline`, `ppid` and `threads` too.
 - `privileged` (boolean, optional): run as root.
 
 `linuxctl get processes top` calls this tool.

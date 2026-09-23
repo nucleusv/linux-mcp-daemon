@@ -150,3 +150,39 @@ func TestFormatLayout(t *testing.T) {
 		t.Error("bad sort_by accepted")
 	}
 }
+
+func TestTableAndWideFormats(t *testing.T) {
+	fakeProc(t)
+	table, err := Top([]byte(`{"interval_ms": 50, "sort_by": "pid", "output_format": "table"}`))
+	if err != nil || !strings.HasPrefix(table, "top - ") || !strings.Contains(table, " systemd\n") {
+		t.Errorf("table should be top's text layout: %v\n%s", err, table)
+	}
+	wide, err := Top([]byte(`{"interval_ms": 50, "sort_by": "pid", "output_format": "wide"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(wide, "   PPID  THR COMMAND") {
+		t.Errorf("wide header missing PPID/THR:\n%s", wide)
+	}
+	if !strings.Contains(wide, "/sbin/init splash") || !strings.Contains(wide, "[burner]") {
+		t.Errorf("wide should show cmdline, [comm] for no cmdline:\n%s", wide)
+	}
+}
+
+func TestWideAlignsLongUsernames(t *testing.T) {
+	snap := Snapshot{Processes: []Row{
+		{PID: 1, User: "root", PR: "20", Command: "a", Cmdline: "/a"},
+		{PID: 2, User: "privileged", PR: "20", Command: "b", Cmdline: "/b"},
+	}}
+	lines := strings.Split(FormatWide(snap), "\n")
+	head, r1, r2 := lines[6], lines[7], lines[8]
+	// The PR value must sit under the PR header in every row, whatever
+	// the length of the user name before it.
+	want := strings.Index(head, " PR ")
+	if strings.Index(r1, " 20 ") != want || strings.Index(r2, " 20 ") != want {
+		t.Errorf("misaligned:\n%s\n%s\n%s", head, r1, r2)
+	}
+	if !strings.Contains(r2, "privileged") {
+		t.Errorf("wide must not truncate user names: %q", r2)
+	}
+}
