@@ -1,6 +1,12 @@
 # Build stage
 FROM golang:alpine AS builder
 
+# Set automatically by BuildKit to match the build's target platform (arm64
+# on Docker Desktop/Apple Silicon, amd64 on a typical x86_64 Linux host) -
+# this was previously hardcoded to arm64, which silently produced a binary
+# that wouldn't run on an amd64 target.
+ARG TARGETARCH
+
 WORKDIR /app
 
 # Copy go mod and sum files
@@ -12,7 +18,7 @@ RUN go mod download
 COPY . .
 
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o mcpd ./cmd/mcpd
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -o mcpd ./cmd/mcpd
 
 # Docs Build Stage
 FROM node:20-alpine AS docs-builder
