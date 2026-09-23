@@ -312,8 +312,6 @@ func main() {
 	case "template_read":
 		runDescribe(authToken, action.Template, action.Positional, outputFormat)
 
-	case "top_snapshot":
-		runTop(authToken, outputFormat)
 	}
 }
 

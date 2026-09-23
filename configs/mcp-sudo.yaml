@@ -199,6 +199,8 @@ users:
           allowed: true
         processes/list:
           allowed: true
+        processes/top:
+          allowed: true
         services/list:
           allowed: true
         services/manage:

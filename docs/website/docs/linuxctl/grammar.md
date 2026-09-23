@@ -17,7 +17,7 @@ linuxctl <verb> <group> [target-keyword] [name/args]
   - **`describe`** - rich, aggregated single-object detail, backed by resource templates. Not redundant with `get <group> <name>`: `get` returns the same lightweight format the many-result case uses, just filtered to one match; `describe` combines several reads into one report (e.g. a process's status + cmdline + limits) and deliberately excludes secret-shaped data (`environ`) by default.
   - **Mutation words** keep their own verb directly - `create`, `update`, `delete`, `restart`, `start`, `stop`, `enable`, `disable`. The last five are enum values from a tool's own schema (`services/manage`'s `action` field), not hardcoded in the client - a future sixth action works immediately with no client changes.
 - **`[target-keyword]`** disambiguates which operation within the group, only needed when the group has more than one candidate under that verb (`network` has five different `get`-shaped operations, so `nslookup`/`ping`/`curl`/`arp`/`trace-path` must be named; `files` has exactly one bare-reachable read, so no keyword is needed for it).
-- **`top`** is a target keyword, not a verb - `get processes top` runs a fixed client-side recipe (`cpu/load-average` + `memory/usage` + `processes/list`), the one deliberate hardcoded exception in an otherwise fully schema-driven client.
+- **`top`** is a target keyword, not a verb - `get processes top` resolves to the `processes/top` tool like any other keyword. (It used to be a hardcoded client-side recipe combining three calls - the one exception in an otherwise schema-driven client; it is now a real tool, so there are no exceptions left.)
 
 ## Standalone commands (no `<group>`)
 

@@ -2,6 +2,10 @@ package listprocesses
 
 import (
 	"encoding/json"
+	"time"
+
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/procstat"
+
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,7 +32,13 @@ type Process struct {
 	PPID    int    `json:"ppid"`
 	RSS     int64  `json:"rss_kb"`
 	Cmdline string `json:"cmdline"`
+	// CPUPercent is only measured for sort_by: cpu (it needs two samples
+	// over an interval, which costs half a second).
+	CPUPercent *float64 `json:"cpu_percent,omitempty"`
 }
+
+// cpuSampleInterval is how long sort_by: cpu measures over.
+const cpuSampleInterval = 500 * time.Millisecond
 
 func Processes(argsJSON []byte) (string, error) {
 	var args GetProcessesArgs
@@ -36,6 +46,23 @@ func Processes(argsJSON []byte) (string, error) {
 		if err := json.Unmarshal(argsJSON, &args); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)
 		}
+	}
+
+	// sort_by: cpu was advertised in the schema but never implemented.
+	// %CPU needs two samples: CPU ticks now, and again after an interval.
+	var cpuBefore map[int]uint64
+	var sampleStart time.Time
+	if args.SortBy == "cpu" {
+		cpuBefore = map[int]uint64{}
+		if pids, err := procstat.ListPIDs(); err == nil {
+			for _, pid := range pids {
+				if p, err := procstat.ReadProc(pid); err == nil {
+					cpuBefore[pid] = p.CPUTicks()
+				}
+			}
+		}
+		sampleStart = time.Now()
+		time.Sleep(cpuSampleInterval)
 	}
 
 	entries, err := os.ReadDir("/proc")
@@ -107,6 +134,14 @@ func Processes(argsJSON []byte) (string, error) {
 			continue
 		}
 
+		if cpuBefore != nil {
+			if cur, err := procstat.ReadProc(pid); err == nil && cur.CPUTicks() >= cpuBefore[pid] {
+				pct := float64(cur.CPUTicks()-cpuBefore[pid]) / procstat.ClockTicks / time.Since(sampleStart).Seconds() * 100
+				pct = float64(int(pct*10+0.5)) / 10
+				p.CPUPercent = &pct
+			}
+		}
+
 		procs = append(procs, p)
 	}
 
@@ -115,9 +150,14 @@ func Processes(argsJSON []byte) (string, error) {
 	sort.Slice(procs, func(i, j int) bool {
 		return procs[i].PID < procs[j].PID
 	})
-	if args.SortBy == "mem" {
+	switch args.SortBy {
+	case "mem":
 		sort.SliceStable(procs, func(i, j int) bool {
 			return procs[i].RSS > procs[j].RSS // Descending
+		})
+	case "cpu":
+		sort.SliceStable(procs, func(i, j int) bool {
+			return cpuOf(procs[i]) > cpuOf(procs[j]) // Descending
 		})
 	}
 
@@ -132,4 +172,11 @@ func Processes(argsJSON []byte) (string, error) {
 	}
 
 	return string(j), nil
+}
+
+func cpuOf(p Process) float64 {
+	if p.CPUPercent == nil {
+		return 0
+	}
+	return *p.CPUPercent
 }

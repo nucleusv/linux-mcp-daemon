@@ -89,13 +89,18 @@ $ linuxctl get processes 1
 [{"cmdline": "/sbin/init", "comm": "systemd", "pid": 1, "ppid": 0, "rss_kb": 18928, "state": "S", "user": "root"}]
 # same tool as the bare form above, filtered to one PID - not a separate endpoint
 
-$ linuxctl get processes top
-=== load ===
-Load Average: 0.70, 0.98, 0.87
-=== memory ===
-{"available":5941297152,"free":356151296,"total":8320299008,"used":2148139008,...}
-=== top 10 processes by memory ===
-[{"pid":754,"user":"root","comm":"kube-apiserver",...}, ...]
+$ linuxctl get processes top --limit 3
+top - 00:05:53 up  5:23,  1 user,  load average: 0.02, 0.19, 0.43
+Tasks: 141 total,   2 running, 139 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.9 us,  1.8 sy,  0.0 ni, 87.7 id,  0.0 wa,  0.0 hi,  0.0 si,  9.6 st
+MiB Mem :   1892.6 total,    475.7 free,    393.3 used,   1023.6 buff/cache
+MiB Swap:   3772.0 total,   3739.3 free,     32.7 used.   1304.0 avail Mem
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+  89528 privile+  20   0 1268100  11864   6552 R  10.0   0.6   0:00.14 mcpd
+  54706 root      20   0  331300   9264   7700 R   1.0   0.5   1:25.59 NetworkManager
+      1 root      20   0   22596  12560   9148 S   0.0   0.6   2:13.24 systemd
+# the processes/top tool: top's header and all its columns, %CPU sampled over 1s
 
 $ linuxctl describe processes 1
 === status ===

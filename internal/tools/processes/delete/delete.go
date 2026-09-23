@@ -1,13 +1,11 @@
 package deleteprocess
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
-	"strconv"
 	"strings"
+	"syscall"
 )
 
 // DeleteProcessArgs defines the parameters for the processes/delete tool.
@@ -18,9 +16,12 @@ type DeleteProcessArgs struct {
 	Privileged   bool   `json:"privileged,omitempty"`    // Privileged executes the kill command as root.
 }
 
-var validSignals = map[string]bool{
-	"SIGTERM": true, "SIGKILL": true, "SIGHUP": true, "SIGINT": true, "SIGQUIT": true,
-	"SIGUSR1": true, "SIGUSR2": true, "SIGSTOP": true, "SIGCONT": true, "SIGABRT": true,
+// validSignals are the signals this tool may send, by name.
+var validSignals = map[string]syscall.Signal{
+	"SIGTERM": syscall.SIGTERM, "SIGKILL": syscall.SIGKILL, "SIGHUP": syscall.SIGHUP,
+	"SIGINT": syscall.SIGINT, "SIGQUIT": syscall.SIGQUIT, "SIGUSR1": syscall.SIGUSR1,
+	"SIGUSR2": syscall.SIGUSR2, "SIGSTOP": syscall.SIGSTOP, "SIGCONT": syscall.SIGCONT,
+	"SIGABRT": syscall.SIGABRT,
 }
 
 func Delete(argsJSON []byte) (string, error) {
@@ -48,20 +49,22 @@ func Delete(argsJSON []byte) (string, error) {
 		if !strings.HasPrefix(s, "SIG") {
 			s = "SIG" + s
 		}
-		if !validSignals[s] {
+		if _, ok := validSignals[s]; !ok {
 			return "", fmt.Errorf("invalid signal %q (e.g. SIGTERM, SIGKILL, SIGHUP, SIGINT)", args.Signal)
 		}
 		signal = s
 	}
 
-	cmd := exec.Command("kill", "-s", strings.TrimPrefix(signal, "SIG"), "--", strconv.Itoa(args.PID))
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	if err != nil {
-		return "", fmt.Errorf("kill error: %v, stderr: %s", err, stderr.String())
+	// kill(2) directly rather than the kill binary. PID is already > 0 here,
+	// so this can never be the kill(-1)/kill(0) broadcast forms.
+	if err := syscall.Kill(args.PID, validSignals[signal]); err != nil {
+		switch err {
+		case syscall.ESRCH:
+			return "", fmt.Errorf("no such process: %d", args.PID)
+		case syscall.EPERM:
+			return "", fmt.Errorf("not permitted to signal process %d (owned by another user - retry with privileged: true if authorized)", args.PID)
+		}
+		return "", fmt.Errorf("failed to send %s to process %d: %v", signal, args.PID, err)
 	}
 
 	return fmt.Sprintf("Successfully sent signal %s to process %d", signal, args.PID), nil

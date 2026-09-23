@@ -69,28 +69,3 @@ func buildDescribeURIs(tpl TemplateDef, positional []string) []string {
 		return []string{fillTemplate(tpl.URITemplate, positional)}
 	}
 }
-
-// runTop is the one deliberate hardcoded exception in the whole grammar
-// (plan/linuxctl-redesign.md): no tool is named "top", it's a fixed client
-// recipe combining cpu/load-average + memory/usage + processes/list.
-func runTop(authToken, outputFormat string) {
-	loadResp := callMethod(authToken, nextID(), "tools/call", map[string]interface{}{
-		"name":      "cpu/load-average",
-		"arguments": map[string]interface{}{},
-	})
-	memResp := callMethod(authToken, nextID(), "tools/call", map[string]interface{}{
-		"name":      "memory/usage",
-		"arguments": map[string]interface{}{"output_format": "json"},
-	})
-	procResp := callMethod(authToken, nextID(), "tools/call", map[string]interface{}{
-		"name":      "processes/list",
-		"arguments": map[string]interface{}{"sort_by": "mem", "limit": 10, "output_format": "json"},
-	})
-
-	fmt.Println("=== load ===")
-	renderResponse(loadResp, "", "content")
-	fmt.Println("\n=== memory ===")
-	renderResponse(memResp, outputFormat, "content")
-	fmt.Println("\n=== top 10 processes by memory ===")
-	renderResponse(procResp, outputFormat, "content")
-}

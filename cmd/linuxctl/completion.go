@@ -382,9 +382,6 @@ func keywordsFor(reg Registry, verb, group string) []string {
 				kws = append(kws, r.LinuxctlVerb)
 			}
 		}
-		if group == "processes" {
-			kws = append(kws, "top")
-		}
 	case "describe":
 		for _, t := range reg.Templates {
 			if t.Group == group && t.LinuxctlVerb != "" {

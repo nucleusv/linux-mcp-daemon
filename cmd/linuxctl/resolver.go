@@ -50,7 +50,7 @@ type Registry struct {
 // Action is what Resolve produces - main.go executes it without needing to
 // know which of these three shapes it came from.
 type Action struct {
-	Kind        string // "tool_call", "resource_read", "template_read", "top_snapshot"
+	Kind        string // "tool_call", "resource_read", "template_read"
 	Tool        ToolDef
 	ResourceURI string
 	Template    TemplateDef
@@ -311,12 +311,7 @@ func Resolve(reg Registry, verb, group string, rest []string) (Action, error) {
 	}
 
 	// Case B: get - the sole universal read verb, one result or many.
-	// "top" is handled here as the one keyword in "processes" that doesn't
-	// map to a single tool/resource call.
 	if verb == "get" {
-		if group == "processes" && len(rest) > 0 && rest[0] == "top" {
-			return Action{Kind: "top_snapshot"}, nil
-		}
 		if tool, remaining, ok := matchToolByLinuxctlVerb(reg, group, rest); ok {
 			return Action{Kind: "tool_call", Tool: tool, Args: map[string]interface{}{}, Positional: remaining}, nil
 		}

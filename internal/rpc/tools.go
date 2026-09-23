@@ -199,6 +199,23 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
+				"name":          "processes/top",
+				"tools_group":   "processes",
+				"linuxctl_verb": "top",
+				"description":   "A snapshot like `top -b -n 1`: header with uptime, logged-in users, load average, task counts by state, CPU breakdown (us/sy/ni/id/wa/hi/si/st) and memory/swap in MiB, followed by the process table with all of top's columns (PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND). %CPU is measured over a short sampling interval, as top does. Use processes/list for a plain listing, processes/delete to signal a process.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"sort_by":       map[string]interface{}{"type": "string", "enum": []string{"cpu", "mem", "res", "time", "pid"}, "description": "Sort column: cpu (default, like top), mem/res (resident memory), time (total CPU time), pid"},
+						"limit":         map[string]interface{}{"type": "integer", "description": "Maximum processes to list (default: all)"},
+						"user":          map[string]interface{}{"type": "string", "description": "Only this user's processes"},
+						"interval_ms":   map[string]interface{}{"type": "integer", "description": "%CPU sampling interval in milliseconds (default 1000, max 10000)"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to top-style text"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+					},
+				},
+			},
+			map[string]interface{}{
 				"name":          "processes/list",
 				"tools_group":   "processes",
 				"linuxctl_verb": "get",
@@ -652,6 +669,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"disks/health":          true,
 			"disks/partitions":      true,
 			"processes/list":        true,
+			"processes/top":         true,
 			"processes/delete":      true,
 			"network/connections":   true,
 			"network/nslookup":      true,
