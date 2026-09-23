@@ -34,7 +34,10 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-Real response (captured live):
+</details>
+
+**Real response (captured live):**
+
 ```text
 [WARNING: Output truncated to last 30KB]
 ...
@@ -55,5 +58,3 @@ ort 1(veth0ef6e1f) entered disabled state
 [  +0.000318] veth37722
 ...
 ```
-
-</details>

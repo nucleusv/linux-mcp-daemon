@@ -30,9 +30,10 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "system://hostname"}}'
 ```
 
-Real response (captured live):
+</details>
+
+**Real response (captured live):**
+
 ```text
 desktop-control-plane
 ```
-
-</details>

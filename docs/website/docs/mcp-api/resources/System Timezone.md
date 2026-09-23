@@ -30,12 +30,13 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "system://timezone"}}'
 ```
 
-Real response (captured live):
+</details>
+
+**Real response (captured live):**
+
 ```text
 Time zone: UTC
 Abbreviation: UTC
 UTC offset: +0.0
 Current local time: Wed, 23 Sep 2026 11:43:50 UTC
 ```
-
-</details>

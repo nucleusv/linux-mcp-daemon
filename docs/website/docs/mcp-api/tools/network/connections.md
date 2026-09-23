@@ -34,7 +34,10 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-Real response (captured live):
+</details>
+
+**Real response (captured live):**
+
 ```text
 Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess
 udp   UNCONN 0      0         127.0.0.11:45825      0.0.0.0:*          
@@ -51,5 +54,3 @@ tcp   LISTEN 0      4096      127.0.0.11:37707      0.0.0.0:*
 tcp   LISTEN 0      4096
 ...
 ```
-
-</details>

@@ -34,7 +34,10 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-Real response (captured live):
+</details>
+
+**Real response (captured live):**
+
 ```text
 Your authorized privileged tools:
 {
@@ -87,5 +90,3 @@ Your authorized privileged tools:
       "Allowed": true,
 ...
 ```
-
-</details>

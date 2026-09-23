@@ -8,6 +8,14 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+// This same build output backs two different deployments that need different
+// baseUrls: the Dockerfile bundles it into the daemon image, served at
+// /docs/ by cmd/mcpd/main.go's http.StripPrefix("/docs/", ...); GitHub Pages
+// serves the whole gh-pages branch at the repo root, i.e. /linux-mcp-daemon/.
+// `npm run deploy` (docs/website/package.json) sets this env var; the
+// Dockerfile's plain `npm run build` doesn't, so it keeps the /docs/ default.
+const isGithubPagesDeploy = process.env.DOCS_DEPLOY_TARGET === 'github-pages';
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Linux MCPd',
@@ -20,15 +28,14 @@ const config = {
   },
 
   // Set the production url of your site here
-  url: 'https://github.com',
+  url: 'https://nucleusv.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/docs/',
+  baseUrl: isGithubPagesDeploy ? '/linux-mcp-daemon/' : '/docs/',
 
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'facebook', // Usually your GitHub org/user name.
-  projectName: 'docusaurus', // Usually your repo name.
+  // GitHub pages deployment config (also used to build "Edit this page" links).
+  organizationName: 'nucleusv', // Usually your GitHub org/user name.
+  projectName: 'linux-mcp-daemon', // Usually your repo name.
+  deploymentBranch: 'gh-pages',
 
   onBrokenLinks: 'throw',
 
@@ -51,7 +58,7 @@ const config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+            'https://github.com/nucleusv/linux-mcp-daemon/tree/main/docs/website/',
         },
         blog: {
           showReadingTime: true,
@@ -62,7 +69,7 @@ const config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+            'https://github.com/nucleusv/linux-mcp-daemon/tree/main/docs/website/',
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',

@@ -34,7 +34,10 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-Real response (captured live):
+</details>
+
+**Real response (captured live):**
+
 ```text
 [FILE] alternatives.log (6522 bytes, modified: 2026-09-22 23:51:44)
 [DIR]  apt/ (modified: 2026-09-22 23:51:42)
@@ -45,5 +48,3 @@ Real response (captured live):
 [FILE] lastlog (0 bytes, modified: 2026-09-11 02:06:06)
 [FILE] wtmp (0 bytes, modified: 2026-09-11 02:06:06)
 ```
-
-</details>

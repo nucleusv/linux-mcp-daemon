@@ -30,7 +30,10 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "file:///etc/hosts/stat"}}'
 ```
 
-Real response (captured live) - this particular URI needs `privileged: true` under the hood, and the token used for this capture wasn't granted that in `mcp-sudo.yaml`, so this is a genuine authorization error, not a placeholder:
+</details>
+
+**Real response (captured live) - this particular URI needs `privileged: true` under the hood, and the token used for this capture wasn't granted that in `mcp-sudo.yaml`, so this is a genuine authorization error, not a placeholder:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -41,5 +44,3 @@ Real response (captured live) - this particular URI needs `privileged: true` und
   }
 }
 ```
-
-</details>

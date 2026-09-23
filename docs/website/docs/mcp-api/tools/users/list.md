@@ -36,7 +36,10 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-Real response (captured live):
+</details>
+
+**Real response (captured live):**
+
 ```text
 ubuntu (uid=1000 gid=1000) home=/home/ubuntu shell=/bin/bash
 testuser (uid=1001 gid=1001) home=/home/testuser shell=/bin/bash
@@ -44,5 +47,3 @@ unpriviliged (uid=1002 gid=1002) home=/home/unpriviliged shell=/bin/bash
 privileged (uid=1003 gid=1003) home=/home/privileged shell=/bin/bash
 nobody (uid=65534 gid=65534) home=/nonexistent shell=/usr/sbin/nologin
 ```
-
-</details>

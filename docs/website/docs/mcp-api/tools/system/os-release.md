@@ -34,7 +34,10 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-Real response (captured live):
+</details>
+
+**Real response (captured live):**
+
 ```text
 OS Release Info:
 PRETTY_NAME="Ubuntu 24.04.5 LTS"
@@ -54,5 +57,3 @@ LOGO=ubuntu-logo
 Kernel Info:
 Linux desktop-control-plane 7.0.12-linuxkit #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026 aarch64
 ```
-
-</details>

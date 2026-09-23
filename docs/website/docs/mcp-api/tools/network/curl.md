@@ -34,7 +34,10 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-Real response (captured live):
+</details>
+
+**Real response (captured live):**
+
 ```json
 {
   "status_code": 404,
@@ -48,5 +51,3 @@ Real response (captured live):
   "body": "404 page not found\n"
 }
 ```
-
-</details>
