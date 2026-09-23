@@ -10,6 +10,8 @@ When an AI requests a tool execution, the Master daemon **never** executes that 
 
 ## How it works
 
+![linux-mcp-daemon architecture: clients call the mcpd master, which authenticates, rate-limits, routes and checks mcp-sudo.yaml, then spawns an ephemeral worker under the caller's OS user](/linux-mcp-daemon-architecture.svg)
+
 1. The Master daemon receives an MCP `tools/call` JSON-RPC message.
 2. It authenticates the user via their Bearer token.
 3. Instead of running the tool, the Master uses `os/exec` to spawn a new instance of itself (`./mcpd worker <tool> <json>`).

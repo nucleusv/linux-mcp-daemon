@@ -14,26 +14,11 @@ Communication happens directly between the AI agent and the daemon via HTTP Serv
 
 ## How It Works
 
-```
-AI agent / linuxctl / curl
-        │  Bearer token, JSON-RPC over SSE+HTTP (port 9091)
-        ▼
-┌───────────────────────┐
-│   mcpd master daemon   │  runs as root, never touches /proc or /sys
-│  (auth, rate limiting, │  or execs a binary directly - it only
-│   routing, mcp-sudo)   │  decides *whether* a call is allowed
-└──────────┬─────────────┘
-           │ re-execs itself: `mcpd worker <tool>`, args on stdin
-           │ as a specific OS user (syscall.Credential{Uid: ...})
-           ▼
-┌───────────────────────┐
-│   ephemeral worker     │  one short-lived process per call,
-│  (does the real work,  │  runs unprivileged unless mcp-sudo.yaml
-│   then exits)          │  grants privileged: true for this user+tool
-└───────────────────────┘
-```
+<p align="center">
+  <img src="docs/imgs/linux-mcp-daemon-architecture.svg" alt="linux-mcp-daemon architecture: clients call the mcpd master over JSON-RPC; the master authenticates, rate-limits, routes and checks mcp-sudo.yaml, then spawns an ephemeral worker under the caller's OS user that acts on /proc, /sys, DBus/systemd and the filesystem" width="860">
+</p>
 
-- **Every tool/resource call spawns a fresh worker process and exits.** There's no long-lived state per call - `internal/worker/spawner.go` re-execs the `mcpd` binary itself in `worker` mode, with `syscall.Credential{Uid: targetUID}` set to a real OS account resolved via `user.Lookup()`. This is the actual privilege isolation, not a config flag: an unprivileged user's worker process is a genuinely different Linux UID than a privileged one's.
+- **Every tool/resource call spawns a fresh worker process and exits.** There's no long-lived state per call - `internal/worker/spawner.go` re-execs the `mcpd` binary itself in `worker` mode (arguments on stdin, never argv), with `syscall.Credential{Uid, Gid, Groups}` set to a real OS account resolved via `user.Lookup()`. This is the actual privilege isolation, not a config flag: an unprivileged user's worker process is a genuinely different Linux UID than a privileged one's.
 - **`configs/mcp-sudo.yaml` decides, per user and per tool, whether `privileged: true` is honored.** Two grants exist for resources specifically (see `ARCHITECTURE.md`'s gotcha section) - one for the resource URI itself, one for the internal worker tool name behind it.
 - **When `mcpd` runs containerized** (`configs/daemon.yaml`'s `worker.containerized: true`, this project's actual Kubernetes deployment), a privileged worker also joins the real host's mount namespace (`setns(CLONE_NEWNS)` on `/proc/1/ns/mnt`, no external `nsenter` binary) - so `privileged: true` means root on the real host, not just root inside the daemon's own container image.
 - **Bearer tokens are salted+hashed** in `daemon.yaml` (`token_salt` + `token_hash`, `sha256`, constant-time compared), not stored in plaintext. New/rotated users are managed entirely locally via `linuxctl <verb> mcpd user` - a design that never touches the network, so it can't be reached by anything with just a bearer token (see [Daemon User Administration](docs/website/docs/linuxctl/mcpd-admin.md)).

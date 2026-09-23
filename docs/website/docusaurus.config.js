@@ -32,6 +32,10 @@ const config = {
   // Set the /<baseUrl>/ pathname under which your site is served
   baseUrl: isGithubPagesDeploy ? '/linux-mcp-daemon/' : '/docs/',
 
+  // docs/imgs holds images shared with the repo README (e.g. the
+  // architecture diagram), served from here too so there's one copy.
+  staticDirectories: ['static', '../imgs'],
+
   // GitHub pages deployment config (also used to build "Edit this page" links).
   organizationName: 'nucleusv', // Usually your GitHub org/user name.
   projectName: 'linux-mcp-daemon', // Usually your repo name.
