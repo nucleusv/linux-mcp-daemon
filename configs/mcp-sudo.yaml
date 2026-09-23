@@ -225,6 +225,10 @@ users:
           allowed: true
         files/content:
           allowed: true
+        # Worker behind file:///{path}/stat - a privileged file:// read needs
+        # both the resource grant and this one (see ARCHITECTURE.md).
+        files/stat:
+          allowed: true
         processes/read:
           allowed: true
         system/os-release:
