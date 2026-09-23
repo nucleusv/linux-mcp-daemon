@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Install, upgrade or uninstall linux-mcp-daemon (mcpd + linuxctl) on a
-# systemd Linux host from a GitHub release.
+# systemd Linux host from a GitHub release. On macOS it installs only the
+# linuxctl CLI (mcpd is Linux-only).
 #
 #   curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash
 #
@@ -13,6 +14,7 @@
 #                      downloading (offline installs, testing)
 #   --uninstall        stop and remove mcpd (keeps /etc/mcpd)
 #   --purge            with --uninstall: also delete /etc/mcpd
+#   --bin-dir DIR      macOS only: where to put linuxctl (default /usr/local/bin)
 #
 # Environment variables work too (handy with curl | bash):
 #   MCPD_VERSION=v0.1.0   MCPD_USER=name
@@ -39,6 +41,7 @@ START=1
 ARCHIVE=""
 UNINSTALL=0
 PURGE=0
+BIN_DIR_SET=0
 
 say()  { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
@@ -77,7 +80,70 @@ Install, upgrade or uninstall linux-mcp-daemon (mcpd + linuxctl).
   --no-start         install and enable, but don't start the service
   --archive FILE     install from a local release tarball
   --uninstall        remove mcpd (keeps /etc/mcpd); add --purge to delete it too
+  --bin-dir DIR      macOS only: where to put linuxctl (default /usr/local/bin)
+
+On macOS only the linuxctl CLI is installed - no sudo needed with a writable --bin-dir:
+  curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | bash -s -- --bin-dir ~/.local/bin
 USAGE
+}
+
+# resolve_version sets VERSION (latest release if unset) and NUM.
+resolve_version() {
+    if [ -z "$VERSION" ]; then
+        fetch "https://api.github.com/repos/$REPO/releases/latest" "$TMP/latest.json" \
+            || die "could not query the latest release (try --version vX.Y.Z)"
+        VERSION="$(sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' "$TMP/latest.json" | head -n1)"
+        [ -n "$VERSION" ] || die "could not determine the latest release (try --version vX.Y.Z)"
+    fi
+    case "$VERSION" in v*) ;; *) VERSION="v$VERSION" ;; esac
+    NUM="${VERSION#v}"
+}
+
+# download_verified FILE - fetch a release asset into $TMP/FILE and check
+# it against the release's checksums.txt, aborting on any mismatch.
+download_verified() {
+    local base="https://github.com/$REPO/releases/download/$VERSION"
+    say "Downloading $1 ($VERSION)"
+    fetch "$base/$1" "$TMP/$1" || die "download failed: $base/$1"
+    fetch "$base/checksums.txt" "$TMP/checksums.txt" || die "download failed: $base/checksums.txt"
+    say "Verifying sha256 checksum"
+    local expected actual
+    expected="$(awk -v f="$1" '$2 == f {print $1}' "$TMP/checksums.txt")"
+    [ -n "$expected" ] || die "$1 is not listed in checksums.txt"
+    actual="$(sha256 "$TMP/$1")"
+    [ "$expected" = "$actual" ] || die "checksum mismatch for $1 (expected $expected, got $actual) - refusing to install"
+}
+
+# install_cli_macos installs just linuxctl: mcpd is Linux-only, and a Mac
+# typically drives a remote mcpd. No root needed if --bin-dir is writable.
+install_cli_macos() {
+    [ -z "$ARCHIVE" ] || die "--archive is for Linux server archives"
+    [ "$UNINSTALL" -eq 0 ] || { rm -f "$BIN_DIR/linuxctl"; say "linuxctl removed from $BIN_DIR"; return; }
+    case "$(uname -m)" in
+        arm64)  ARCH="arm64" ;;
+        x86_64) ARCH="amd64" ;;
+        *) die "unsupported architecture: $(uname -m)" ;;
+    esac
+    mkdir -p "$BIN_DIR" 2>/dev/null || true
+    [ -w "$BIN_DIR" ] || die "$BIN_DIR is not writable - rerun with sudo, or pass --bin-dir ~/.local/bin"
+    TMP="$(mktemp -d)"
+    trap 'rm -rf "$TMP"' EXIT
+    resolve_version
+    local file="linuxctl_${NUM}_darwin_${ARCH}.tar.gz"
+    download_verified "$file"
+    tar -xzf "$TMP/$file" -C "$TMP" linuxctl
+    install -m 0755 "$TMP/linuxctl" "$BIN_DIR/linuxctl"
+    say "Installed $("$BIN_DIR/linuxctl" --version) to $BIN_DIR"
+    case ":$PATH:" in *":$BIN_DIR:"*) ;; *) warn "$BIN_DIR is not on your PATH - add: export PATH=\"$BIN_DIR:\$PATH\"" ;; esac
+    cat <<EOF
+
+  Point it at a Linux host running mcpd:
+    export MCP_SERVER=http://your-server:9091
+    export MCP_TOKEN=<token>
+    linuxctl get system os-release
+
+  Shell completion: source <(linuxctl completion zsh)   # or bash
+EOF
 }
 
 main() {
@@ -89,13 +155,19 @@ while [ $# -gt 0 ]; do
         --archive)   ARCHIVE="${2:?--archive needs a file}"; shift 2 ;;
         --uninstall) UNINSTALL=1; shift ;;
         --purge)     PURGE=1; shift ;;
+        --bin-dir)   BIN_DIR="${2:?--bin-dir needs a directory}"; BIN_DIR_SET=1; shift 2 ;;
         -h|--help)   usage; exit 0 ;;
         *)           die "unknown option: $1 (see --help)" ;;
     esac
 done
 
+case "$(uname -s)" in
+    Darwin) install_cli_macos; exit 0 ;;
+    Linux)  ;;
+    *) die "unsupported OS: $(uname -s) (mcpd runs on Linux; linuxctl also on macOS)" ;;
+esac
+[ "$BIN_DIR_SET" -eq 0 ] || die "--bin-dir is for macOS; on Linux the service expects $BIN_DIR"
 [ "$(id -u)" -eq 0 ] || die "run as root (sudo bash)"
-[ "$(uname -s)" = "Linux" ] || die "mcpd runs on Linux only (linuxctl for macOS is in the release assets)"
 HAVE_SYSTEMD=0
 if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
     HAVE_SYSTEMD=1
@@ -132,26 +204,9 @@ if [ -n "$ARCHIVE" ]; then
     say "Installing from local archive $ARCHIVE (checksum not verified)"
     cp "$ARCHIVE" "$TMP/release.tar.gz"
 else
-    if [ -z "$VERSION" ]; then
-        fetch "https://api.github.com/repos/$REPO/releases/latest" "$TMP/latest.json" \
-            || die "could not query the latest release (try --version vX.Y.Z)"
-        VERSION="$(sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' "$TMP/latest.json" | head -n1)"
-        [ -n "$VERSION" ] || die "could not determine the latest release (try --version vX.Y.Z)"
-    fi
-    case "$VERSION" in v*) ;; *) VERSION="v$VERSION" ;; esac
-    NUM="${VERSION#v}"
+    resolve_version
     FILE="linux-mcp-daemon_${NUM}_linux_${ARCH}.tar.gz"
-    BASE="https://github.com/$REPO/releases/download/$VERSION"
-
-    say "Downloading $FILE ($VERSION)"
-    fetch "$BASE/$FILE" "$TMP/$FILE" || die "download failed: $BASE/$FILE"
-    fetch "$BASE/checksums.txt" "$TMP/checksums.txt" || die "download failed: $BASE/checksums.txt"
-
-    say "Verifying sha256 checksum"
-    EXPECTED="$(awk -v f="$FILE" '$2 == f {print $1}' "$TMP/checksums.txt")"
-    [ -n "$EXPECTED" ] || die "$FILE is not listed in checksums.txt"
-    ACTUAL="$(sha256 "$TMP/$FILE")"
-    [ "$EXPECTED" = "$ACTUAL" ] || die "checksum mismatch for $FILE (expected $EXPECTED, got $ACTUAL) - refusing to install"
+    download_verified "$FILE"
     mv "$TMP/$FILE" "$TMP/release.tar.gz"
 fi
 

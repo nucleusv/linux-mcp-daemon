@@ -90,14 +90,15 @@ sudo docker run -d --name mcpd --restart unless-stopped \
 
 ## macOS: the CLI
 
-`linuxctl` runs anywhere and talks to a remote mcpd. Download `linuxctl_<version>_darwin_arm64.tar.gz` (Apple Silicon) or `..._darwin_amd64.tar.gz` (Intel) from the [release page](https://github.com/nucleusv/linux-mcp-daemon/releases), then:
+`linuxctl` runs anywhere and talks to a remote mcpd. The same install script, run on a Mac, installs just `linuxctl` (from the macOS release archive, sha256-verified) - no sudo needed when the target directory is yours:
 
 ```bash
-tar xzf linuxctl_*_darwin_*.tar.gz linuxctl
-sudo mv linuxctl /usr/local/bin/
+curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | bash -s -- --bin-dir ~/.local/bin
 export MCP_SERVER=http://your-server:9091 MCP_TOKEN=...
 linuxctl get system os-release
 ```
+
+Without `--bin-dir` it installs to `/usr/local/bin` (run with `sudo` if that isn't writable). `--uninstall --bin-dir DIR` removes it. Or download `linuxctl_<version>_darwin_arm64.tar.gz` (Apple Silicon) / `..._darwin_amd64.tar.gz` (Intel) from the [release page](https://github.com/nucleusv/linux-mcp-daemon/releases) yourself.
 
 Shell completion: see [Autocompletion](./linuxctl/autocompletion).
 

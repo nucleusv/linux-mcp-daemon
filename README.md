@@ -68,7 +68,7 @@ linuxctl get processes top
 - **Pin a version / name the user:** `... | sudo bash -s -- --version v0.1.0 --user alice`
 - **Uninstall:** `... | sudo bash -s -- --uninstall` (add `--purge` to delete `/etc/mcpd`)
 - **Container image:** `ghcr.io/nucleusv/linux-mcp-daemon` (amd64/arm64) - setup steps in the [installation docs](https://nucleusv.github.io/linux-mcp-daemon/installation/).
-- **macOS:** download `linuxctl` from the [releases page](https://github.com/nucleusv/linux-mcp-daemon/releases) to drive a remote mcpd.
+- **macOS (CLI only):** the same script installs just `linuxctl` - `curl -fsSL .../install.sh | bash -s -- --bin-dir ~/.local/bin` - to drive a remote mcpd.
 
 > mcpd listens on all interfaces over plain HTTP unless TLS is enabled in `daemon.yaml`. Firewall port 9091 to trusted addresses, or enable TLS, before exposing it. Root access for tools is granted per user and per tool in `mcp-sudo.yaml`.
 
