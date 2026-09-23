@@ -85,17 +85,10 @@ How it's enforced:
 
 ## Restricting kernel parameter writes (`kernel/system-control`)
 
-With `allowed: true`, a user can both read and **write** kernel parameters as root - and writing some of them is equivalent to running arbitrary code as root (`kernel.core_pattern` can name a program the kernel runs on every crash; `kernel.modprobe` names the module loader). An optional `sysctl:` block separates the two:
+With `allowed: true`, a user can both read and **write** kernel parameters as root - and writing some of them is equivalent to running arbitrary code as root (`kernel.core_pattern` can name a program the kernel runs on every crash; `kernel.modprobe` names the module loader). An optional `sysctl:` block limits which keys may be written:
 
 ```yaml
 users:
-  alice:
-    privileged:
-      tools:
-        kernel/system-control:
-          allowed: true
-          sysctl:
-            read_only: true            # may read everything, write nothing
   bob:
     privileged:
       tools:
@@ -108,7 +101,9 @@ users:
               - net.ipv4.conf.*.rp_filter
 ```
 
-Without a `sysctl:` block, writes are unrestricted - the default, unchanged. The check runs in the daemon itself, before any worker is spawned, against the key in its normalized dotted form (so `net/ipv4/ip_forward` and `net.ipv4.ip_forward` are the same key). Invalid `write_keys` patterns stop the config from loading.
+**For read-only access, don't grant `allowed` at all.** Reading needs no root - only about 67 of ~2700 parameters are root-readable only (for example `net.ipv4.tcp_fastopen_key`, a secret key) - and without root the OS refuses every write.
+
+Without a `sysctl:` block, writes are unrestricted - the default, unchanged. (An earlier `read_only` option was removed as redundant with not granting `allowed`; a leftover `read_only` key makes the config fail to load rather than being silently ignored.) The check runs in the daemon itself, before any worker is spawned, against the key in its normalized dotted form (so `net/ipv4/ip_forward` and `net.ipv4.ip_forward` are the same key). Invalid `write_keys` patterns stop the config from loading.
 
 ## Full reference example
 

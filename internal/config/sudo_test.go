@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -108,9 +109,24 @@ func TestLoadPerToolNetworkPolicy(t *testing.T) {
 	}
 }
 
+func TestRemovedReadOnlyFailsLoudly(t *testing.T) {
+	path := t.TempDir() + "/mcp-sudo.yaml"
+	os.WriteFile(path, []byte(`users:
+  alice:
+    privileged:
+      tools:
+        kernel/system-control:
+          allowed: true
+          sysctl:
+            read_only: true
+`), 0o600)
+	if _, err := LoadSudoConfig(path); err == nil || !strings.Contains(err.Error(), "read_only is no longer supported") {
+		t.Errorf("leftover read_only must refuse to load (it would otherwise be silently ignored, leaving writes open): %v", err)
+	}
+}
+
 func TestSysctlWritePolicy(t *testing.T) {
 	c := &SudoConfig{Users: map[string]UserSudo{
-		"ro":    {Privileged: PrivilegedConfig{Tools: map[string]ToolPrivilege{"kernel/system-control": {Allowed: true, Sysctl: &SysctlPolicy{ReadOnly: true}}}}},
 		"keys":  {Privileged: PrivilegedConfig{Tools: map[string]ToolPrivilege{"kernel/system-control": {Allowed: true, Sysctl: &SysctlPolicy{WriteKeys: []string{"net.ipv4.ip_forward", "vm.*", "net.ipv4.conf.*.rp_filter"}}}}}},
 		"plain": {Privileged: PrivilegedConfig{Tools: map[string]ToolPrivilege{"kernel/system-control": {Allowed: true}}}},
 	}}
@@ -120,7 +136,6 @@ func TestSysctlWritePolicy(t *testing.T) {
 	}{
 		{"plain", "kernel.core_pattern", true}, // no sysctl block: unchanged behavior
 		{"nobody", "kernel.core_pattern", true},
-		{"ro", "vm.swappiness", false},
 		{"keys", "net.ipv4.ip_forward", true},
 		{"keys", "vm.swappiness", true},
 		{"keys", "vm.a.b", false}, // "*" stays within one component

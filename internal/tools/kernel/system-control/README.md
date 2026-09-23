@@ -16,10 +16,10 @@ Writing some parameters is equivalent to running code as root (`kernel.core_patt
 kernel/system-control:
   allowed: true
   sysctl:
-    read_only: true                              # refuse every write
-    # or:
     write_keys: ["net.ipv4.ip_forward", "vm.*"]  # only these keys ("*" = one dotted component)
 ```
+
+For read-only access, don't grant `allowed` at all: reading needs no root (only ~67 of ~2700 parameters, such as `net.ipv4.tcp_fastopen_key`, are root-readable only), and without root the OS refuses every write.
 
 ## Parameters
 - `key` (string): parameter name or subtree. Required unless `read_all`.

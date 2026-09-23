@@ -40,10 +40,15 @@ type ToolPrivilege struct {
 // SysctlPolicy limits which kernel parameters a user may change. Writing
 // some parameters is equivalent to running code as root (e.g.
 // kernel.core_pattern, kernel.modprobe), so it's worth being able to allow
-// reads without writes, or writes to only a known set of keys.
+// writes to only a known set of keys. (For read-only access, don't grant
+// `allowed` at all: reading needs no root, and without root the OS refuses
+// every write.)
 type SysctlPolicy struct {
-	// ReadOnly refuses every write.
-	ReadOnly bool `yaml:"read_only"`
+	// RemovedReadOnly catches the former read_only option. It was removed
+	// as redundant with simply not granting `allowed`, and is kept only so
+	// a leftover `read_only: true` fails loudly at load - a silently ignored
+	// key would leave writes open while the config reads as closed.
+	RemovedReadOnly *bool `yaml:"read_only"`
 	// WriteKeys, if non-empty, is the only set of keys that may be
 	// written. Entries are dotted keys or glob patterns ("vm.*",
 	// "net.ipv4.conf.*.rp_filter"); "*" matches within one dotted
@@ -61,9 +66,6 @@ func (c *SudoConfig) CanWriteSysctl(username, key string) (bool, string) {
 	privs, ok := userSudo.Privileged.Tools["kernel/system-control"]
 	if !ok || privs.Sysctl == nil {
 		return true, ""
-	}
-	if privs.Sysctl.ReadOnly {
-		return false, "kernel/system-control is read-only for this user (sysctl.read_only in mcp-sudo.yaml)"
 	}
 	if len(privs.Sysctl.WriteKeys) == 0 {
 		return true, ""
@@ -104,6 +106,9 @@ func LoadSudoConfig(path string) (*SudoConfig, error) {
 	for username, userSudo := range cfg.Users {
 		for toolName, privs := range userSudo.Privileged.Tools {
 			if privs.Sysctl != nil {
+				if privs.Sysctl.RemovedReadOnly != nil {
+					return nil, fmt.Errorf("validation error in %s: user '%s', tool '%s': sysctl.read_only is no longer supported - for read-only access remove `allowed` (reading needs no root, and without root the OS refuses writes); to limit writes use sysctl.write_keys", path, username, toolName)
+				}
 				for _, p := range privs.Sysctl.WriteKeys {
 					if err := validSysctlPattern(p); err != nil {
 						return nil, fmt.Errorf("validation error in %s: user '%s', tool '%s': invalid sysctl.write_keys pattern %q: %v", path, username, toolName, p, err)

@@ -29,6 +29,11 @@ users:
             - /
         kernel/system-control:
           allowed: true
+          sysctl:
+            write_keys:          # may write only these ("*" = one dotted component)
+              - net.ipv4.ip_forward
+              - vm.*
+              - net.ipv4.conf.*.rp_filter
         logs/dmesg:
           allowed: true
         logs/logins:
@@ -162,8 +167,7 @@ users:
           # Optional write restrictions (checked before any worker runs).
           # Absent = unrestricted. Example:
           # sysctl:
-          #   read_only: true                              # refuse every write
-          #   write_keys: ["net.ipv4.ip_forward", "vm.*"]  # or: only these keys
+          #   write_keys: ["net.ipv4.ip_forward", "vm.*"]  # only these keys
         logs/dmesg:
           allowed: true
         logs/logins:
