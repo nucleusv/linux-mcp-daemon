@@ -10,6 +10,23 @@ import (
 	"strings"
 )
 
+// ReadWorker is the worker entrypoint for network://interfaces and
+// network://interfaces/{name}: {"name": ""} for all interfaces. It runs in
+// an unprivileged worker - the daemon's master process must never read
+// /sys itself (see CLAUDE.md), and interface data needs no root.
+func ReadWorker(argsJSON []byte) (string, error) {
+	var args struct {
+		Name string `json:"name"`
+	}
+	if len(argsJSON) > 0 {
+		if err := json.Unmarshal(argsJSON, &args); err != nil {
+			return "", fmt.Errorf("invalid arguments: %v", err)
+		}
+	}
+	content, _, err := Read(args.Name)
+	return content, err
+}
+
 // Read returns network interfaces. If targetName is provided, it returns only that interface.
 func Read(targetName string) (string, string, error) {
 	ifaces, err := net.Interfaces()

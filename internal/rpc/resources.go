@@ -7,7 +7,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/interfaces"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/os/release"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/system/hostname"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/system/locale"
@@ -238,7 +237,11 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 		case strings.HasPrefix(params.URI, "network://interfaces"):
 			targetName := strings.TrimPrefix(params.URI, "network://interfaces")
 			targetName = strings.TrimPrefix(targetName, "/")
-			content, mimeType, readErr = interfaces.Read(targetName)
+			// Read in an unprivileged worker, never in this (root) master
+			// process - the master must not touch /proc or /sys itself.
+			argsJSON, _ := json.Marshal(map[string]string{"name": targetName})
+			content, readErr = worker.SpawnWorker(session.User, "read_interfaces", argsJSON, false, h.SudoConfig, 30)
+			mimeType = "application/json"
 		case strings.HasPrefix(params.URI, "file://"):
 			content, mimeType, readErr = file.Handle(params.URI, session.User, h.SudoConfig)
 		case strings.HasPrefix(params.URI, "service://") && strings.HasSuffix(params.URI, "/status"):

@@ -9,5 +9,6 @@ By default this reports on whatever filesystem the worker process sees. When `mc
 All tools in the Linux MCP Daemon natively support returning structured JSON output. This can be requested by passing the `output_format` parameter.
 
 ## Parameters
-- `output_format` (string, optional): The requested format. Setting this to `json`, `yaml`, `table`, or `wide` will return the raw structured JSON payload (array of `{name, version, architecture}`) instead of a human-readable summary line.
+- `name` (string, optional): Only packages whose name matches this glob or exact name (`openssh-*`, `*ssl*`, `curl`).
+- `output_format` (string, optional): The requested format. Setting this to `json`, `yaml`, `table`, or `wide` will return the raw structured JSON payload (array of `{name, version, architecture}`). The default text output is the list itself - a count line, then `NAME VERSION ARCH` columns (it used to be only the count). Packages removed with only their config files left (`deinstall ... config-files`) are not listed, matching `dpkg -l`'s `ii` entries.
 - `privileged` (boolean, optional): Run the worker as root (must be authorized in `mcp-sudo.yaml`). See "Host vs. container filesystem" above for what this means when `mcpd` runs containerized.

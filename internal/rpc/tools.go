@@ -505,7 +505,8 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"device": map[string]interface{}{"type": "string", "description": "Specific block device to query (e.g., 'sda')"},
+						"device":     map[string]interface{}{"type": "string", "description": "Specific block device to query (e.g., 'sda')"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - required to read SMART data"},
 					},
 					"required": []string{"device"},
 				},
@@ -556,6 +557,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 					"type": "object",
 					"properties": map[string]interface{}{
 						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
+						"name":          map[string]interface{}{"type": "string", "description": "Only packages whose name matches this glob or exact name (e.g. 'openssh-*', '*ssl*', 'curl')"},
 						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 					},
 				},

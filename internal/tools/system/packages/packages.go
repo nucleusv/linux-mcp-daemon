@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"sort"
 	"strings"
 )
@@ -12,6 +13,7 @@ import (
 // GetPackagesArgs are the tool's input arguments.
 type GetPackagesArgs struct {
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
+	Name         string `json:"name,omitempty"`          // Name filters packages by name: a glob ("linux-*", "*ssl*") or an exact name.
 }
 
 // Package describes a single installed package, normalized across the
@@ -54,6 +56,22 @@ func List(argsJSON []byte) (string, error) {
 
 	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].Name < pkgs[j].Name })
 
+	if args.Name != "" {
+		if _, err := path.Match(args.Name, ""); err != nil {
+			return "", fmt.Errorf("invalid name pattern %q: %v", args.Name, err)
+		}
+		var kept []Package
+		for _, p := range pkgs {
+			if ok, _ := path.Match(args.Name, p.Name); ok {
+				kept = append(kept, p)
+			}
+		}
+		pkgs = kept
+	}
+	if pkgs == nil {
+		pkgs = []Package{}
+	}
+
 	if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
 		b, err := json.Marshal(pkgs)
 		if err != nil {
@@ -62,7 +80,27 @@ func List(argsJSON []byte) (string, error) {
 		return string(b), nil
 	}
 
-	return fmt.Sprintf("%d packages installed (%s)\n", len(pkgs), manager), nil
+	// Text: the actual list, dpkg -l style. It used to be only a count
+	// ("397 packages installed"), so a caller asking without a format got
+	// no package names at all.
+	nameW, verW := len("NAME"), len("VERSION")
+	for _, p := range pkgs {
+		nameW = max(nameW, len(p.Name))
+		verW = max(verW, len(p.Version))
+	}
+	var b strings.Builder
+	what := "packages installed"
+	if args.Name != "" {
+		what = fmt.Sprintf("installed packages matching %q", args.Name)
+	}
+	fmt.Fprintf(&b, "%d %s (%s)\n", len(pkgs), what, manager)
+	if len(pkgs) > 0 {
+		fmt.Fprintf(&b, "%-*s  %-*s  %s\n", nameW, "NAME", verW, "VERSION", "ARCH")
+		for _, p := range pkgs {
+			fmt.Fprintf(&b, "%-*s  %-*s  %s\n", nameW, p.Name, verW, p.Version, p.Architecture)
+		}
+	}
+	return b.String(), nil
 }
 
 // detectManager identifies the package manager in scope by checking for its

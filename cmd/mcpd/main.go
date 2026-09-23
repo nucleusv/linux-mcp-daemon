@@ -14,6 +14,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/usb"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/kernel/modules"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/routes"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/interfaces"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/rpc"
 	cpulist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/list"
 	loadaverage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/load-average"
@@ -125,6 +126,7 @@ func main() {
 			"read_dmi":              dmi.ReadDMI,
 			"read_modules":          modules.ReadModules,
 			"read_routes":           routes.ReadRoutes,
+			"read_interfaces":       interfaces.ReadWorker,
 			"services/list":         list.List,
 			"services/manage":       manage_service.Manage,
 			"services/status":       status_service.Status,
