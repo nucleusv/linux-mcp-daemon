@@ -110,18 +110,15 @@ func Processes(argsJSON []byte) (string, error) {
 		procs = append(procs, p)
 	}
 
-	// Sort
-	if args.SortBy != "" {
-		switch args.SortBy {
-		case "mem":
-			sort.Slice(procs, func(i, j int) bool {
-				return procs[i].RSS > procs[j].RSS // Descending
-			})
-		case "pid":
-			sort.Slice(procs, func(i, j int) bool {
-				return procs[i].PID < procs[j].PID // Ascending
-			})
-		}
+	// Sort - by PID unless asked otherwise, like ps. /proc's own directory
+	// order is lexical ("1", "10014", "104", ...), never numeric.
+	sort.Slice(procs, func(i, j int) bool {
+		return procs[i].PID < procs[j].PID
+	})
+	if args.SortBy == "mem" {
+		sort.SliceStable(procs, func(i, j int) bool {
+			return procs[i].RSS > procs[j].RSS // Descending
+		})
 	}
 
 	// Limit

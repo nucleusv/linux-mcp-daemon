@@ -2,7 +2,7 @@
 
 **Tool Name**: `disks/list`
 
-Lists block devices and partitions. To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool.
+Lists block devices as a tree (equivalent to `lsblk`): disks, their partitions, and LVM/dm-crypt/RAID volumes nested under the devices they're built on, with MAJ:MIN, RM, SIZE, RO, TYPE and MOUNTPOINTS. `json`/`yaml` output is the same tree under `blockdevices` (the shape of `lsblk -J`), with nested `children`. To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool.
 
 ## Example
 
@@ -17,30 +17,53 @@ linuxctl get disks
 
 Output:
 ```text
-NAME         SIZE(BYTES)  RO     RM    
-nbd0         0            false  false 
-nbd1         0            false  false 
-nbd10        0            false  false 
-nbd11        0            false  false 
-nbd12        0            false  false 
-nbd13        0            false  false 
-nbd14        0            false  false 
-nbd15        0            false  false 
-nbd2         0            false  false 
-nbd3         0            false  false 
-nbd4         0            false  false 
-nbd5         0            false  false 
-nbd6         0            false  false 
-nbd7         0            false  false 
-nbd8         0            false  false 
-nbd9         0            false  false 
-ram0         4194304      false  false 
-ram1         4194304      false  false 
-ram10        4194304      false  false 
-ram11        4194304      false  false 
-ram12        4194304      false  false 
-ram13        4194304
-...
+NAME            MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+sda               8:0    0   60G  0 disk
+├─sda1            8:1    0    2G  0 part /boot
+└─sda2            8:2    0   58G  0 part
+  ├─vg4114-swap 252:0    0  3.7G  0 lvm  [SWAP]
+  └─vg4114-root 252:1    0 54.3G  0 lvm  /
+sr0              11:0    1    2K  1 rom
+```
+
+</details>
+
+<details>
+<summary><b>linuxctl (yaml tree)</b></summary>
+
+```bash
+linuxctl get disks -o yaml
+```
+
+Output (truncated):
+```yaml
+blockdevices:
+    - name: sda
+      kname: sda
+      maj:min: "8:0"
+      rm: false
+      size: 60G
+      size_bytes: 64424509440
+      ro: false
+      type: disk
+      mountpoints: []
+      children:
+        - name: sda1
+          kname: sda1
+          maj:min: "8:1"
+          ...
+          mountpoints:
+            - /boot
+        - name: sda2
+          ...
+          children:
+            - name: vg4114-swap
+              kname: dm-0
+              maj:min: "252:0"
+              ...
+              type: lvm
+              mountpoints:
+                - '[SWAP]'
 ```
 
 </details>
@@ -71,7 +94,7 @@ Response:
     "content": [
       {
         "type": "text",
-        "text": "NAME         SIZE(BYTES)  RO     RM    \nnbd0         0            false  false \nnbd1         0            false  false \nnbd10        0            false  false \nnbd11        0            false  false \nnbd12        0            false  false \nnbd13        0            false  false \nnbd14        0            false  false \nnbd15        0            false  false \nnbd2         0            false  false \nnbd3         0            false  false \nnbd4         0            false  false \nnbd5         0            false  false \nnbd6         0            false  false \nnbd7         0            false  false \nnbd8         0            false  false \nnbd9         0            false  false \nram0         4194304      false  false \nram1         4194304      false  false \nram10        4194304      false  false \nram11        4194304      false  false \nram12        4194304      false  false \nram13        4194304\n..."
+        "text": "NAME            MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS\nsda               8:0    0   60G  0 disk\n├─sda1            8:1    0    2G  0 part /boot\n└─sda2            8:2    0   58G  0 part\n  ├─vg4114-swap 252:0    0  3.7G  0 lvm  [SWAP]\n  └─vg4114-root 252:1    0 54.3G  0 lvm  /\nsr0              11:0    1    2K  1 rom\n"
       }
     ]
   }

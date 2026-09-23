@@ -438,12 +438,13 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":        "disks/list",
 				"tools_group": "disks",
 				"linuxctl_verb": "get",
-				"description": "Lists block devices and partitions. To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool.",
+				"description": "Lists block devices as a tree (equivalent to lsblk): disks, their partitions, and LVM/dm-crypt/RAID volumes nested under the devices they're built on, with MAJ:MIN, RM, SIZE, RO, TYPE and MOUNTPOINTS. json/yaml output is the same tree under \"blockdevices\" (like lsblk -J), with nested \"children\". To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool. (Use 'privileged: true' in containerized deployments to see the host's mount points.)",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"all":           map[string]interface{}{"type": "boolean", "description": "Include empty devices"},
+						"all":           map[string]interface{}{"type": "boolean", "description": "Include empty devices and RAM disks (lsblk -a)"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root - in containerized deployments, reads the host's mount table for MOUNTPOINTS"},
 					},
 				},
 			},
