@@ -68,12 +68,14 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 ### Tools, by group
 
 **files**
-- [`files/list`](./tools/files/list) - Lists contents of a directory.
+- [`files/list`](./tools/files/list) - Lists a directory like `ls -la` (permissions, owner, size, dates, symlink targets).
 - [`files/read`](./tools/files/read) - Precision reading of file contents with chunking/streaming support.
 - [`files/create`](./tools/files/create) - Create a new file or replace file contents.
 - [`files/update`](./tools/files/update) - Programmatically edit a file by appending text or replacing specific line ranges.
 - [`files/find`](./tools/files/find) - Search for files in a directory hierarchy.
 - [`files/filetype`](./tools/files/filetype) - Determines a file's MIME type (equivalent to `file -b --mime-type`).
+- [`files/chmod`](./tools/files/chmod) - Changes permission bits (octal or symbolic); never follows symlinks.
+- [`files/chown`](./tools/files/chown) - Changes owner and/or group; never follows symlinks.
 
 **disks**
 - [`disks/free`](./tools/disks/free) - Returns disk space statistics (df -h).
@@ -86,6 +88,7 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 
 **processes**
 - [`processes/list`](./tools/processes/list) - Lists running processes on the system.
+- [`processes/top`](./tools/processes/top) - A `top -b -n 1` snapshot: load, tasks, CPU and memory header plus all of top's columns.
 - [`processes/delete`](./tools/processes/delete) - Terminates a specific process by PID.
 
 **network**

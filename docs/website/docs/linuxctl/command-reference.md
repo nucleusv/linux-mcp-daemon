@@ -44,6 +44,19 @@ text/plain
 
 Note: `get files list /var/log` needs the explicit `list` keyword (unlike every other bare-reachable case in this table) because `files` has two candidates that could otherwise both plausibly claim a bare path (`files/list`, a directory listing, vs `files/read`, file content), and the client can't `stat()` a path that lives on the remote system to tell which one you mean. `files/read` keeps the bare form (`get files /etc/hosts`).
 
+```bash
+$ linuxctl chmod files /srv/app/deploy.sh u+x
+/srv/app/deploy.sh: 0644 (-rw-r--r--) -> 0744 (-rwxr--r--)
+
+$ linuxctl chmod files /srv/app go-rwx --recursive true
+# ... one line per change, then:
+changed 4, unchanged 0, skipped 1 symlink(s) (never followed): /srv/app/passwd-link
+
+$ linuxctl chown files /srv/app www-data:www-data --recursive true --privileged true
+# positional args fill the tool's required fields (path, then mode/owner);
+# any path containing a symlink is refused - see the files/chmod and files/chown pages
+```
+
 ## disks
 
 ```bash

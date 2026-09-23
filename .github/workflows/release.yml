@@ -28,6 +28,8 @@ jobs:
           go-version-file: go.mod
       - run: go vet ./...
       - run: go test ./...
+      - name: Docs cover every tool
+        run: bash scripts/check_readmes.sh && bash scripts/check_docs.sh
 
   binaries:
     needs: test

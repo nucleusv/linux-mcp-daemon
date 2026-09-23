@@ -54,7 +54,7 @@ Rich, aggregated single-object detail, backed by resource templates. Not redunda
 .B mutation words
 \fBcreate\fR, \fBupdate\fR, \fBdelete\fR, \fBrestart\fR, \fBstart\fR, \fBstop\fR, \fBenable\fR, \fBdisable\fR keep their own verb directly. The last five are enum values read from a tool's own schema, not hardcoded in the client.
 .PP
-\fB[target-keyword]\fR disambiguates which operation within the group, only needed when the group has more than one candidate under that verb. \fBtop\fR is one such keyword (not a verb) \- \fBget processes top\fR runs a fixed client recipe combining \fBcpu/load-average\fR, \fBmemory/usage\fR, and \fBprocesses/list\fR.
+\fB[target-keyword]\fR disambiguates which operation within the group, only needed when the group has more than one candidate under that verb. \fBtop\fR is one such keyword (not a verb) \- \fBget processes top\fR calls the \fBprocesses/top\fR tool: a \fBtop \-b \-n 1\fR style snapshot with the load/tasks/CPU/memory header and all of top's columns.
 .SH COMMANDS
 .TP
 .B ping
