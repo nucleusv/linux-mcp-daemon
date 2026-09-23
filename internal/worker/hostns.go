@@ -5,6 +5,8 @@ import (
 	"os"
 	"runtime"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // sameNamespace reports whether two namespace files (e.g. two /proc/*/ns/mnt
@@ -86,8 +88,12 @@ func JoinHostMountNamespace() error {
 	}
 	defer fd.Close()
 
-	if _, _, errno := syscall.Syscall(syscall.SYS_SETNS, fd.Fd(), uintptr(syscall.CLONE_NEWNS), 0); errno != 0 {
-		return fmt.Errorf("setns(CLONE_NEWNS): %w", errno)
+	// syscall.SYS_SETNS is undefined on linux/amd64 in the standard library
+	// (defined only for arm, arm64, mips*, ppc64*, s390x, riscv64, loong64) -
+	// use x/sys/unix's Setns wrapper, which has the correct syscall number
+	// for every Linux architecture, amd64 included.
+	if err := unix.Setns(int(fd.Fd()), unix.CLONE_NEWNS); err != nil {
+		return fmt.Errorf("setns(CLONE_NEWNS): %w", err)
 	}
 
 	// setns only swaps which mount table this thread consults; the process's
