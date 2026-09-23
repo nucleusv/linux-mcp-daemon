@@ -290,16 +290,15 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 	if readErr != nil {
 			resp.Error = map[string]interface{}{"code": -32603, "message": readErr.Error()}
 		} else {
-			// Cache the result if applicable
-			if params.URI == "devices://dmi" || params.URI == "system://hostname" {
-				h.ResourceCache.Set(params.URI, content, mimeType, 24*time.Hour)
-			} else if params.URI == "devices://pci" {
-				h.ResourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
-			} else if params.URI == "os://release" || params.URI == "os://uname" {
-				h.ResourceCache.Set(params.URI, content, mimeType, 1*time.Hour)
-			} else if params.URI == "devices://usb" || params.URI == "kernel://modules" {
+			// Cache the result if applicable: 60 seconds for static
+			// resources (long TTLs like the former 24h meant e.g. a changed
+			// hostname went unseen for a day), 5 seconds for network state,
+			// which changes often.
+			switch params.URI {
+			case "devices://dmi", "devices://pci", "devices://usb", "kernel://modules",
+				"os://release", "os://uname", "system://hostname":
 				h.ResourceCache.Set(params.URI, content, mimeType, 60*time.Second)
-			} else if params.URI == "network://interfaces" || params.URI == "network://routes" {
+			case "network://interfaces", "network://routes":
 				h.ResourceCache.Set(params.URI, content, mimeType, 5*time.Second)
 			}
 
