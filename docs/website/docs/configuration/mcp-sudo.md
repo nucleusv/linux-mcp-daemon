@@ -83,6 +83,33 @@ How it's enforced:
 - With a policy active, `network/curl` ignores `HTTP_PROXY`/`HTTPS_PROXY` environment variables, since a proxy would make the check apply to the proxy's address rather than the real destination.
 - Rules are validated at startup - an invalid CIDR stops the daemon from loading the config rather than silently never matching.
 
+## Restricting kernel parameter writes (`kernel/system-control`)
+
+With `allowed: true`, a user can both read and **write** kernel parameters as root - and writing some of them is equivalent to running arbitrary code as root (`kernel.core_pattern` can name a program the kernel runs on every crash; `kernel.modprobe` names the module loader). An optional `sysctl:` block separates the two:
+
+```yaml
+users:
+  alice:
+    privileged:
+      tools:
+        kernel/system-control:
+          allowed: true
+          sysctl:
+            read_only: true            # may read everything, write nothing
+  bob:
+    privileged:
+      tools:
+        kernel/system-control:
+          allowed: true
+          sysctl:
+            write_keys:                # may write only these
+              - net.ipv4.ip_forward
+              - vm.*                   # "*" matches within one dotted component
+              - net.ipv4.conf.*.rp_filter
+```
+
+Without a `sysctl:` block, writes are unrestricted - the default, unchanged. The check runs in the daemon itself, before any worker is spawned, against the key in its normalized dotted form (so `net/ipv4/ip_forward` and `net.ipv4.ip_forward` are the same key). Invalid `write_keys` patterns stop the config from loading.
+
 ## Full reference example
 
 The daemon's own `configs/mcp-sudo.yaml` includes a `privileged` user with every tool and every resource this daemon currently exposes granted. It isn't meant to represent a real least-privilege user (see `admin`/`testuser`/`unpriviliged` in that same file for that) - it exists purely as living documentation of the complete authorization surface, and is kept in sync with `internal/rpc/tools.go`/`resources.go` whenever a tool or resource is added, renamed, or removed.

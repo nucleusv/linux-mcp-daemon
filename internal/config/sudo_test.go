@@ -107,3 +107,31 @@ func TestLoadPerToolNetworkPolicy(t *testing.T) {
 		t.Error("invalid CIDR accepted at load time")
 	}
 }
+
+func TestSysctlWritePolicy(t *testing.T) {
+	c := &SudoConfig{Users: map[string]UserSudo{
+		"ro":    {Privileged: PrivilegedConfig{Tools: map[string]ToolPrivilege{"kernel/system-control": {Allowed: true, Sysctl: &SysctlPolicy{ReadOnly: true}}}}},
+		"keys":  {Privileged: PrivilegedConfig{Tools: map[string]ToolPrivilege{"kernel/system-control": {Allowed: true, Sysctl: &SysctlPolicy{WriteKeys: []string{"net.ipv4.ip_forward", "vm.*", "net.ipv4.conf.*.rp_filter"}}}}}},
+		"plain": {Privileged: PrivilegedConfig{Tools: map[string]ToolPrivilege{"kernel/system-control": {Allowed: true}}}},
+	}}
+	cases := []struct {
+		user, key string
+		ok        bool
+	}{
+		{"plain", "kernel.core_pattern", true}, // no sysctl block: unchanged behavior
+		{"nobody", "kernel.core_pattern", true},
+		{"ro", "vm.swappiness", false},
+		{"keys", "net.ipv4.ip_forward", true},
+		{"keys", "vm.swappiness", true},
+		{"keys", "vm.a.b", false}, // "*" stays within one component
+		{"keys", "net.ipv4.conf.eth0.rp_filter", true},
+		{"keys", "kernel.core_pattern", false},
+		{"keys", "kernel.modprobe", false},
+	}
+	for _, c2 := range cases {
+		ok, _ := c.CanWriteSysctl(c2.user, c2.key)
+		if ok != c2.ok {
+			t.Errorf("CanWriteSysctl(%s, %s) = %v, want %v", c2.user, c2.key, ok, c2.ok)
+		}
+	}
+}

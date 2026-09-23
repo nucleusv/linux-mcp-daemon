@@ -9,6 +9,7 @@ import (
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
 	sudorules "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/sudo-rules"
+	systemcontrol "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/kernel/system-control"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 )
 
@@ -403,13 +404,14 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "kernel/system-control",
 				"tools_group":   "kernel",
 				"linuxctl_verb": "sysctl",
-				"description":   "Reads or writes kernel parameters (sysctl equivalent) at runtime.",
+				"description":   "Reads or writes kernel parameters (sysctl equivalent) at runtime, natively via /proc/sys. Writes require privileged: true, and may be restricted per user (read-only, or only certain keys) by mcp-sudo.yaml.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"key":      map[string]interface{}{"type": "string", "description": "Kernel parameter name (e.g., net.ipv4.ip_forward)"},
-						"value":    map[string]interface{}{"type": "string", "description": "Value to set for the parameter. If omitted, reads the parameter."},
-						"read_all": map[string]interface{}{"type": "boolean", "description": "If true, reads all available parameters. Ignored if key is set."},
+						"key":        map[string]interface{}{"type": "string", "description": "Kernel parameter name, dotted (net.ipv4.ip_forward) or slash form (net/ipv4/conf/eth0.100/rp_filter). A directory (e.g. net.ipv4) reads its whole subtree."},
+						"value":      map[string]interface{}{"type": "string", "description": "Value to set for the parameter. If omitted, reads the parameter."},
+						"read_all":   map[string]interface{}{"type": "boolean", "description": "If true, reads all available parameters. Ignored if key is set."},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - required for writes"},
 					},
 				},
 			},
@@ -696,6 +698,22 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 						if b, err := json.Marshal(argMap); err == nil {
 							params.Arguments = b
 						}
+					}
+				}
+			}
+
+			// kernel/system-control writes are checked here, in the master,
+			// against the user's sysctl policy - the worker never runs for a
+			// refused write.
+			if params.Name == "kernel/system-control" && execErr == nil {
+				var sc struct {
+					Key   string `json:"key"`
+					Value string `json:"value"`
+				}
+				_ = json.Unmarshal(params.Arguments, &sc)
+				if sc.Key != "" && sc.Value != "" {
+					if ok, reason := h.SudoConfig.CanWriteSysctl(session.User, systemcontrol.NormalizeKey(sc.Key)); !ok {
+						execErr = fmt.Errorf("%s", reason)
 					}
 				}
 			}

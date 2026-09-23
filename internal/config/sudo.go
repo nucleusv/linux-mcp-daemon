@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -31,6 +32,61 @@ type ToolPrivilege struct {
 	// running as root, it applies to every call of the tool - network
 	// access doesn't depend on the worker's uid. Absent = unrestricted.
 	Network *netpolicy.Policy `yaml:"network,omitempty"`
+	// Sysctl restricts kernel/system-control writes. Absent = unrestricted
+	// (writes allowed wherever the tool may run as root, as before).
+	Sysctl *SysctlPolicy `yaml:"sysctl,omitempty"`
+}
+
+// SysctlPolicy limits which kernel parameters a user may change. Writing
+// some parameters is equivalent to running code as root (e.g.
+// kernel.core_pattern, kernel.modprobe), so it's worth being able to allow
+// reads without writes, or writes to only a known set of keys.
+type SysctlPolicy struct {
+	// ReadOnly refuses every write.
+	ReadOnly bool `yaml:"read_only"`
+	// WriteKeys, if non-empty, is the only set of keys that may be
+	// written. Entries are dotted keys or glob patterns ("vm.*",
+	// "net.ipv4.conf.*.rp_filter"); "*" matches within one dotted
+	// component.
+	WriteKeys []string `yaml:"write_keys,omitempty"`
+}
+
+// CanWriteSysctl reports whether username may write key (dotted form)
+// through kernel/system-control, and why not if they can't.
+func (c *SudoConfig) CanWriteSysctl(username, key string) (bool, string) {
+	userSudo, ok := c.Users[username]
+	if !ok {
+		return true, ""
+	}
+	privs, ok := userSudo.Privileged.Tools["kernel/system-control"]
+	if !ok || privs.Sysctl == nil {
+		return true, ""
+	}
+	if privs.Sysctl.ReadOnly {
+		return false, "kernel/system-control is read-only for this user (sysctl.read_only in mcp-sudo.yaml)"
+	}
+	if len(privs.Sysctl.WriteKeys) == 0 {
+		return true, ""
+	}
+	for _, pattern := range privs.Sysctl.WriteKeys {
+		if sysctlKeyMatch(pattern, key) {
+			return true, ""
+		}
+	}
+	return false, fmt.Sprintf("writing %s is not permitted for this user (not in sysctl.write_keys in mcp-sudo.yaml)", key)
+}
+
+func validSysctlPattern(pattern string) error {
+	_, err := path.Match(strings.ReplaceAll(pattern, ".", "/"), "")
+	return err
+}
+
+// sysctlKeyMatch matches a dotted key against a dotted glob, treating "."
+// as the separator so "*" never spans components ("vm.*" matches
+// "vm.swappiness" but not "vm.a.b").
+func sysctlKeyMatch(pattern, key string) bool {
+	ok, err := path.Match(strings.ReplaceAll(pattern, ".", "/"), strings.ReplaceAll(key, ".", "/"))
+	return err == nil && ok
 }
 
 func LoadSudoConfig(path string) (*SudoConfig, error) {
@@ -47,6 +103,13 @@ func LoadSudoConfig(path string) (*SudoConfig, error) {
 	// Validation
 	for username, userSudo := range cfg.Users {
 		for toolName, privs := range userSudo.Privileged.Tools {
+			if privs.Sysctl != nil {
+				for _, p := range privs.Sysctl.WriteKeys {
+					if err := validSysctlPattern(p); err != nil {
+						return nil, fmt.Errorf("validation error in %s: user '%s', tool '%s': invalid sysctl.write_keys pattern %q: %v", path, username, toolName, p, err)
+					}
+				}
+			}
 			if privs.Network != nil {
 				if err := privs.Network.Validate(); err != nil {
 					return nil, fmt.Errorf("validation error in %s: user '%s', tool '%s': %v", path, username, toolName, err)

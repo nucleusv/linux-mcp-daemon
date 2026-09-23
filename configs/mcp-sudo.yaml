@@ -159,6 +159,11 @@ users:
             - /
         kernel/system-control:
           allowed: true
+          # Optional write restrictions (checked before any worker runs).
+          # Absent = unrestricted. Example:
+          # sysctl:
+          #   read_only: true                              # refuse every write
+          #   write_keys: ["net.ipv4.ip_forward", "vm.*"]  # or: only these keys
         logs/dmesg:
           allowed: true
         logs/logins:
