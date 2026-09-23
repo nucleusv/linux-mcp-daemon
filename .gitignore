@@ -24,6 +24,9 @@ go.work.sum
 # Logs
 *.log
 
+# Node (only docs/website is a Node project; nothing at the root needs npm)
+/node_modules/
+
 # Docs
 docs/website/node_modules/
 docs/website/build/

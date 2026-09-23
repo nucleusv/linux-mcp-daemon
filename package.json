@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "eventsource": "^5.1.1",
-    "node-fetch": "^2.7.0"
-  }
-}
