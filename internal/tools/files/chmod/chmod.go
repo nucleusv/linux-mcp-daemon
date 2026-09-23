@@ -12,10 +12,30 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/fsafe"
 )
 
+// Mode is a chmod mode that may arrive as a JSON string ("0755", "u+x") or
+// as a JSON number - clients such as linuxctl send `0755` as the number
+// 755. A number's decimal digits are the octal digits the caller typed, so
+// 755 means mode 0755, never decimal 755 (= 01363).
+type Mode string
+
+func (m *Mode) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err == nil {
+		*m = Mode(s)
+		return nil
+	}
+	var n json.Number
+	if err := json.Unmarshal(b, &n); err != nil {
+		return fmt.Errorf("mode must be a string or a number")
+	}
+	*m = Mode(n.String())
+	return nil
+}
+
 // ChmodArgs defines the parameters for the files/chmod tool.
 type ChmodArgs struct {
 	Path       string `json:"path"`                 // Absolute path. Required.
-	Mode       string `json:"mode"`                 // Octal ("0644", "755", "4755") or symbolic ("u+x,go-w", "a=r"). Required.
+	Mode       Mode   `json:"mode"`                 // Octal ("0644", "755", "4755") or symbolic ("u+x,go-w", "a=r"). Required.
 	Recursive  bool   `json:"recursive,omitempty"`  // Apply to everything below a directory too (symlinks skipped).
 	Privileged bool   `json:"privileged,omitempty"` // Run as root (if authorized in mcp-sudo.yaml).
 }
@@ -28,7 +48,7 @@ func Chmod(argsJSON []byte) (string, error) {
 	if args.Path == "" || args.Mode == "" {
 		return "", fmt.Errorf("path and mode are required")
 	}
-	apply, err := ParseMode(args.Mode)
+	apply, err := ParseMode(string(args.Mode))
 	if err != nil {
 		return "", err
 	}

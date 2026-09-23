@@ -1,6 +1,9 @@
 package chmod
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestParseModeUnits(t *testing.T) {
 	cases := []struct {
@@ -41,5 +44,19 @@ func TestParseModeUnits(t *testing.T) {
 		if _, err := ParseMode(bad); err == nil {
 			t.Errorf("ParseMode(%q) accepted", bad)
 		}
+	}
+}
+
+func TestModeAcceptsNumbers(t *testing.T) {
+	for raw, want := range map[string]string{`"0755"`: "0755", `"u+x"`: "u+x", `755`: "755", `4755`: "4755", `644`: "644"} {
+		var args ChmodArgs
+		if err := json.Unmarshal([]byte(`{"path":"/x","mode":`+raw+`}`), &args); err != nil || string(args.Mode) != want {
+			t.Errorf("mode %s parsed as %q, %v; want %q", raw, args.Mode, err, want)
+		}
+	}
+	// 755 must mean octal 0755, not decimal 755 (= 0o1363).
+	f, _ := ParseMode("755")
+	if got := f(0, false); got != 0o755 {
+		t.Errorf("numeric 755 -> %04o, want 0755", got)
 	}
 }
