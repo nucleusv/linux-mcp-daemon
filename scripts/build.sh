@@ -8,3 +8,6 @@ cd "$(dirname "$0")/.."
 echo "Building Docker image 'linux-mcp-daemon-by-claude:local'..."
 docker build -t linux-mcp-daemon-by-claude:local .
 echo "Build complete."
+
+# Keep the local linuxctl binary in sync with every daemon image build.
+./scripts/build-cli.sh

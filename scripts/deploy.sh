@@ -19,6 +19,9 @@ echo "Building Docker image '$IMAGE:$TAG'..."
 # ancient build :local last pointed to - which crash-looped us once already.
 docker build -t $IMAGE:$TAG -t $IMAGE:local .
 
+# Keep the local linuxctl binary in sync with every daemon image build.
+./scripts/build-cli.sh
+
 echo "Ensuring namespace '$NAMESPACE' exists..."
 kubectl apply -f k8s/namespace.yaml
 

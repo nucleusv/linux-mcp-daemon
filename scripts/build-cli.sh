@@ -7,7 +7,9 @@ cd "$(dirname "$0")/.."
 
 echo "Building linuxctl for macOS..."
 
-# Build for the local machine (assumes macOS/darwin by default if run on Mac)
-go build -o linuxctl ./cmd/linuxctl
+mkdir -p executables
 
-echo "Build complete. You can run it via ./linuxctl"
+# Build for the local machine (assumes macOS/darwin by default if run on Mac)
+go build -o executables/linuxctl ./cmd/linuxctl
+
+echo "Build complete. You can run it via ./executables/linuxctl"
