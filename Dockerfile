@@ -42,6 +42,8 @@ COPY docs/website/package.json docs/website/package-lock.json* ./
 RUN npm ci || npm install
 # Copy the rest of the documentation files
 COPY docs/website .
+# Images shared with the repo README (served via staticDirectories '../imgs').
+COPY docs/imgs /app/docs/imgs
 # Build the Docusaurus site
 RUN npm run build
 
