@@ -1,5 +1,7 @@
 # Linux MCPd
 
+[![Docs](https://img.shields.io/badge/docs-nucleusv.github.io-blue)](https://nucleusv.github.io/linux-mcp-daemon/)
+
 A high-performance, Go-based Model Context Protocol (MCP) daemon (`mcpd`) designed to securely bridge AI agents directly with the Linux operating system.
 
 ## Overview
