@@ -15,29 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get disks
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-# 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-# 2. POST the tools/call request to that endpoint
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "disks/list", "arguments": {}}}'
-
-# 3. The result arrives on the SSE stream opened in step 1
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```text
 NAME         SIZE(BYTES)  RO     RM    
 nbd0         0            false  false 
@@ -64,3 +42,41 @@ ram12        4194304      false  false
 ram13        4194304
 ...
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+# 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+# 2. POST the tools/call request to that endpoint
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "disks/list", "arguments": {}}}'
+
+# 3. The result arrives on the SSE stream opened in step 1
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "7",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "NAME         SIZE(BYTES)  RO     RM    \nnbd0         0            false  false \nnbd1         0            false  false \nnbd10        0            false  false \nnbd11        0            false  false \nnbd12        0            false  false \nnbd13        0            false  false \nnbd14        0            false  false \nnbd15        0            false  false \nnbd2         0            false  false \nnbd3         0            false  false \nnbd4         0            false  false \nnbd5         0            false  false \nnbd6         0            false  false \nnbd7         0            false  false \nnbd8         0            false  false \nnbd9         0            false  false \nram0         4194304      false  false \nram1         4194304      false  false \nram10        4194304      false  false \nram11        4194304      false  false \nram12        4194304      false  false \nram13        4194304\n..."
+      }
+    ]
+  }
+}
+```
+
+</details>
+

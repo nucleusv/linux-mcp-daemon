@@ -15,6 +15,12 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get memory usage
 ```
 
+Output:
+```text
+TYPE         TOTAL        USED         FREE         SHARED       BUFF/CACHE   AVAILABLE   
+Mem:         8320299008   2227826688   439062528    25890816     5653409792   5858467840
+```
+
 </details>
 
 <details>
@@ -34,11 +40,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "19",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "TYPE         TOTAL        USED         FREE         SHARED       BUFF/CACHE   AVAILABLE   \nMem:         8320299008   2227826688   439062528    25890816     5653409792   5858467840"
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-TYPE         TOTAL        USED         FREE         SHARED       BUFF/CACHE   AVAILABLE   
-Mem:         8320299008   2227826688   439062528    25890816     5653409792   5858467840
-```

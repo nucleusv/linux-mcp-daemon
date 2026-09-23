@@ -15,29 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get system os-release
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-# 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-# 2. POST the tools/call request to that endpoint
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "system/os-release", "arguments": {}}}'
-
-# 3. The result arrives on the SSE stream opened in step 1
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```text
 OS Release Info:
 PRETTY_NAME="Ubuntu 24.04.5 LTS"
@@ -57,3 +35,41 @@ LOGO=ubuntu-logo
 Kernel Info:
 Linux desktop-control-plane 7.0.12-linuxkit #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026 aarch64
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+# 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+# 2. POST the tools/call request to that endpoint
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "system/os-release", "arguments": {}}}'
+
+# 3. The result arrives on the SSE stream opened in step 1
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "27",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "OS Release Info:\nPRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.5 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n\nKernel Info:\nLinux desktop-control-plane 7.0.12-linuxkit #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026 aarch64"
+      }
+    ]
+  }
+}
+```
+
+</details>
+

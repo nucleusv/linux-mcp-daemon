@@ -15,6 +15,15 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get cpu
 ```
 
+Output:
+```text
+CPU Information (Total Processors: 4)
+Vendor ID: 0x61
+Model Name: 8
+CPU MHz/BogoMIPS: 48.00
+Cache Size: N/A
+```
+
 </details>
 
 <details>
@@ -34,14 +43,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "25",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "CPU Information (Total Processors: 4)\nVendor ID: 0x61\nModel Name: 8\nCPU MHz/BogoMIPS: 48.00\nCache Size: N/A"
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-CPU Information (Total Processors: 4)
-Vendor ID: 0x61
-Model Name: 8
-CPU MHz/BogoMIPS: 48.00
-Cache Size: N/A
-```

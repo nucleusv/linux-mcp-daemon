@@ -15,25 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource kernel://modules
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "kernel://modules"}}'
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```json
 [
   {
@@ -78,3 +60,38 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   }
 ]
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "kernel://modules"}}'
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "40",
+  "result": {
+    "contents": [
+      {
+        "mimeType": "application/json",
+        "text": "[\n  {\n    \"name\": \"selfowner\",\n    \"size\": \"32768\",\n    \"used_by_count\": \"-\",\n    \"used_by\": null,\n    \"state\": \"Live\",\n    \"address\": \"0xffff80007a63c000\"\n  },\n  {\n    \"name\": \"shiftfs\",\n    \"size\": \"32768\",\n    \"used_by_count\": \"-\",\n    \"used_by\": null,\n    \"state\": \"Live\",\n    \"address\": \"0xffff80007a631000\"\n  },\n  {\n    \"name\": \"rosetta\",\n    \"size\": \"12288\",\n    \"used_by_count\": \"-\",\n    \"used_by\": null,\n    \"state\": \"Live\",\n    \"address\": \"0xffff80007a62b000\"\n  },\n  {\n    \"name\": \"grpcfuse\",\n    \"size\": \"12288\",\n    \"used_by_count\": \"-\",\n    \"used_by\": null,\n    \"state\": \"Live\",\n    \"address\": \"0xffff80007a625000\"\n  },\n  {\n    \"name\": \"fakeowner\",\n    \"size\": \"135168\",\n    \"used_by_count\": \"-\",\n    \"used_by\": null,\n    \"state\": \"Live\",\n    \"address\": \"0xffff80007a600000\"\n  }\n]",
+        "uri": "kernel://modules"
+      }
+    ]
+  }
+}
+```
+
+</details>
+

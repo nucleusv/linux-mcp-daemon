@@ -15,25 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource network://interfaces
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "network://interfaces"}}'
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```text
 [
   {
@@ -87,3 +69,38 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
       "rx_dr
 ...
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "network://interfaces"}}'
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "36",
+  "result": {
+    "contents": [
+      {
+        "mimeType": "application/json",
+        "text": "[\n  {\n    \"addresses\": [\n      \"127.0.0.1/8\",\n      \"::1/128\"\n    ],\n    \"flags\": \"up|loopback|running\",\n    \"index\": 1,\n    \"mac\": \"\",\n    \"mtu\": 65536,\n    \"name\": \"lo\",\n    \"statistics\": {\n      \"rx_bytes\": 5655107440,\n      \"rx_dropped\": 0,\n      \"rx_errors\": 0,\n      \"rx_packets\": 22774140,\n      \"tx_bytes\": 5655107440,\n      \"tx_dropped\": 0,\n      \"tx_errors\": 0,\n      \"tx_packets\": 22774140\n    }\n  },\n  {\n    \"addresses\": null,\n    \"flags\": \"0\",\n    \"index\": 2,\n    \"mac\": \"\",\n    \"mtu\": 1480,\n    \"name\": \"tunl0\",\n    \"statistics\": {\n      \"rx_bytes\": 0,\n      \"rx_dropped\": 0,\n      \"rx_errors\": 0,\n      \"rx_packets\": 0,\n      \"tx_bytes\": 0,\n      \"tx_dropped\": 0,\n      \"tx_errors\": 0,\n      \"tx_packets\": 0\n    }\n  },\n  {\n    \"addresses\": null,\n    \"flags\": \"0\",\n    \"index\": 3,\n    \"mac\": \"\",\n    \"mtu\": 1476,\n    \"name\": \"gre0\",\n    \"statistics\": {\n      \"rx_bytes\": 0,\n      \"rx_dr\n...",
+        "uri": "network://interfaces"
+      }
+    ]
+  }
+}
+```
+
+</details>
+

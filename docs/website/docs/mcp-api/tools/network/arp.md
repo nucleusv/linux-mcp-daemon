@@ -15,29 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get network arp
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-# 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-# 2. POST the tools/call request to that endpoint
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "network/arp", "arguments": {}}}'
-
-# 3. The result arrives on the SSE stream opened in step 1
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```text
 [
   {
@@ -86,3 +64,41 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
     "flags": "0x
 ...
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+# 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+# 2. POST the tools/call request to that endpoint
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "network/arp", "arguments": {}}}'
+
+# 3. The result arrives on the SSE stream opened in step 1
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "15",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[\n  {\n    \"ip_address\": \"172.19.0.8\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"d6:ee:9a:61:0c:f8\",\n    \"mask\": \"*\",\n    \"device\": \"eth0\"\n  },\n  {\n    \"ip_address\": \"10.244.0.3\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"d2:f4:ff:a6:64:23\",\n    \"mask\": \"*\",\n    \"device\": \"veth785ec824\"\n  },\n  {\n    \"ip_address\": \"172.19.0.3\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"02:82:72:c2:cd:d8\",\n    \"mask\": \"*\",\n    \"device\": \"eth0\"\n  },\n  {\n    \"ip_address\": \"10.244.0.2\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"c6:a2:80:2b:82:36\",\n    \"mask\": \"*\",\n    \"device\": \"vethfdafeed9\"\n  },\n  {\n    \"ip_address\": \"10.244.0.7\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"c2:73:6d:dc:17:a1\",\n    \"mask\": \"*\",\n    \"device\": \"vethbdcd73f8\"\n  },\n  {\n    \"ip_address\": \"10.244.0.5\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x\n..."
+      }
+    ]
+  }
+}
+```
+
+</details>
+

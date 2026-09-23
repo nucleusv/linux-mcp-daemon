@@ -30,6 +30,12 @@ $ linuxctl get disks partitions vda --output json
 ]
 ```
 
+Output:
+```text
+DEVICE         PARENT     NUM    START(SECT)    SIZE(SECT)     SIZE(BYTES)   
+vda1           vda        1      2048           124997632      63998787584
+```
+
 </details>
 
 <details>
@@ -45,11 +51,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "disks/partitions", "arguments": {"device": "vda", "output_format": "json"}}}'
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "11",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "DEVICE         PARENT     NUM    START(SECT)    SIZE(SECT)     SIZE(BYTES)   \nvda1           vda        1      2048           124997632      63998787584"
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-DEVICE         PARENT     NUM    START(SECT)    SIZE(SECT)     SIZE(BYTES)   
-vda1           vda        1      2048           124997632      63998787584
-```

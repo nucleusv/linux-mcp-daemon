@@ -15,6 +15,11 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource file:///etc/hosts/stat
 ```
 
+Output:
+```text
+Error: Permission denied. Hint: You are not authorized to use 'privileged: true' for this tool in mcp-sudo.yaml (Code: -32603)
+```
+
 </details>
 
 <details>
@@ -30,10 +35,7 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "file:///etc/hosts/stat"}}'
 ```
 
-</details>
-
-**Real response (captured live) - this particular URI needs `privileged: true` under the hood, and the token used for this capture wasn't granted that in `mcp-sudo.yaml`, so this is a genuine authorization error, not a placeholder:**
-
+Response:
 ```json
 {
   "jsonrpc": "2.0",
@@ -44,3 +46,6 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   }
 }
 ```
+
+</details>
+

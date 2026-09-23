@@ -15,6 +15,11 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get kernel sysctl net.ipv4.ip_forward
 ```
 
+Output:
+```text
+net.ipv4.ip_forward = 1
+```
+
 </details>
 
 <details>
@@ -34,10 +39,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "24",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "net.ipv4.ip_forward = 1"
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-net.ipv4.ip_forward = 1
-```

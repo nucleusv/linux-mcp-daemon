@@ -15,25 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource network://routes
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "network://routes"}}'
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```text
 [
   {
@@ -85,3 +67,38 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
     "metric": "0"
 ...
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "network://routes"}}'
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "37",
+  "result": {
+    "contents": [
+      {
+        "mimeType": "application/json",
+        "text": "[\n  {\n    \"iface\": \"eth0\",\n    \"destination\": \"00000000\",\n    \"gateway\": \"010013AC\",\n    \"flags\": \"0003\",\n    \"ref_cnt\": \"0\",\n    \"use\": \"0\",\n    \"metric\": \"0\",\n    \"mask\": \"00000000\",\n    \"mtu\": \"0\",\n    \"window\": \"0\",\n    \"irtt\": \"0\"\n  },\n  {\n    \"iface\": \"vethfdafeed9\",\n    \"destination\": \"0200F40A\",\n    \"gateway\": \"00000000\",\n    \"flags\": \"0005\",\n    \"ref_cnt\": \"0\",\n    \"use\": \"0\",\n    \"metric\": \"0\",\n    \"mask\": \"FFFFFFFF\",\n    \"mtu\": \"0\",\n    \"window\": \"0\",\n    \"irtt\": \"0\"\n  },\n  {\n    \"iface\": \"veth785ec824\",\n    \"destination\": \"0300F40A\",\n    \"gateway\": \"00000000\",\n    \"flags\": \"0005\",\n    \"ref_cnt\": \"0\",\n    \"use\": \"0\",\n    \"metric\": \"0\",\n    \"mask\": \"FFFFFFFF\",\n    \"mtu\": \"0\",\n    \"window\": \"0\",\n    \"irtt\": \"0\"\n  },\n  {\n    \"iface\": \"veth5eefa300\",\n    \"destination\": \"0400F40A\",\n    \"gateway\": \"00000000\",\n    \"flags\": \"0005\",\n    \"ref_cnt\": \"0\",\n    \"use\": \"0\",\n    \"metric\": \"0\"\n...",
+        "uri": "network://routes"
+      }
+    ]
+  }
+}
+```
+
+</details>
+

@@ -15,29 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get disks health vda
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-# 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-# 2. POST the tools/call request to that endpoint
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "disks/health", "arguments": {"device": "vda"}}}'
-
-# 3. The result arrives on the SSE stream opened in step 1
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```json
 {
   "json_format_version": [
@@ -73,3 +51,41 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   }
 }
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+# 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+# 2. POST the tools/call request to that endpoint
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "disks/health", "arguments": {"device": "vda"}}}'
+
+# 3. The result arrives on the SSE stream opened in step 1
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "10",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"json_format_version\": [\n    1,\n    0\n  ],\n  \"smartctl\": {\n    \"version\": [\n      7,\n      4\n    ],\n    \"pre_release\": false,\n    \"svn_revision\": \"5530\",\n    \"platform_info\": \"aarch64-linux-7.0.12-linuxkit\",\n    \"build_info\": \"(local build)\",\n    \"argv\": [\n      \"smartctl\",\n      \"-j\",\n      \"-a\",\n      \"/dev/vda\"\n    ],\n    \"messages\": [\n      {\n        \"string\": \"/dev/vda: Unable to detect device type\",\n        \"severity\": \"error\"\n      }\n    ],\n    \"exit_status\": 1\n  },\n  \"local_time\": {\n    \"time_t\": 1790163825,\n    \"asctime\": \"Wed Sep 23 11:43:45 2026 UTC\"\n  }\n}"
+      }
+    ]
+  }
+}
+```
+
+</details>
+

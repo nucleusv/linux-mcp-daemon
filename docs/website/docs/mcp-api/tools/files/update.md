@@ -15,6 +15,11 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl update files /tmp/note.txt --content " world" --append true
 ```
 
+Output:
+```text
+Successfully appended to /tmp/note.txt
+```
+
 </details>
 
 <details>
@@ -34,17 +39,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-</details>
-
-**Real response (captured live):**
-
+Response:
 ```json
 {
-  "content": [
-    {
-      "type": "text",
-      "text": "Successfully appended to /tmp/note.txt"
-    }
-  ]
+  "jsonrpc": "2.0",
+  "id": "c2",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Successfully appended to /tmp/note.txt"
+      }
+    ]
+  }
 }
 ```
+
+</details>
+

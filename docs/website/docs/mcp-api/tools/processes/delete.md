@@ -15,6 +15,11 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl delete processes 1234 --signal SIGTERM
 ```
 
+Output (not executed here - hypothetical, matches the tool's source code):
+```text
+Successfully sent signal SIGTERM to process 1234
+```
+
 </details>
 
 <details>
@@ -34,17 +39,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-</details>
-
-**Not executed against a real process for this page (it would kill something on the host) - this is the exact shape `internal/tools/processes/delete/delete.go` returns on success, not a live capture:**
-
+Response (not executed here - hypothetical, matches the tool's source code):
 ```json
 {
-  "content": [
-    {
-      "type": "text",
-      "text": "Successfully sent signal SIGTERM to process 1234"
-    }
-  ]
+  "jsonrpc": "2.0",
+  "id": "1",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Successfully sent signal SIGTERM to process 1234"
+      }
+    ]
+  }
 }
 ```
+
+</details>
+

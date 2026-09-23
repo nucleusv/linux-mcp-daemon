@@ -15,25 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource devices://usb
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "devices://usb"}}'
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```json
 [
   {
@@ -52,3 +34,38 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   }
 ]
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "devices://usb"}}'
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "42",
+  "result": {
+    "contents": [
+      {
+        "mimeType": "application/json",
+        "text": "[\n  {\n    \"bus_id\": \"usb1\",\n    \"vendor_id\": \"1d6b\",\n    \"product_id\": \"0002\",\n    \"manufacturer\": \"Linux 7.0.12-linuxkit vhci_hcd\",\n    \"product\": \"USB/IP Virtual Host Controller\"\n  },\n  {\n    \"bus_id\": \"usb2\",\n    \"vendor_id\": \"1d6b\",\n    \"product_id\": \"0003\",\n    \"manufacturer\": \"Linux 7.0.12-linuxkit vhci_hcd\",\n    \"product\": \"USB/IP Virtual Host Controller\"\n  }\n]",
+        "uri": "devices://usb"
+      }
+    ]
+  }
+}
+```
+
+</details>
+

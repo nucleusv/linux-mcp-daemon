@@ -15,6 +15,18 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource service://kubelet.service/status
 ```
 
+Output:
+```json
+{
+  "name": "kubelet.service",
+  "description": "kubelet: The Kubernetes Node Agent",
+  "load_state": "loaded",
+  "active_state": "active",
+  "sub_state": "running",
+  "fragment_path": "/etc/systemd/system/kubelet.service"
+}
+```
+
 </details>
 
 <details>
@@ -30,17 +42,22 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "service://kubelet.service/status"}}'
 ```
 
-</details>
-
-**Real response (captured live):**
-
+Response:
 ```json
 {
-  "name": "kubelet.service",
-  "description": "kubelet: The Kubernetes Node Agent",
-  "load_state": "loaded",
-  "active_state": "active",
-  "sub_state": "running",
-  "fragment_path": "/etc/systemd/system/kubelet.service"
+  "jsonrpc": "2.0",
+  "id": "44",
+  "result": {
+    "contents": [
+      {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"kubelet.service\",\n  \"description\": \"kubelet: The Kubernetes Node Agent\",\n  \"load_state\": \"loaded\",\n  \"active_state\": \"active\",\n  \"sub_state\": \"running\",\n  \"fragment_path\": \"/etc/systemd/system/kubelet.service\"\n}",
+        "uri": "service://kubelet.service/status"
+      }
+    ]
+  }
 }
 ```
+
+</details>
+

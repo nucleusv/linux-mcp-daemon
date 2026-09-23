@@ -15,25 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource process://1/status
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "process://1/status"}}'
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```text
 Name:	systemd
 Umask:	0000
@@ -89,3 +71,38 @@ Seccomp_filters:	0
 Speculation_
 ...
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "process://1/status"}}'
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "46",
+  "result": {
+    "contents": [
+      {
+        "mimeType": "text/plain",
+        "text": "Name:\tsystemd\nUmask:\t0000\nState:\tS (sleeping)\nTgid:\t1\nNgid:\t0\nPid:\t1\nPPid:\t0\nTracerPid:\t0\nUid:\t0\t0\t0\t0\nGid:\t0\t0\t0\t0\nFDSize:\t256\nGroups:\t0 \nNStgid:\t1\nNSpid:\t1\nNSpgid:\t1\nNSsid:\t1\nKthread:\t0\nVmPeak:\t   30340 kB\nVmSize:\t   29784 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t   19392 kB\nVmRSS:\t   19392 kB\nRssAnon:\t    9480 kB\nRssFile:\t    9912 kB\nRssShmem:\t       0 kB\nVmData:\t    8532 kB\nVmStk:\t     132 kB\nVmExe:\t     120 kB\nVmLib:\t   17976 kB\nVmPTE:\t      96 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffff\nThreads:\t1\nSigQ:\t0/31882\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t7fefc1fe28014a03\nSigIgn:\t0000000000001000\nSigCgt:\t00000000000004ec\nCapInh:\t0000000000000000\nCapPrm:\t000001ffffffffff\nCapEff:\t000001ffffffffff\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_\n...",
+        "uri": "process://1/status"
+      }
+    ]
+  }
+}
+```
+
+</details>
+

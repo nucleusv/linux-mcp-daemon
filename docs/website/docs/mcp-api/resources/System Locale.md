@@ -15,6 +15,12 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource system://locale
 ```
 
+Output:
+```text
+Source: /etc/default/locale
+LANG=C.UTF-8
+```
+
 </details>
 
 <details>
@@ -30,11 +36,22 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "system://locale"}}'
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "35",
+  "result": {
+    "contents": [
+      {
+        "mimeType": "text/plain",
+        "text": "Source: /etc/default/locale\nLANG=C.UTF-8",
+        "uri": "system://locale"
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-Source: /etc/default/locale
-LANG=C.UTF-8
-```

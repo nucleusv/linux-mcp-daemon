@@ -15,25 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource network://interfaces/eth0
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "network://interfaces/eth0"}}'
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```json
 {
   "addresses": [
@@ -58,3 +40,38 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   }
 }
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "network://interfaces/eth0"}}'
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "43",
+  "result": {
+    "contents": [
+      {
+        "mimeType": "application/json",
+        "text": "{\n  \"addresses\": [\n    \"172.19.0.7/16\",\n    \"fc00:f853:ccd:e793::7/64\",\n    \"fe80::b444:e3ff:fec0:4fd2/64\"\n  ],\n  \"flags\": \"up|broadcast|multicast|running\",\n  \"index\": 11,\n  \"mac\": \"b6:44:e3:c0:4f:d2\",\n  \"mtu\": 65535,\n  \"name\": \"eth0\",\n  \"statistics\": {\n    \"rx_bytes\": 683918914,\n    \"rx_dropped\": 0,\n    \"rx_errors\": 0,\n    \"rx_packets\": 890576,\n    \"tx_bytes\": 864826874,\n    \"tx_dropped\": 0,\n    \"tx_errors\": 0,\n    \"tx_packets\": 713740\n  }\n}",
+        "uri": "network://interfaces/eth0"
+      }
+    ]
+  }
+}
+```
+
+</details>
+

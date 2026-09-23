@@ -26,6 +26,15 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get system services --pattern "kube*"
 ```
 
+Output:
+```text
+[active] kubelet.service
+  State: running (active) | Load: loaded
+  Desc: kubelet: The Kubernetes Node Agent
+
+Hint: To read detailed properties of a specific service, use the resource: service://<name>/status
+```
+
 </details>
 
 <details>
@@ -45,14 +54,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "20",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[active] kubelet.service\n  State: running (active) | Load: loaded\n  Desc: kubelet: The Kubernetes Node Agent\n\nHint: To read detailed properties of a specific service, use the resource: service://<name>/status"
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-[active] kubelet.service
-  State: running (active) | Load: loaded
-  Desc: kubelet: The Kubernetes Node Agent
-
-Hint: To read detailed properties of a specific service, use the resource: service://<name>/status
-```

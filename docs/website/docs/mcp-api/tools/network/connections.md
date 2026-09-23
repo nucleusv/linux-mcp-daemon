@@ -15,6 +15,24 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get network connections
 ```
 
+Output:
+```text
+Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess
+udp   UNCONN 0      0         127.0.0.11:45825      0.0.0.0:*          
+tcp   LISTEN 0      4096       127.0.0.1:44439      0.0.0.0:*          
+tcp   LISTEN 0      4096      172.19.0.7:2380       0.0.0.0:*          
+tcp   LISTEN 0      4096      172.19.0.7:2379       0.0.0.0:*          
+tcp   LISTEN 0      4096       127.0.0.1:2379       0.0.0.0:*          
+tcp   LISTEN 0      4096       127.0.0.1:2381       0.0.0.0:*          
+tcp   LISTEN 0      4096       127.0.0.1:10248      0.0.0.0:*          
+tcp   LISTEN 0      4096       127.0.0.1:10249      0.0.0.0:*          
+tcp   LISTEN 0      4096       127.0.0.1:10259      0.0.0.0:*          
+tcp   LISTEN 0      4096       127.0.0.1:10257      0.0.0.0:*          
+tcp   LISTEN 0      4096      127.0.0.11:37707      0.0.0.0:*          
+tcp   LISTEN 0      4096
+...
+```
+
 </details>
 
 <details>
@@ -34,23 +52,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "17",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess\nudp   UNCONN 0      0         127.0.0.11:45825      0.0.0.0:*          \ntcp   LISTEN 0      4096       127.0.0.1:44439      0.0.0.0:*          \ntcp   LISTEN 0      4096      172.19.0.7:2380       0.0.0.0:*          \ntcp   LISTEN 0      4096      172.19.0.7:2379       0.0.0.0:*          \ntcp   LISTEN 0      4096       127.0.0.1:2379       0.0.0.0:*          \ntcp   LISTEN 0      4096       127.0.0.1:2381       0.0.0.0:*          \ntcp   LISTEN 0      4096       127.0.0.1:10248      0.0.0.0:*          \ntcp   LISTEN 0      4096       127.0.0.1:10249      0.0.0.0:*          \ntcp   LISTEN 0      4096       127.0.0.1:10259      0.0.0.0:*          \ntcp   LISTEN 0      4096       127.0.0.1:10257      0.0.0.0:*          \ntcp   LISTEN 0      4096      127.0.0.11:37707      0.0.0.0:*          \ntcp   LISTEN 0      4096\n..."
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess
-udp   UNCONN 0      0         127.0.0.11:45825      0.0.0.0:*          
-tcp   LISTEN 0      4096       127.0.0.1:44439      0.0.0.0:*          
-tcp   LISTEN 0      4096      172.19.0.7:2380       0.0.0.0:*          
-tcp   LISTEN 0      4096      172.19.0.7:2379       0.0.0.0:*          
-tcp   LISTEN 0      4096       127.0.0.1:2379       0.0.0.0:*          
-tcp   LISTEN 0      4096       127.0.0.1:2381       0.0.0.0:*          
-tcp   LISTEN 0      4096       127.0.0.1:10248      0.0.0.0:*          
-tcp   LISTEN 0      4096       127.0.0.1:10249      0.0.0.0:*          
-tcp   LISTEN 0      4096       127.0.0.1:10259      0.0.0.0:*          
-tcp   LISTEN 0      4096       127.0.0.1:10257      0.0.0.0:*          
-tcp   LISTEN 0      4096      127.0.0.11:37707      0.0.0.0:*          
-tcp   LISTEN 0      4096
-...
-```

@@ -15,29 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get auth sudo-rules
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-# 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-# 2. POST the tools/call request to that endpoint
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "auth/sudo-rules", "arguments": {}}}'
-
-# 3. The result arrives on the SSE stream opened in step 1
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```text
 Your authorized privileged tools:
 {
@@ -90,3 +68,41 @@ Your authorized privileged tools:
       "Allowed": true,
 ...
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+# 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+# 2. POST the tools/call request to that endpoint
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "auth/sudo-rules", "arguments": {}}}'
+
+# 3. The result arrives on the SSE stream opened in step 1
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "30",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Your authorized privileged tools:\n{\n  \"Tools\": {\n    \"auth/sudo-rules\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"cpu/list\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"cpu/load-average\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"disks/free\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"disks/health\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"disks/list\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"disks/mounts\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"disks/partitions\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"disks/performance\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"disks/usage\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"files/content\": {\n      \"Allowed\": true,\n      \"Paths\": null\n    },\n    \"files/create\": {\n      \"Allowed\": true,\n..."
+      }
+    ]
+  }
+}
+```
+
+</details>
+

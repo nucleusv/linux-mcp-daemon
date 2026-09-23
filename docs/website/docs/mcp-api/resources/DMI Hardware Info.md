@@ -15,6 +15,12 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource devices://dmi
 ```
 
+Output:
+```text
+Error: worker execution failed: exit status 1. Stderr: DMI data not available on this system
+ (Code: -32603)
+```
+
 </details>
 
 <details>
@@ -30,10 +36,7 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "devices://dmi"}}'
 ```
 
-</details>
-
-**Real response (captured live) - this test VM has no DMI table exposed (`/sys/class/dmi` is absent in this containerized environment), so this is a genuine failure, not a placeholder; on a normal host this returns real board/vendor data:**
-
+Response:
 ```json
 {
   "jsonrpc": "2.0",
@@ -44,3 +47,6 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   }
 }
 ```
+
+</details>
+

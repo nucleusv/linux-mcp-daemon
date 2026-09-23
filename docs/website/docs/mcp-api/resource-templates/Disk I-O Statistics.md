@@ -15,25 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource disks://vda/stats
 ```
 
-</details>
-
-<details>
-<summary><b>curl (raw MCP JSON-RPC)</b></summary>
-
-```bash
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
-# server sends: event: endpoint / data: /message?session_id=...
-
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
-  -H "Authorization: Bearer $MCP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "disks://vda/stats"}}'
-```
-
-</details>
-
-**Real response (captured live):**
-
+Output:
 ```json
 [
   {
@@ -54,3 +36,38 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   }
 ]
 ```
+
+</details>
+
+<details>
+<summary><b>curl (raw MCP JSON-RPC)</b></summary>
+
+```bash
+curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+# server sends: event: endpoint / data: /message?session_id=...
+
+curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "disks://vda/stats"}}'
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "45",
+  "result": {
+    "contents": [
+      {
+        "mimeType": "application/json",
+        "text": "[\n  {\n    \"major\": 254,\n    \"minor\": 0,\n    \"device_name\": \"vda\",\n    \"reads_completed\": 9558738,\n    \"reads_merged\": 506656,\n    \"sectors_read\": 4052204802,\n    \"time_reading_ms\": 9788136,\n    \"writes_completed\": 2162223,\n    \"writes_merged\": 1689822,\n    \"sectors_written\": 78537752,\n    \"time_writing_ms\": 5850628,\n    \"ios_in_progress\": 0,\n    \"time_doing_ios_ms\": 1742727,\n    \"weighted_time_ios_ms\": 16081971\n  }\n]",
+        "uri": "disks://vda/stats"
+      }
+    ]
+  }
+}
+```
+
+</details>
+

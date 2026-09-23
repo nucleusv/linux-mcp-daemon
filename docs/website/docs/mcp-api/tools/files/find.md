@@ -15,6 +15,15 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get files find /var/log --name "*.log"
 ```
 
+Output:
+```text
+/var/log/bootstrap.log
+/var/log/dpkg.log
+/var/log/apt/history.log
+/var/log/apt/term.log
+/var/log/alternatives.log
+```
+
 </details>
 
 <details>
@@ -34,14 +43,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "3",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "/var/log/bootstrap.log\n/var/log/dpkg.log\n/var/log/apt/history.log\n/var/log/apt/term.log\n/var/log/alternatives.log"
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-/var/log/bootstrap.log
-/var/log/dpkg.log
-/var/log/apt/history.log
-/var/log/apt/term.log
-/var/log/alternatives.log
-```

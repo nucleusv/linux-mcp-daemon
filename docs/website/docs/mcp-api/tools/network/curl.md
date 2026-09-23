@@ -15,6 +15,21 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get network curl http://127.0.0.1:9091/ping
 ```
 
+Output:
+```json
+{
+  "status_code": 404,
+  "status": "404 Not Found",
+  "headers": {
+    "Content-Length": "19",
+    "Content-Type": "text/plain; charset=utf-8",
+    "Date": "Wed, 23 Sep 2026 11:43:46 GMT",
+    "X-Content-Type-Options": "nosniff"
+  },
+  "body": "404 page not found\n"
+}
+```
+
 </details>
 
 <details>
@@ -34,20 +49,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-</details>
-
-**Real response (captured live):**
-
+Response:
 ```json
 {
-  "status_code": 404,
-  "status": "404 Not Found",
-  "headers": {
-    "Content-Length": "19",
-    "Content-Type": "text/plain; charset=utf-8",
-    "Date": "Wed, 23 Sep 2026 11:43:46 GMT",
-    "X-Content-Type-Options": "nosniff"
-  },
-  "body": "404 page not found\n"
+  "jsonrpc": "2.0",
+  "id": "14",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"status_code\": 404,\n  \"status\": \"404 Not Found\",\n  \"headers\": {\n    \"Content-Length\": \"19\",\n    \"Content-Type\": \"text/plain; charset=utf-8\",\n    \"Date\": \"Wed, 23 Sep 2026 11:43:46 GMT\",\n    \"X-Content-Type-Options\": \"nosniff\"\n  },\n  \"body\": \"404 page not found\\n\"\n}"
+      }
+    ]
+  }
 }
 ```
+
+</details>
+

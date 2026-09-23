@@ -15,6 +15,15 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource os://uname
 ```
 
+Output:
+```text
+Sysname: Linux
+Nodename: desktop-control-plane
+Release: 7.0.12-linuxkit
+Version: #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026
+Machine: aarch64
+```
+
 </details>
 
 <details>
@@ -30,14 +39,22 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "os://uname"}}'
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "31",
+  "result": {
+    "contents": [
+      {
+        "mimeType": "text/plain",
+        "text": "Sysname: Linux\nNodename: desktop-control-plane\nRelease: 7.0.12-linuxkit\nVersion: #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026\nMachine: aarch64",
+        "uri": "os://uname"
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-Sysname: Linux
-Nodename: desktop-control-plane
-Release: 7.0.12-linuxkit
-Version: #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026
-Machine: aarch64
-```

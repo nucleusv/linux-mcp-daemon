@@ -17,6 +17,12 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get disks mounts
 ```
 
+Output:
+```text
+overlay on / type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1317/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1316/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1315/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1314/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1272/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1271/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1224/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/265/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/264/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1318/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshot
+...
+```
+
 </details>
 
 <details>
@@ -36,11 +42,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "8",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "overlay on / type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1317/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1316/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1315/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1314/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1272/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1271/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1224/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/265/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/264/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1318/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshot\n..."
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-overlay on / type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1317/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1316/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1315/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1314/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1272/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1271/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1224/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/265/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/264/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1318/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshot
-...
-```

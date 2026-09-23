@@ -15,6 +15,18 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get files list /var/log
 ```
 
+Output:
+```text
+[FILE] alternatives.log (6522 bytes, modified: 2026-09-22 23:51:44)
+[DIR]  apt/ (modified: 2026-09-22 23:51:42)
+[FILE] bootstrap.log (61237 bytes, modified: 2026-09-11 02:06:15)
+[FILE] btmp (0 bytes, modified: 2026-09-11 02:06:06)
+[FILE] dpkg.log (215150 bytes, modified: 2026-09-22 23:51:45)
+[FILE] faillog (0 bytes, modified: 2026-09-11 02:06:14)
+[FILE] lastlog (0 bytes, modified: 2026-09-11 02:06:06)
+[FILE] wtmp (0 bytes, modified: 2026-09-11 02:06:06)
+```
+
 </details>
 
 <details>
@@ -34,17 +46,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "1",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[FILE] alternatives.log (6522 bytes, modified: 2026-09-22 23:51:44)\n[DIR]  apt/ (modified: 2026-09-22 23:51:42)\n[FILE] bootstrap.log (61237 bytes, modified: 2026-09-11 02:06:15)\n[FILE] btmp (0 bytes, modified: 2026-09-11 02:06:06)\n[FILE] dpkg.log (215150 bytes, modified: 2026-09-22 23:51:45)\n[FILE] faillog (0 bytes, modified: 2026-09-11 02:06:14)\n[FILE] lastlog (0 bytes, modified: 2026-09-11 02:06:06)\n[FILE] wtmp (0 bytes, modified: 2026-09-11 02:06:06)"
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-[FILE] alternatives.log (6522 bytes, modified: 2026-09-22 23:51:44)
-[DIR]  apt/ (modified: 2026-09-22 23:51:42)
-[FILE] bootstrap.log (61237 bytes, modified: 2026-09-11 02:06:15)
-[FILE] btmp (0 bytes, modified: 2026-09-11 02:06:06)
-[FILE] dpkg.log (215150 bytes, modified: 2026-09-22 23:51:45)
-[FILE] faillog (0 bytes, modified: 2026-09-11 02:06:14)
-[FILE] lastlog (0 bytes, modified: 2026-09-11 02:06:06)
-[FILE] wtmp (0 bytes, modified: 2026-09-11 02:06:06)
-```

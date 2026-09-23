@@ -17,6 +17,11 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get logs logins --privileged true
 ```
 
+Output:
+```text
+worker execution failed: exit status 1. Stderr: last failed: exec: "last": executable file not found in $PATH
+```
+
 </details>
 
 <details>
@@ -36,18 +41,22 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
-</details>
-
-**Real response (captured live) - this test VM's minimal LinuxKit node has no `last`/`lastb` binaries installed at all, so this is a genuine failure, not a placeholder:**
-
+Response:
 ```json
 {
-  "content": [
-    {
-      "type": "text",
-      "text": "worker execution failed: exit status 1. Stderr: last failed: exec: \"last\": executable file not found in $PATH\n"
-    }
-  ],
-  "isError": true
+  "jsonrpc": "2.0",
+  "id": "23",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "worker execution failed: exit status 1. Stderr: last failed: exec: \"last\": executable file not found in $PATH"
+      }
+    ],
+    "isError": true
+  }
 }
 ```
+
+</details>
+

@@ -15,6 +15,14 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get disks free /
 ```
 
+Output:
+```text
+Filesystem space on /
+Total:     62671097856
+Used:      62671097856 (100.0%)
+Available: 0
+```
+
 </details>
 
 <details>
@@ -34,13 +42,21 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "5",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Filesystem space on /\nTotal:     62671097856\nUsed:      62671097856 (100.0%)\nAvailable: 0"
+      }
+    ]
+  }
+}
+```
+
 </details>
 
-**Real response (captured live):**
-
-```text
-Filesystem space on /
-Total:     62671097856
-Used:      62671097856 (100.0%)
-Available: 0
-```
