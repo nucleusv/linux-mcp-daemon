@@ -135,18 +135,18 @@ echo "Testing: explain <group> meta-verb"
 echo "Testing: tool <name> direct escape hatch (symmetric with resource <uri>)"
 ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" tool files/list --path /tmp
 
-echo "Testing: get mcp <tools|resources|prompts|info> meta-group"
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp tools > /tmp/mcp_tools_out.txt
-grep -q "files/list" /tmp/mcp_tools_out.txt || { echo "❌ FAILED: get mcp tools missing files/list"; exit 1; }
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp resources > /tmp/mcp_resources_out.txt
-grep -q "os://uname" /tmp/mcp_resources_out.txt || { echo "❌ FAILED: get mcp resources missing os://uname"; exit 1; }
+echo "Testing: get mcp-api <tools|resources|prompts|info> meta-group"
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp-api tools > /tmp/mcp_tools_out.txt
+grep -q "files/list" /tmp/mcp_tools_out.txt || { echo "❌ FAILED: get mcp-api tools missing files/list"; exit 1; }
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp-api resources > /tmp/mcp_resources_out.txt
+grep -q "os://uname" /tmp/mcp_resources_out.txt || { echo "❌ FAILED: get mcp-api resources missing os://uname"; exit 1; }
 # prompts is a real MCP capability mcpd doesn't implement - this must report
 # that plainly, not silently succeed with an empty list or crash.
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp prompts > /tmp/mcp_prompts_out.txt
-grep -q "does not implement" /tmp/mcp_prompts_out.txt || { echo "❌ FAILED: get mcp prompts did not report the missing capability"; exit 1; }
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp info > /tmp/mcp_info_out.txt
-grep -q "protocolVersion" /tmp/mcp_info_out.txt || { echo "❌ FAILED: get mcp info missing protocolVersion"; exit 1; }
-echo "✅ get mcp tools/resources/prompts/info all correct"
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp-api prompts > /tmp/mcp_prompts_out.txt
+grep -q "does not implement" /tmp/mcp_prompts_out.txt || { echo "❌ FAILED: get mcp-api prompts did not report the missing capability"; exit 1; }
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp-api info > /tmp/mcp_info_out.txt
+grep -q "protocolVersion" /tmp/mcp_info_out.txt || { echo "❌ FAILED: get mcp-api info missing protocolVersion"; exit 1; }
+echo "✅ get mcp-api tools/resources/prompts/info all correct"
 
 echo "==========================================="
 echo "  Testing Resources (JSON & Table outputs) "

@@ -180,18 +180,23 @@ func main() {
 		os.Exit(0)
 	}
 
-	// "get mcp <tools|resources|prompts>" - a reserved meta-group for the MCP
-	// protocol's own top-level catalog concepts, not a real tools_group.
-	// Distinct from "tool <name>"/"resource <uri>" (direct single-item
-	// invocation by identifier) - "mcp" is specifically for discovering
-	// what's available. mcpd currently implements tools and resources
-	// (incl. resource templates); prompts is a real MCP capability this
-	// daemon doesn't implement, reported clearly rather than silently
-	// omitted, since "what can we get from mcpd over the MCP standard" is
-	// exactly the question this command answers.
-	if firstWord == "get" && len(rawArgs) > 1 && rawArgs[1] == "mcp" {
+	// "get mcp-api <tools|resources|prompts|info>" - a reserved meta-group for
+	// the MCP protocol's own top-level catalog concepts, not a real
+	// tools_group. Named "mcp-api", not "mcp", specifically to stay visually
+	// distinct from the unrelated "mcpd" admin group below - "mcp"/"mcpd"
+	// differ by one character and are exactly the kind of thing a typo (or a
+	// human skimming a command) could confuse. Also matches the docs site's
+	// own "MCP API" sidebar category name. Distinct from "tool <name>"/
+	// "resource <uri>" (direct single-item invocation by identifier) -
+	// "mcp-api" is specifically for discovering what's available. mcpd
+	// currently implements tools and resources (incl. resource templates);
+	// prompts is a real MCP capability this daemon doesn't implement,
+	// reported clearly rather than silently omitted, since "what can we get
+	// from mcpd over the MCP standard" is exactly the question this command
+	// answers.
+	if firstWord == "get" && len(rawArgs) > 1 && rawArgs[1] == "mcp-api" {
 		if len(rawArgs) < 3 {
-			fmt.Println("Usage: linuxctl get mcp <tools|resources|prompts|info>")
+			fmt.Println("Usage: linuxctl get mcp-api <tools|resources|prompts|info>")
 			os.Exit(1)
 		}
 		switch rawArgs[2] {
@@ -204,7 +209,7 @@ func main() {
 		case "info":
 			printMCPInfo(authToken)
 		default:
-			fmt.Printf("Error: unknown mcp catalog %q (expected tools, resources, prompts, or info)\n", rawArgs[2])
+			fmt.Printf("Error: unknown mcp-api catalog %q (expected tools, resources, prompts, or info)\n", rawArgs[2])
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -319,7 +324,7 @@ func printPromptsList(authToken string) {
 	respRPC := callMethod(authToken, nextID(), "prompts/list", nil)
 	if respRPC.Error != nil {
 		fmt.Printf("This mcpd daemon does not implement the MCP prompts capability (%s).\n", respRPC.Error.Message)
-		fmt.Println("Its initialize response only declares \"tools\" and \"resources\" - see `linuxctl get mcp info`.")
+		fmt.Println("Its initialize response only declares \"tools\" and \"resources\" - see `linuxctl get mcp-api info`.")
 		return
 	}
 	var result map[string]interface{}
@@ -400,11 +405,11 @@ func fetchRegistry(authToken string) Registry {
 func printTopLevelUsage(reg Registry) {
 	fmt.Println("Usage: linuxctl [options] <verb> <group> [target-keyword] [args]")
 	fmt.Println("       linuxctl [options] describe <group> [target-keyword] <name>")
-	fmt.Println("       linuxctl [options] explain <group> [verb]")
-	fmt.Println("       linuxctl [options] get tools")
+	fmt.Println("       linuxctl [options] explain <group>")
+	fmt.Println("       linuxctl [options] get mcp-api <tools|resources|prompts|info>")
 	fmt.Println("       linuxctl [options] tool <group>/<command> [--flag val ...]")
-	fmt.Println("       linuxctl [options] resources")
 	fmt.Println("       linuxctl [options] resource <uri>")
+	fmt.Println("       linuxctl [options] <verb> mcpd user <username>")
 	fmt.Println("Options:")
 	flag.PrintDefaults()
 

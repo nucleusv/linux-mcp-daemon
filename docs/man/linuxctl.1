@@ -12,7 +12,7 @@ linuxctl \- Command line interface for the Linux MCP Daemon
 [\fIOPTIONS\fR] \fIexplain <group>\fR
 .br
 .B linuxctl
-[\fIOPTIONS\fR] \fIget mcp <tools|resources|prompts|info>\fR
+[\fIOPTIONS\fR] \fIget mcp-api <tools|resources|prompts|info>\fR
 .br
 .B linuxctl
 [\fIOPTIONS\fR] \fItool <group>/<command>\fR [\fI\-\-flag val ...\fR]
@@ -66,7 +66,7 @@ Reads the exact contents of an MCP resource directly by URI. URIs use \fBscheme:
 .B explain <group>
 Lists every tool, resource, and template reachable in a group, with the exact verb/keyword for each \- generated dynamically from the live schema.
 .TP
-.B get mcp <tools|resources|prompts|info>
+.B get mcp-api <tools|resources|prompts|info>
 A reserved meta-group for the MCP protocol's own top-level catalog concepts, not a real \fBtools_group\fR. \fBinfo\fR prints the raw \fBinitialize\fR response (protocol version and declared capabilities); \fBprompts\fR calls the real \fBprompts/list\fR method and reports plainly that this daemon doesn't implement it, rather than pretending the catalog is empty.
 .TP
 .B <verb> <group> [target-keyword] [args]
@@ -95,7 +95,7 @@ Ping the daemon using an environment variable:
 .PP
 List all available resources:
 .IP
-.B linuxctl resources
+.B linuxctl get mcp-api resources
 .PP
 Read the system uname as a resource:
 .IP

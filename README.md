@@ -205,10 +205,10 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 ### Introspecting the MCP protocol itself
 
 ```bash
-./linuxctl get mcp info      # raw initialize response: protocol version + declared capabilities
-./linuxctl get mcp tools     # every tool, by literal name
-./linuxctl get mcp resources # every static resource + template
-./linuxctl get mcp prompts   # reports plainly that mcpd doesn't implement this MCP capability
+./linuxctl get mcp-api info      # raw initialize response: protocol version + declared capabilities
+./linuxctl get mcp-api tools     # every tool, by literal name
+./linuxctl get mcp-api resources # every static resource + template
+./linuxctl get mcp-api prompts   # reports plainly that mcpd doesn't implement this MCP capability
 ```
 ```bash
 curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Type: application/json" \

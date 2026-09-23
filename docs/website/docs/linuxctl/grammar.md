@@ -48,7 +48,7 @@ Calls a tool directly by its literal name, symmetric with `resource <uri>` - bot
 linuxctl tool files/list --path /tmp
 ```
 
-See [MCP Meta-Group](./mcp-meta-group) for `get mcp tools/resources/prompts/info`, and [Daemon User Administration](./mcpd-admin) for the local-only `mcpd` group.
+See [MCP Meta-Group](./mcp-meta-group) for `get mcp-api tools/resources/prompts/info`, and [Daemon User Administration](./mcpd-admin) for the local-only `mcpd` group.
 
 ## `<verb> <group> [target-keyword] [args]`
 

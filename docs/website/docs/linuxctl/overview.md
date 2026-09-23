@@ -12,7 +12,7 @@ The `linuxctl` command-line interface allows users and AI agents to seamlessly i
 This section is split into a few focused pages so every way of using `linuxctl` is easy to find:
 
 - **[Grammar & Commands](./grammar)** - the `<verb> <group> [target-keyword]` grammar itself, plus every standalone command (`ping`, `explain`, `resource`, `tool`).
-- **[MCP Meta-Group](./mcp-meta-group)** - `get mcp tools/resources/prompts/info`, for introspecting the MCP protocol itself (what this daemon does and doesn't implement).
+- **[MCP Meta-Group](./mcp-meta-group)** - `get mcp-api tools/resources/prompts/info`, for introspecting the MCP protocol itself (what this daemon does and doesn't implement).
 - **[Full Command Reference](./command-reference)** - every tool, resource, and template, grouped and with real captured output.
 - **[Daemon User Administration](./mcpd-admin)** - `create`/`delete`/`update`/`list`/`describe mcpd user`, the local-only (no network) way to manage bearer tokens and permissions.
 
@@ -22,7 +22,7 @@ This section is split into a few focused pages so every way of using `linuxctl` 
 linuxctl [OPTIONS] <verb> <group> [target-keyword] [args]
 linuxctl [OPTIONS] describe <group> [target-keyword] <name>
 linuxctl [OPTIONS] explain <group>
-linuxctl [OPTIONS] get mcp <tools|resources|prompts|info>
+linuxctl [OPTIONS] get mcp-api <tools|resources|prompts|info>
 linuxctl [OPTIONS] tool <group>/<command> [--flag val ...]
 linuxctl [OPTIONS] resource <uri>
 linuxctl [OPTIONS] <verb> mcpd user <username>
