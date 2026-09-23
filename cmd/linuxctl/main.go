@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,7 +20,7 @@ import (
 )
 
 var (
-	serverURL  = flag.String("server", "http://localhost:9091", "The URL of the mcpd server")
+	serverURL  = flag.String("server", defaultServerURL(), "The URL of the mcpd server (default from MCP_SERVER env var)")
 	token      = flag.String("token", "", "Bearer token for authentication")
 	configPath = flag.String("config-path", "./configs", "Local path to the daemon's configs/ directory (used only by the local-only 'mcpd' admin group)")
 )
@@ -55,9 +56,27 @@ func nextID() string {
 	return strconv.Itoa(idCounter)
 }
 
+func defaultServerURL() string {
+	if v := os.Getenv("MCP_SERVER"); v != "" {
+		return v
+	}
+	return "http://localhost:9091"
+}
+
 func main() {
 	flag.Parse()
 	rawArgs := flag.Args()
+
+	// Shell completion - "completion" just prints a script; "__complete" is
+	// the hidden callback that script runs on every Tab press (see
+	// completion.go). Both must run before the token check below.
+	if len(rawArgs) >= 1 && rawArgs[0] == "completion" {
+		runCompletionScript(rawArgs[1:])
+		return
+	}
+	if len(rawArgs) >= 1 && rawArgs[0] == "__complete" {
+		startCompletion(rawArgs[1:])
+	}
 
 	// The "mcpd" group is local-only admin (user/token management) - it never
 	// talks to the daemon over the network, so it's handled before any auth
@@ -151,6 +170,10 @@ func main() {
 	// Wait for endpoint
 	for postEndpoint == "" {
 		// active busy wait for simplicity, should be quick
+	}
+
+	if firstWord == "__complete" {
+		finishCompletion(authToken)
 	}
 
 	// 4. Transport-bridge and meta commands, unrelated to the verb/group grammar.
@@ -410,6 +433,7 @@ func printTopLevelUsage(reg Registry) {
 	fmt.Println("       linuxctl [options] tool <group>/<command> [--flag val ...]")
 	fmt.Println("       linuxctl [options] resource <uri>")
 	fmt.Println("       linuxctl [options] <verb> mcpd user <username>")
+	fmt.Println("       linuxctl completion <bash|zsh>")
 	fmt.Println("Options:")
 	flag.PrintDefaults()
 
@@ -614,18 +638,33 @@ func renderResponse(respRPC JSONRPCResponse, outputFormat, contentKey string) {
 
 func printFormatted(text, outputFormat string) {
 	switch outputFormat {
+	// json and yaml re-render the server's JSON without decoding it into Go
+	// maps/float64s, which would alphabetize keys and print large numbers
+	// in scientific notation.
 	case "json":
-		var obj interface{}
-		if err := json.Unmarshal([]byte(text), &obj); err == nil {
-			b, _ := json.MarshalIndent(obj, "", "  ")
-			fmt.Println(string(b))
+		var buf bytes.Buffer
+		if err := json.Indent(&buf, []byte(text), "", "  "); err == nil {
+			fmt.Println(buf.String())
 		} else {
 			fmt.Print(text)
 		}
 	case "yaml":
-		var obj interface{}
-		if err := json.Unmarshal([]byte(text), &obj); err == nil {
-			b, _ := yaml.Marshal(obj)
+		var node yaml.Node
+		if err := yaml.Unmarshal([]byte(text), &node); err == nil && json.Valid([]byte(text)) {
+			// JSON parses as flow-style YAML; reset to block style.
+			var toBlock func(n *yaml.Node)
+			toBlock = func(n *yaml.Node) {
+				// Keep quotes on strings a YAML 1.1 parser (PyYAML, ...)
+				// would read as something else - "8:0" is base-60 480 there.
+				if !(n.Kind == yaml.ScalarNode && n.Tag == "!!str" && yaml11Ambiguous.MatchString(n.Value)) {
+					n.Style = 0
+				}
+				for _, c := range n.Content {
+					toBlock(c)
+				}
+			}
+			toBlock(&node)
+			b, _ := yaml.Marshal(&node)
 			fmt.Print(string(b))
 		} else {
 			fmt.Print(text)
@@ -636,7 +675,9 @@ func printFormatted(text, outputFormat string) {
 			fmt.Print(text)
 			return
 		}
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+		var buf bytes.Buffer
+		w := tabwriter.NewWriter(&buf, 0, 0, 3, ' ', 0)
+		keyOrder := jsonKeyOrder([]byte(text))
 
 		printArrayAsTable := func(arr []interface{}) {
 			if len(arr) == 0 {
@@ -647,6 +688,9 @@ func printFormatted(text, outputFormat string) {
 				for k := range first {
 					keys = append(keys, k)
 				}
+				// Columns in the order the server sent them - Go map
+				// iteration is random, which reshuffled columns every run.
+				sort.Slice(keys, func(i, j int) bool { return keyOrder[keys[i]] < keyOrder[keys[j]] })
 				fmt.Fprintln(w, strings.ToUpper(strings.Join(keys, "\t")))
 				for _, item := range arr {
 					if m, ok := item.(map[string]interface{}); ok {
@@ -698,6 +742,16 @@ func printFormatted(text, outputFormat string) {
 			}
 		}
 		w.Flush()
+		// "table" fits the terminal, cutting long trailing columns (a
+		// process's cmdline, ...) the way ps does; "wide" never truncates,
+		// mirroring kubectl's -o wide.
+		width := 0
+		if outputFormat == "table" {
+			width = terminalWidth()
+		}
+		for _, line := range strings.SplitAfter(buf.String(), "\n") {
+			fmt.Print(truncateLine(line, width))
+		}
 	default:
 		fmt.Print(text)
 	}
