@@ -26,12 +26,13 @@ linuxctl [OPTIONS] get mcp-api <tools|resources|prompts|info>
 linuxctl [OPTIONS] tool <group>/<command> [--flag val ...]
 linuxctl [OPTIONS] resource <uri>
 linuxctl [OPTIONS] <verb> mcpd user <username>
+linuxctl completion <bash|zsh>
 ```
 
 ## Options
 
 - `-server URL`
-  The URL of the `mcpd` server to connect to. Defaults to `http://localhost:9091`.
+  The URL of the `mcpd` server to connect to. Defaults to the `MCP_SERVER` environment variable, or `http://localhost:9091` if that's unset.
 
 - `-token TOKEN`
   Bearer token for authentication. If not provided via this flag, the client looks for the `MCP_TOKEN` environment variable. Not needed for the local-only `mcpd` admin group.
@@ -44,9 +45,13 @@ linuxctl [OPTIONS] <verb> mcpd user <username>
 - `MCP_TOKEN`
   The bearer token used for authenticating with the daemon. This is the recommended way to authenticate so you don't leak tokens in shell histories.
 
+- `MCP_SERVER`
+  Default for `-server`. Prefer this over a shell alias like `alias linuxctl="linuxctl -server ..."` - shell completion can't see through aliases.
+
 ## Quick example
 
 ```bash
+export MCP_SERVER="http://my-host:9091"
 export MCP_TOKEN="your_token_here"
 linuxctl ping
 linuxctl get files /etc/hosts
@@ -54,3 +59,11 @@ linuxctl get disks free /
 ```
 
 See [Grammar & Commands](./grammar) for the full rules, or jump straight to the [Full Command Reference](./command-reference) for real, copy-pasteable examples across every tool.
+
+## Shell completion
+
+`linuxctl completion bash|zsh` enables `Tab` completion of verbs, groups, keywords, flags and resource URIs, driven by the daemon's live registry. See [Autocompletion (bash/zsh)](./autocompletion) for setup.
+
+## Table output width
+
+`-o table` fits the terminal - long trailing columns such as a process's command line are cut with `…`, like `ps`. This still applies when piped (`| more`, `| less`), using the controlling terminal's width. Use `-o wide` for untruncated output, as with `kubectl`.
