@@ -34,4 +34,32 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Real response (captured live):
+```text
+NAME         SIZE(BYTES)  RO     RM    
+nbd0         0            false  false 
+nbd1         0            false  false 
+nbd10        0            false  false 
+nbd11        0            false  false 
+nbd12        0            false  false 
+nbd13        0            false  false 
+nbd14        0            false  false 
+nbd15        0            false  false 
+nbd2         0            false  false 
+nbd3         0            false  false 
+nbd4         0            false  false 
+nbd5         0            false  false 
+nbd6         0            false  false 
+nbd7         0            false  false 
+nbd8         0            false  false 
+nbd9         0            false  false 
+ram0         4194304      false  false 
+ram1         4194304      false  false 
+ram10        4194304      false  false 
+ram11        4194304      false  false 
+ram12        4194304      false  false 
+ram13        4194304
+...
+```
+
 </details>

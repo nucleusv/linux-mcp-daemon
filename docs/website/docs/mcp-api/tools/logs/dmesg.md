@@ -34,4 +34,26 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Real response (captured live):
+```text
+[WARNING: Output truncated to last 30KB]
+...
+ort 1(veth0ef6e1f) entered disabled state
+[  +0.000004] veth0ef6e1f: entered allmulticast mode
+[  +0.000033] veth0ef6e1f: entered promiscuous mode
+[  +0.103033] eth0: renamed from veth4d63741
+[  +0.000641] docker0: port 1(veth0ef6e1f) entered blocking state
+[  +0.000003] docker0: port 1(veth0ef6e1f) entered forwarding state
+[  +0.088267] docker0: port 1(veth0ef6e1f) entered disabled state
+[  +0.000039] veth4d63741: renamed from eth0
+[  +0.010448] docker0: port 1(veth0ef6e1f) entered disabled state
+[  +0.000722] veth0ef6e1f (unregistering): left allmulticast mode
+[  +0.000002] veth0ef6e1f (unregistering): left promiscuous mode
+[  +0.000002] docker0: port 1(veth0ef6e1f) entered disabled state
+[Sep23 08:55] docker0: port 1(veth37722d0) entered blocking state
+[  +0.000363] docker0: port 1(veth37722d0) entered disabled state
+[  +0.000318] veth37722
+...
+```
+
 </details>

@@ -45,4 +45,10 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "disks/partitions", "arguments": {"device": "vda", "output_format": "json"}}}'
 ```
 
+Real response (captured live):
+```text
+DEVICE         PARENT     NUM    START(SECT)    SIZE(SECT)     SIZE(BYTES)   
+vda1           vda        1      2048           124997632      63998787584
+```
+
 </details>

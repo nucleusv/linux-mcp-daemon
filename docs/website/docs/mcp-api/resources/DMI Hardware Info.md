@@ -30,4 +30,16 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "devices://dmi"}}'
 ```
 
+Real response (captured live) - this test VM has no DMI table exposed (`/sys/class/dmi` is absent in this containerized environment), so this is a genuine failure, not a placeholder; on a normal host this returns real board/vendor data:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "d1",
+  "error": {
+    "code": -32603,
+    "message": "worker execution failed: exit status 1. Stderr: DMI data not available on this system\n"
+  }
+}
+```
+
 </details>

@@ -34,4 +34,16 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Not executed against a real process for this page (it would kill something on the host) - this is the exact shape `internal/tools/processes/delete/delete.go` returns on success, not a live capture:
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Successfully sent signal SIGTERM to process 1234"
+    }
+  ]
+}
+```
+
 </details>

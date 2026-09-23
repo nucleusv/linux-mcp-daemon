@@ -30,4 +30,13 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "os://uname"}}'
 ```
 
+Real response (captured live):
+```text
+Sysname: Linux
+Nodename: desktop-control-plane
+Release: 7.0.12-linuxkit
+Version: #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026
+Machine: aarch64
+```
+
 </details>

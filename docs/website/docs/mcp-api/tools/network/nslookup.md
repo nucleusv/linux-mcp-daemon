@@ -34,4 +34,51 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Real response (captured live):
+```text
+{
+  "host": "google.com",
+  "records": [
+    {
+      "type": "CNAME",
+      "value": "google.com."
+    },
+    {
+      "type": "A",
+      "value": "142.250.65.238"
+    },
+    {
+      "type": "AAAA",
+      "value": "2607:f8b0:4006:813::200e"
+    },
+    {
+      "type": "TXT",
+      "value": "v=spf1 include:_spf.google.com ~all"
+    },
+    {
+      "type": "TXT",
+      "value": "onetrust-domain-verification=0d477fe608074e6f9c12bca7826035cc"
+    },
+    {
+      "type": "TXT",
+      "value": "MS=E4A68B9AB2BB9670BCE15412F62916164C0B20BB"
+    },
+    {
+      "type": "TXT",
+      "value": "globalsign-smime-dv=CDYX+XFHUw2wml6/Gb8+59BsH31KzUr6c1l2BPvqKX8="
+    },
+    {
+      "type": "TXT",
+      "value": "Z29vZ2xl"
+    },
+    {
+      "type": "TXT",
+      "value": "apple-domain-verification=30afIBcvSuDV2PLX"
+    },
+    {
+      "type": "TXT",
+      "value": "facebook-domain-verification=22rm551cu4k0ab0b
+...
+```
+
 </details>

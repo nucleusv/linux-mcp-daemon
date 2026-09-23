@@ -30,4 +30,57 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "devices://pci"}}'
 ```
 
+Real response (captured live):
+```text
+[
+  {
+    "slot": "0000:00:00.0",
+    "vendor_id": "0x106b",
+    "device_id": "0x1a05",
+    "class": "0x060000"
+  },
+  {
+    "slot": "0000:00:01.0",
+    "vendor_id": "0x1af4",
+    "device_id": "0x1041",
+    "class": "0x020000"
+  },
+  {
+    "slot": "0000:00:05.0",
+    "vendor_id": "0x1af4",
+    "device_id": "0x1043",
+    "class": "0x078000"
+  },
+  {
+    "slot": "0000:00:06.0",
+    "vendor_id": "0x1af4",
+    "device_id": "0x1042",
+    "class": "0x018000"
+  },
+  {
+    "slot": "0000:00:07.0",
+    "vendor_id": "0x1af4",
+    "device_id": "0x1042",
+    "class": "0x018000"
+  },
+  {
+    "slot": "0000:00:08.0",
+    "vendor_id": "0x1af4",
+    "device_id": "0x105a",
+    "class": "0x018000"
+  },
+  {
+    "slot": "0000:00:09.0",
+    "vendor_id": "0x1af4",
+    "device_id": "0x105a",
+    "class": "0x018000"
+  },
+  {
+    "slot": "0000:00:0a.0",
+    "vendor_id": "0x1af4",
+    "device_id": "0x105a",
+    "cl
+...
+```
+
 </details>

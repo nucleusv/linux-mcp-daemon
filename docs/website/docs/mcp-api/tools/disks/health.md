@@ -34,4 +34,41 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Real response (captured live):
+```json
+{
+  "json_format_version": [
+    1,
+    0
+  ],
+  "smartctl": {
+    "version": [
+      7,
+      4
+    ],
+    "pre_release": false,
+    "svn_revision": "5530",
+    "platform_info": "aarch64-linux-7.0.12-linuxkit",
+    "build_info": "(local build)",
+    "argv": [
+      "smartctl",
+      "-j",
+      "-a",
+      "/dev/vda"
+    ],
+    "messages": [
+      {
+        "string": "/dev/vda: Unable to detect device type",
+        "severity": "error"
+      }
+    ],
+    "exit_status": 1
+  },
+  "local_time": {
+    "time_t": 1790163825,
+    "asctime": "Wed Sep 23 11:43:45 2026 UTC"
+  }
+}
+```
+
 </details>

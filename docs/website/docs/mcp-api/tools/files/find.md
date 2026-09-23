@@ -34,4 +34,13 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Real response (captured live):
+```text
+/var/log/bootstrap.log
+/var/log/dpkg.log
+/var/log/apt/history.log
+/var/log/apt/term.log
+/var/log/alternatives.log
+```
+
 </details>

@@ -30,4 +30,57 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "network://routes"}}'
 ```
 
+Real response (captured live):
+```text
+[
+  {
+    "iface": "eth0",
+    "destination": "00000000",
+    "gateway": "010013AC",
+    "flags": "0003",
+    "ref_cnt": "0",
+    "use": "0",
+    "metric": "0",
+    "mask": "00000000",
+    "mtu": "0",
+    "window": "0",
+    "irtt": "0"
+  },
+  {
+    "iface": "vethfdafeed9",
+    "destination": "0200F40A",
+    "gateway": "00000000",
+    "flags": "0005",
+    "ref_cnt": "0",
+    "use": "0",
+    "metric": "0",
+    "mask": "FFFFFFFF",
+    "mtu": "0",
+    "window": "0",
+    "irtt": "0"
+  },
+  {
+    "iface": "veth785ec824",
+    "destination": "0300F40A",
+    "gateway": "00000000",
+    "flags": "0005",
+    "ref_cnt": "0",
+    "use": "0",
+    "metric": "0",
+    "mask": "FFFFFFFF",
+    "mtu": "0",
+    "window": "0",
+    "irtt": "0"
+  },
+  {
+    "iface": "veth5eefa300",
+    "destination": "0400F40A",
+    "gateway": "00000000",
+    "flags": "0005",
+    "ref_cnt": "0",
+    "use": "0",
+    "metric": "0"
+...
+```
+
 </details>

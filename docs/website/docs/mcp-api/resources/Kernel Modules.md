@@ -30,4 +30,50 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "kernel://modules"}}'
 ```
 
+Real response (captured live):
+```json
+[
+  {
+    "name": "selfowner",
+    "size": "32768",
+    "used_by_count": "-",
+    "used_by": null,
+    "state": "Live",
+    "address": "0xffff80007a63c000"
+  },
+  {
+    "name": "shiftfs",
+    "size": "32768",
+    "used_by_count": "-",
+    "used_by": null,
+    "state": "Live",
+    "address": "0xffff80007a631000"
+  },
+  {
+    "name": "rosetta",
+    "size": "12288",
+    "used_by_count": "-",
+    "used_by": null,
+    "state": "Live",
+    "address": "0xffff80007a62b000"
+  },
+  {
+    "name": "grpcfuse",
+    "size": "12288",
+    "used_by_count": "-",
+    "used_by": null,
+    "state": "Live",
+    "address": "0xffff80007a625000"
+  },
+  {
+    "name": "fakeowner",
+    "size": "135168",
+    "used_by_count": "-",
+    "used_by": null,
+    "state": "Live",
+    "address": "0xffff80007a600000"
+  }
+]
+```
+
 </details>

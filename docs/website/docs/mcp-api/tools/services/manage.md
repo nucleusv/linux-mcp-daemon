@@ -34,4 +34,16 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Not executed against a real service for this page (it would restart something on the host) - this is the exact shape `internal/tools/services/manage/manage.go` returns on success, not a live capture:
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Job 482 completed with status: done"
+    }
+  ]
+}
+```
+
 </details>

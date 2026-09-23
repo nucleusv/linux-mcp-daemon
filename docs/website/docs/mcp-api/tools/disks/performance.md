@@ -34,4 +34,11 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Real response (captured live):
+```text
+Device       Reads        Writes       SectRead     SectWrite    I/O(ms)     
+----------------------------------------------------------------------------
+vda          9558735      2162109      4052204522   78536488     1742699
+```
+
 </details>

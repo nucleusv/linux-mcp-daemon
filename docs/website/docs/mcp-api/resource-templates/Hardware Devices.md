@@ -30,4 +30,24 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "devices://usb"}}'
 ```
 
+Real response (captured live):
+```json
+[
+  {
+    "bus_id": "usb1",
+    "vendor_id": "1d6b",
+    "product_id": "0002",
+    "manufacturer": "Linux 7.0.12-linuxkit vhci_hcd",
+    "product": "USB/IP Virtual Host Controller"
+  },
+  {
+    "bus_id": "usb2",
+    "vendor_id": "1d6b",
+    "product_id": "0003",
+    "manufacturer": "Linux 7.0.12-linuxkit vhci_hcd",
+    "product": "USB/IP Virtual Host Controller"
+  }
+]
+```
+
 </details>

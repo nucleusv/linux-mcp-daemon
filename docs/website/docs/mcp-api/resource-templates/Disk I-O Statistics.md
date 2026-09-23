@@ -30,4 +30,26 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "disks://vda/stats"}}'
 ```
 
+Real response (captured live):
+```json
+[
+  {
+    "major": 254,
+    "minor": 0,
+    "device_name": "vda",
+    "reads_completed": 9558738,
+    "reads_merged": 506656,
+    "sectors_read": 4052204802,
+    "time_reading_ms": 9788136,
+    "writes_completed": 2162223,
+    "writes_merged": 1689822,
+    "sectors_written": 78537752,
+    "time_writing_ms": 5850628,
+    "ios_in_progress": 0,
+    "time_doing_ios_ms": 1742727,
+    "weighted_time_ios_ms": 16081971
+  }
+]
+```
+
 </details>

@@ -34,4 +34,54 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Real response (captured live):
+```text
+[
+  {
+    "ip_address": "172.19.0.8",
+    "hw_type": "0x1",
+    "flags": "0x2",
+    "hw_address": "d6:ee:9a:61:0c:f8",
+    "mask": "*",
+    "device": "eth0"
+  },
+  {
+    "ip_address": "10.244.0.3",
+    "hw_type": "0x1",
+    "flags": "0x2",
+    "hw_address": "d2:f4:ff:a6:64:23",
+    "mask": "*",
+    "device": "veth785ec824"
+  },
+  {
+    "ip_address": "172.19.0.3",
+    "hw_type": "0x1",
+    "flags": "0x2",
+    "hw_address": "02:82:72:c2:cd:d8",
+    "mask": "*",
+    "device": "eth0"
+  },
+  {
+    "ip_address": "10.244.0.2",
+    "hw_type": "0x1",
+    "flags": "0x2",
+    "hw_address": "c6:a2:80:2b:82:36",
+    "mask": "*",
+    "device": "vethfdafeed9"
+  },
+  {
+    "ip_address": "10.244.0.7",
+    "hw_type": "0x1",
+    "flags": "0x2",
+    "hw_address": "c2:73:6d:dc:17:a1",
+    "mask": "*",
+    "device": "vethbdcd73f8"
+  },
+  {
+    "ip_address": "10.244.0.5",
+    "hw_type": "0x1",
+    "flags": "0x
+...
+```
+
 </details>

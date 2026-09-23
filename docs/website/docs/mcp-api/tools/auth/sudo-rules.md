@@ -34,4 +34,58 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
 # 3. The result arrives on the SSE stream opened in step 1
 ```
 
+Real response (captured live):
+```text
+Your authorized privileged tools:
+{
+  "Tools": {
+    "auth/sudo-rules": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "cpu/list": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "cpu/load-average": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "disks/free": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "disks/health": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "disks/list": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "disks/mounts": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "disks/partitions": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "disks/performance": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "disks/usage": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "files/content": {
+      "Allowed": true,
+      "Paths": null
+    },
+    "files/create": {
+      "Allowed": true,
+...
+```
+
 </details>

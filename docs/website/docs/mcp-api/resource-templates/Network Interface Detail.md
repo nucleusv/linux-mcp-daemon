@@ -30,4 +30,30 @@ curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "network://interfaces/eth0"}}'
 ```
 
+Real response (captured live):
+```json
+{
+  "addresses": [
+    "172.19.0.7/16",
+    "fc00:f853:ccd:e793::7/64",
+    "fe80::b444:e3ff:fec0:4fd2/64"
+  ],
+  "flags": "up|broadcast|multicast|running",
+  "index": 11,
+  "mac": "b6:44:e3:c0:4f:d2",
+  "mtu": 65535,
+  "name": "eth0",
+  "statistics": {
+    "rx_bytes": 683918914,
+    "rx_dropped": 0,
+    "rx_errors": 0,
+    "rx_packets": 890576,
+    "tx_bytes": 864826874,
+    "tx_dropped": 0,
+    "tx_errors": 0,
+    "tx_packets": 713740
+  }
+}
+```
+
 </details>
