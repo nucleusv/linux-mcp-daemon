@@ -66,3 +66,18 @@ func TestTruncateLine(t *testing.T) {
 		}
 	}
 }
+
+func TestPositionalFillsRequiredFields(t *testing.T) {
+	schema := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"path": map[string]interface{}{"type": "string"},
+			"mode": map[string]interface{}{"type": "string"},
+		},
+		"required": []interface{}{"path", "mode"},
+	}
+	args := map[string]interface{}{}
+	rest := mapPositionalArgs(schema, args, []string{"/srv/app", "0755"})
+	if args["path"] != "/srv/app" || args["mode"] != "0755" || len(rest) != 0 {
+		t.Errorf("args %v, leftover %v", args, rest)
+	}
+}

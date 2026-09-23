@@ -385,5 +385,29 @@ func mapPositionalArgs(schema map[string]interface{}, args map[string]interface{
 		args[field] = val
 		positional = positional[1:]
 	}
+	// Then fill any still-unset required fields, in the schema's order - so
+	// a new tool's positional arguments work with no client change (e.g.
+	// `linuxctl chmod files /srv/app 0755` fills files/chmod's required
+	// path, mode). The list above only fixes precedence for common names.
+	reqRaw, _ := schema["required"].([]interface{})
+	for _, r := range reqRaw {
+		field, _ := r.(string)
+		if len(positional) == 0 || field == "" {
+			break
+		}
+		if _, alreadySet := args[field]; alreadySet {
+			continue
+		}
+		prop, _ := props[field].(map[string]interface{})
+		if str(prop, "type") == "integer" {
+			if n, err := strconv.Atoi(positional[0]); err == nil {
+				args[field] = n
+				positional = positional[1:]
+				continue
+			}
+		}
+		args[field] = positional[0]
+		positional = positional[1:]
+	}
 	return positional
 }

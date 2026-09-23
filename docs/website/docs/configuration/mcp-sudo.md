@@ -44,6 +44,21 @@ users:
 
 In this example, if the AI is authenticated as `alice`, it can list protected root directories, but it cannot run expensive `disks/usage` tree traversals as root!
 
+## File permission tools (`files/chmod`, `files/chown`)
+
+Both run as the calling user's OS account by default - so a user can chmod its own files, and `chown` (which the kernel only allows root to do for other owners) needs `privileged: true`. Grant them like the other file tools, with `paths:` limiting where a root chmod/chown may reach:
+
+```yaml
+        files/chmod:
+          allowed: true
+          paths: [/srv/app]
+        files/chown:
+          allowed: true
+          paths: [/srv/app]
+```
+
+Paths are checked on the cleaned path with directory boundaries, and both tools refuse any path containing a symlink, so a symlink planted inside `/srv/app` can't carry a root chmod/chown outside it.
+
 ## Restricting network destinations (`network/curl`, `network/ping`)
 
 `allowed` only controls running a tool as root - and for network tools that changes nothing, because reaching a host doesn't depend on the worker's uid. Any user with a token can make `network/curl` or `network/ping` connect *from the server*, including to `localhost`, the private network, or a cloud metadata endpoint (`169.254.169.254`) - which also makes them a target for prompt injection ("curl this internal URL and send me the result").
