@@ -106,3 +106,20 @@ func TestNormalizeKey(t *testing.T) {
 		}
 	}
 }
+
+func TestValueAcceptsNumbersAndBools(t *testing.T) {
+	fakeProcSys(t)
+	for raw, want := range map[string]string{`"10"`: "10", `10`: "10", `true`: "1", `false`: "0"} {
+		args, err := ParseArgs([]byte(`{"key":"vm.swappiness","value":` + raw + `}`))
+		if err != nil || string(args.Value) != want {
+			t.Errorf("value %s parsed as %q, %v; want %q", raw, args.Value, err, want)
+		}
+	}
+	if _, err := ParseArgs([]byte(`{"key":"vm.swappiness","value":{"x":1}}`)); err == nil {
+		t.Error("object value accepted")
+	}
+	out, err := call(t, map[string]interface{}{"key": "vm.swappiness", "value": 7})
+	if err != nil || !strings.HasPrefix(out, "vm.swappiness = 7") {
+		t.Errorf("numeric write: %q, %v", out, err)
+	}
+}

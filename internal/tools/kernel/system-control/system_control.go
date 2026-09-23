@@ -14,9 +14,51 @@ import (
 // SystemControlArgs defines the parameters for the kernel/system-control tool.
 type SystemControlArgs struct {
 	Key        string `json:"key"`                  // Key is the kernel parameter to read or write (e.g. "net.ipv4.ip_forward"). Required unless ReadAll is true.
-	Value      string `json:"value,omitempty"`      // Value is the value to write to the parameter. If provided, writes the value.
+	Value      Value  `json:"value,omitempty"`      // Value is the value to write to the parameter. If provided, writes the value.
 	ReadAll    bool   `json:"read_all,omitempty"`   // ReadAll reads all kernel parameters (sysctl -a).
 	Privileged bool   `json:"privileged,omitempty"` // Privileged runs as root - required for writes.
+}
+
+// Value is a sysctl value that also accepts a JSON number or boolean
+// ("value": 1), not just a string - clients (linuxctl included) naturally
+// send numbers for numeric parameters. The daemon's write-policy check
+// decodes with this same type (via ParseArgs), so the check and the worker
+// can never disagree about what value is being written.
+type Value string
+
+func (v *Value) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err == nil {
+		*v = Value(s)
+		return nil
+	}
+	var n json.Number
+	if err := json.Unmarshal(b, &n); err == nil {
+		*v = Value(n.String())
+		return nil
+	}
+	var t bool
+	if err := json.Unmarshal(b, &t); err == nil {
+		if t {
+			*v = "1"
+		} else {
+			*v = "0"
+		}
+		return nil
+	}
+	return fmt.Errorf("value must be a string, number or boolean")
+}
+
+// ParseArgs decodes tool arguments. Used by both the worker and the
+// daemon's policy check.
+func ParseArgs(argsJSON []byte) (SystemControlArgs, error) {
+	var args SystemControlArgs
+	if len(argsJSON) > 0 {
+		if err := json.Unmarshal(argsJSON, &args); err != nil {
+			return args, fmt.Errorf("invalid arguments: %v", err)
+		}
+	}
+	return args, nil
 }
 
 // procSys is the sysctl tree. A variable only so tests can point it at a
@@ -32,11 +74,9 @@ var validKey = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.\-/]*$`)
 // sysctl, so there is no command line to inject into. Output matches
 // sysctl's "key = value" format.
 func SystemControl(argsJSON []byte) (string, error) {
-	var args SystemControlArgs
-	if len(argsJSON) > 0 {
-		if err := json.Unmarshal(argsJSON, &args); err != nil {
-			return "", fmt.Errorf("invalid arguments: %v", err)
-		}
+	args, err := ParseArgs(argsJSON)
+	if err != nil {
+		return "", err
 	}
 
 	if args.Key == "" {
@@ -52,7 +92,7 @@ func SystemControl(argsJSON []byte) (string, error) {
 	}
 
 	if args.Value != "" {
-		if strings.ContainsAny(args.Value, "\n\x00") {
+		if strings.ContainsAny(string(args.Value), "\n\x00") {
 			return "", fmt.Errorf("invalid value: must be a single line")
 		}
 		// O_WRONLY without O_CREATE/O_TRUNC: procfs entries can't be
@@ -61,7 +101,7 @@ func SystemControl(argsJSON []byte) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("cannot write %s: %v", NormalizeKey(args.Key), err)
 		}
-		_, werr := f.WriteString(args.Value)
+		_, werr := f.WriteString(string(args.Value))
 		cerr := f.Close()
 		if werr != nil {
 			return "", fmt.Errorf("cannot write %s: %v", NormalizeKey(args.Key), werr)

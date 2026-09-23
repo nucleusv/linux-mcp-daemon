@@ -706,12 +706,14 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			// against the user's sysctl policy - the worker never runs for a
 			// refused write.
 			if params.Name == "kernel/system-control" && execErr == nil {
-				var sc struct {
-					Key   string `json:"key"`
-					Value string `json:"value"`
-				}
-				_ = json.Unmarshal(params.Arguments, &sc)
-				if sc.Key != "" && sc.Value != "" {
+				// Decoded with the worker's own parser, and a decode error
+				// refuses the call: a lenient decode that dropped a field
+				// it couldn't parse (e.g. a numeric value) would skip the
+				// policy check while the worker still performed the write.
+				sc, err := systemcontrol.ParseArgs(params.Arguments)
+				if err != nil {
+					execErr = err
+				} else if sc.Key != "" && sc.Value != "" {
 					if ok, reason := h.SudoConfig.CanWriteSysctl(session.User, systemcontrol.NormalizeKey(sc.Key)); !ok {
 						execErr = fmt.Errorf("%s", reason)
 					}
