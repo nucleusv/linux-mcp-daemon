@@ -49,17 +49,19 @@ func TestThresholdDoesNotShrinkTotals(t *testing.T) {
 	root := t.TempDir()
 	os.MkdirAll(filepath.Join(root, "big"), 0o755)
 	os.MkdirAll(filepath.Join(root, "small"), 0o755)
-	os.WriteFile(filepath.Join(root, "big", "a"), make([]byte, 3000), 0o644)
+	// Sizes are chosen to stay clear of a directory entry's own apparent
+	// size, which is 4096 on Linux (ext4/overlayfs) but tiny on macOS APFS.
+	os.WriteFile(filepath.Join(root, "big", "a"), make([]byte, 30000), 0o644)
 	for i := 0; i < 10; i++ {
 		os.WriteFile(filepath.Join(root, "big", "s"+string(rune('0'+i))), make([]byte, 100), 0o644)
 	}
 	os.WriteFile(filepath.Join(root, "small", "b"), make([]byte, 100), 0o644)
 
-	m := usage(t, map[string]interface{}{"path": root, "max_depth": 1, "threshold": 2000})
+	m := usage(t, map[string]interface{}{"path": root, "max_depth": 1, "threshold": 20000})
 	sizes := m["directory_sizes"].(map[string]interface{})
 	big := sizes[filepath.Join(root, "big")].(float64)
-	if big < 4000 { // 3000 + 10*100 + the dir entry itself
-		t.Errorf("big/ = %v, want >= 4000 (small files must still count)", big)
+	if big < 31000 { // 30000 + 10*100 (+ the dir entry itself)
+		t.Errorf("big/ = %v, want >= 31000 (small files must still count)", big)
 	}
 	if _, shown := sizes[filepath.Join(root, "small")]; shown {
 		t.Errorf("small/ should be hidden by threshold, got %v", sizes)

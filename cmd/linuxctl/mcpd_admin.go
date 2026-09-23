@@ -58,6 +58,12 @@ func daemonUsersSeq(root *yaml.Node, create bool) *yaml.Node {
 		seq = &yaml.Node{Kind: yaml.SequenceNode}
 		yamledit.MapSet(root, "users", seq)
 	}
+	if seq != nil && create {
+		// An empty list can only be written "users: []" (flow style);
+		// entries appended to it would inherit that and collapse onto one
+		// line. Switch it to block style so each user gets readable lines.
+		seq.Style &^= yaml.FlowStyle
+	}
 	return seq
 }
 
@@ -201,11 +207,14 @@ func mcpdCreateUser(daemonPath, sudoPath, username, setToken string) {
 		usersMap = yamledit.EmptyMapNode()
 		yamledit.MapSet(sudoRoot, "users", usersMap)
 	}
+	usersMap.Style &^= yaml.FlowStyle // "users: {}" -> block, as for daemon.yaml
 	if yamledit.MapGet(usersMap, username) != nil {
 		fmt.Printf("Note: %s had a stale entry for %q - replacing it with a fresh, empty grant block (this is the point of create/delete being atomic: a recreated user never inherits old grants)\n", sudoPath, username)
 	}
 	freshBlock := yamledit.EmptyMapNode()
+	freshBlock.Style &^= yaml.FlowStyle
 	privileged := yamledit.EmptyMapNode()
+	privileged.Style &^= yaml.FlowStyle
 	yamledit.MapSet(privileged, "tools", yamledit.EmptyMapNode())
 	yamledit.MapSet(privileged, "resources", yamledit.EmptyMapNode())
 	yamledit.MapSet(freshBlock, "privileged", privileged)
@@ -221,9 +230,10 @@ func mcpdCreateUser(daemonPath, sudoPath, username, setToken string) {
 		fmt.Printf("\nToken (shown once - not stored in plaintext anywhere, save it now):\n  %s\n\n", token)
 	}
 	fmt.Println("Next steps:")
-	fmt.Printf("  1. Add a matching OS account (useradd -m -s /bin/bash %s in the Dockerfile) - workers run\n     as a real OS user via user.Lookup(), so this account must exist before %s can make any call.\n", username, username)
-	fmt.Printf("  2. Grant tools/resources for %q in %s (currently empty - denies everything by default)\n", username, sudoPath)
-	fmt.Println("  3. Run scripts/deploy.sh to rebuild and apply")
+	fmt.Printf("  1. Make sure an OS account %q exists on the mcpd host - each call runs as that account:\n       useradd --system --shell /usr/sbin/nologin %s\n     (for the container image, add it to the Dockerfile instead)\n", username, username)
+	fmt.Printf("  2. Optionally grant root for specific tools in %s - without grants %q can use\n     every tool, but only as its own OS account, never as root\n", sudoPath, username)
+	fmt.Println("  3. Restart mcpd to load the new user: systemctl restart mcpd")
+	fmt.Println("     (Kubernetes dev setup: scripts/deploy.sh)")
 }
 
 func mcpdDeleteUser(daemonPath, sudoPath, username string) {
