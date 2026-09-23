@@ -13,7 +13,7 @@ type FileTypeArgs struct {
 }
 
 func Type(argsJSON []byte) (string, error) {
-	// Actually, resources typically get invoked with a path directly from rpc.go 
+	// Actually, resources typically get invoked with a path directly from rpc.go
 	// but we'll accept the JSON for consistency with tools.
 	// Wait, resources don't use argsJSON in the same way, they are passed as raw strings or JSON.
 	// We'll just assume standard JSON mapping like `stat.go` and `content.go` use.
@@ -27,7 +27,10 @@ func Type(argsJSON []byte) (string, error) {
 	}
 
 	// We use the 'file' command to determine the type
-	cmd := exec.Command("file", "-b", "--mime-type", args.Path)
+	// "--" ends option parsing: a path like "-f/etc/shadow" would otherwise
+	// make `file` read that file line by line and echo each line back in
+	// its "cannot open" errors.
+	cmd := exec.Command("file", "-b", "--mime-type", "--", args.Path)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

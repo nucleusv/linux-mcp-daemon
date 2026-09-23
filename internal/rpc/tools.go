@@ -8,6 +8,7 @@ import (
 	"time"
 
 	sudorules "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/sudo-rules"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 )
 
@@ -253,7 +254,9 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 					"properties": map[string]interface{}{
 						"url":     map[string]interface{}{"type": "string"},
 						"method":  map[string]interface{}{"type": "string"},
-						"body":    map[string]interface{}{"type": "string"},
+						"body":    map[string]interface{}{"type": "string", "description": "Request body"},
+						"headers": map[string]interface{}{"type": "object", "description": "Request headers, e.g. {\"Content-Type\": \"application/json\"}", "additionalProperties": map[string]interface{}{"type": "string"}},
+						"insecure": map[string]interface{}{"type": "boolean", "description": "Skip TLS certificate verification"},
 						"timeout": map[string]interface{}{"type": "number"},
 					},
 					"required": []string{"url"},
@@ -295,7 +298,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 					"type": "object",
 					"properties": map[string]interface{}{
 						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"state":         map[string]interface{}{"type": "string", "description": "Filter by TCP state (e.g., LISTEN, ESTABLISHED)"},
+						"state":         map[string]interface{}{"type": "string", "description": "Filter by TCP state, case-insensitive (LISTEN/listening, ESTABLISHED, TIME_WAIT, CLOSE_WAIT, SYN_SENT, ...). Omit to list all sockets - active connections and listening ports."},
 						"port":          map[string]interface{}{"type": "integer", "description": "Filter by port"},
 						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root to see PIDs of other users"},
 					},
@@ -574,27 +577,46 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 // secrets or raw file content (e.g. files/create content, network/curl
 // Authorization headers) into the daemon's plaintext logs.
 func redactArgs(raw json.RawMessage) string {
-	var args map[string]interface{}
+	var args interface{}
 	if err := json.Unmarshal(raw, &args); err != nil {
-		return string(raw)
+		return "<unparseable arguments>"
 	}
-
-	sensitiveSubstrings := []string{"password", "token", "secret", "authorization", "content", "body", "key"}
-	for k := range args {
-		lk := strings.ToLower(k)
-		for _, s := range sensitiveSubstrings {
-			if strings.Contains(lk, s) {
-				args[k] = "<redacted>"
-				break
-			}
-		}
-	}
-
-	redacted, err := json.Marshal(args)
+	redacted, err := json.Marshal(redactValue(args))
 	if err != nil {
-		return string(raw)
+		return "<unparseable arguments>"
 	}
 	return string(redacted)
+}
+
+// redactValue masks sensitive-looking keys at any depth - network/curl's
+// "headers": {"Authorization": ...} is nested one level down, which a
+// top-level-only check missed.
+func redactValue(v interface{}) interface{} {
+	sensitiveSubstrings := []string{"password", "token", "secret", "authorization", "cookie", "content", "body", "data", "header", "value", "key"}
+	switch t := v.(type) {
+	case map[string]interface{}:
+		for k, val := range t {
+			lk := strings.ToLower(k)
+			masked := false
+			for _, s := range sensitiveSubstrings {
+				if strings.Contains(lk, s) {
+					t[k] = "<redacted>"
+					masked = true
+					break
+				}
+			}
+			if !masked {
+				t[k] = redactValue(val)
+			}
+		}
+		return t
+	case []interface{}:
+		for i := range t {
+			t[i] = redactValue(t[i])
+		}
+		return t
+	}
+	return v
 }
 
 func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse) {
@@ -657,16 +679,24 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			_ = json.Unmarshal(params.Arguments, &baseArgs)
 
 			if (params.Name == "files/list" || params.Name == "files/read" || params.Name == "files/create" || params.Name == "files/update" || params.Name == "files/find" || params.Name == "files/filetype") && baseArgs.Privileged {
-				allowedPaths := h.SudoConfig.GetAllowedPaths(session.User, params.Name)
-				allowed := false
-				for _, p := range allowedPaths {
-					if strings.HasPrefix(baseArgs.Path, p) {
-						allowed = true
-						break
-					}
+				checkPath := baseArgs.Path
+				if checkPath == "" && params.Name == "files/find" {
+					checkPath = "/" // files/find's own default
 				}
+				cleanPath, allowed := config.PathAllowed(checkPath, h.SudoConfig.GetAllowedPaths(session.User, params.Name))
 				if !allowed {
 					execErr = fmt.Errorf("user %s is not authorized to run %s on path %s as root", session.User, params.Name, baseArgs.Path)
+				} else {
+					// Hand the worker exactly the path that was authorized,
+					// not the raw one - so no later resolution step can
+					// reinterpret it differently from the check.
+					var argMap map[string]interface{}
+					if err := json.Unmarshal(params.Arguments, &argMap); err == nil {
+						argMap["path"] = cleanPath
+						if b, err := json.Marshal(argMap); err == nil {
+							params.Arguments = b
+						}
+					}
 				}
 			}
 

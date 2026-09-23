@@ -98,7 +98,15 @@ func List(argsJSON []byte) (string, error) {
 
 	var sb strings.Builder
 	for _, u := range users {
-		sb.WriteString(fmt.Sprintf("%s (uid=%d gid=%d) home=%s shell=%s\n", u.Username, u.UID, u.GID, u.HomeDir, u.Shell))
+		primary := u.GroupName
+		if primary == "" {
+			primary = strconv.Itoa(u.GID)
+		}
+		line := fmt.Sprintf("%s (uid=%d gid=%d(%s)) home=%s shell=%s", u.Username, u.UID, u.GID, primary, u.HomeDir, u.Shell)
+		if len(u.Groups) > 0 {
+			line += " groups=" + strings.Join(u.Groups, ",")
+		}
+		sb.WriteString(line + "\n")
 	}
 	return sb.String(), nil
 }

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -71,13 +72,58 @@ func (c *SudoConfig) GetAllowedPaths(username, toolName string) []string {
 	return nil
 }
 
+// PathAllowed reports whether path lies inside one of the allowed
+// directories, returning the cleaned path the caller must then operate on.
+// The check is lexical and boundary-aware: path is cleaned first (so
+// "/tmp/../etc/shadow" is judged as "/etc/shadow", not waved through by a
+// raw prefix match on "/tmp"), and an allowed "/tmp" covers "/tmp" and
+// "/tmp/x" but not "/tmpfoo". Relative paths are always rejected - they'd be
+// resolved against the worker's working directory, which no allowlist entry
+// describes.
+func PathAllowed(path string, allowed []string) (string, bool) {
+	if !strings.HasPrefix(path, "/") {
+		return "", false
+	}
+	clean := filepath.Clean(path)
+	for _, a := range allowed {
+		if !strings.HasPrefix(a, "/") {
+			continue
+		}
+		a = filepath.Clean(a)
+		if a == "/" || clean == a || strings.HasPrefix(clean, a+"/") {
+			return clean, true
+		}
+	}
+	return "", false
+}
+
 // CanReadResourceAsRoot checks if a specific user is authorized to read a resource path as root.
 func (c *SudoConfig) CanReadResourceAsRoot(username, scheme, resourcePath string) bool {
 	if userSudo, ok := c.Users[username]; ok {
 		if resPaths, ok := userSudo.Privileged.Resources[scheme]; ok {
 			for _, p := range resPaths {
-				// Exact match or prefix match for directories
-				if resourcePath == p || strings.HasPrefix(resourcePath, p) {
+				switch {
+				// Exact match - how exact-match resources (devices://usb,
+				// os://uname, ...) are granted: callers pass the literal
+				// sentinel "*" and the config lists "*".
+				case resourcePath == p:
+					return true
+				// Empty prefix grants a whole prefix-matched scheme (file://,
+				// service://, process://). A literal "*" deliberately does
+				// NOT - see the comment in configs/mcp-sudo.yaml.
+				case p == "":
+					return true
+				// Filesystem path grants are matched on the cleaned path with
+				// a directory boundary (see PathAllowed), so neither
+				// "/var/log/../../etc/shadow" nor "/var/logs-private" gets
+				// through a "/var/log" grant.
+				case strings.HasPrefix(p, "/"):
+					if _, ok := PathAllowed(resourcePath, []string{p}); ok {
+						return true
+					}
+				// Non-path prefixes (service names, PIDs) keep plain prefix
+				// matching, as before.
+				case !strings.HasPrefix(resourcePath, "/") && strings.HasPrefix(resourcePath, p):
 					return true
 				}
 			}

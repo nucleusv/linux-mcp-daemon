@@ -2,6 +2,7 @@ package curl
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,7 +16,8 @@ type CurlArgs struct {
 	URL          string            `json:"url"`                     // URL is the target URL to request. Required.
 	Method       string            `json:"method,omitempty"`        // Method is the HTTP method to use (e.g., "GET", "POST"). Defaults to "GET".
 	Headers      map[string]string `json:"headers,omitempty"`       // Headers contains the HTTP headers to send.
-	Data         string            `json:"data,omitempty"`          // Data is the request body payload.
+	Body         string            `json:"body,omitempty"`          // Body is the request body payload (the name the tool schema advertises).
+	Data         string            `json:"data,omitempty"`          // Data is an older alias for Body.
 	Insecure     bool              `json:"insecure,omitempty"`      // Insecure skips TLS certificate validation.
 	OutputFormat string            `json:"output_format,omitempty"` // OutputFormat specifies the desired output format. Defaults to text.
 	Timeout      int               `json:"timeout,omitempty"`       // Timeout is the request timeout in seconds. Defaults to 10.
@@ -26,6 +28,7 @@ type CurlResponse struct {
 	Status     string            `json:"status"`
 	Headers    map[string]string `json:"headers"`
 	Body       string            `json:"body"`
+	Truncated  bool              `json:"truncated,omitempty"` // Body was cut at the 10 MB cap.
 }
 
 func Curl(argsJSON []byte) (string, error) {
@@ -52,10 +55,19 @@ func Curl(argsJSON []byte) (string, error) {
 	client := &http.Client{
 		Timeout: time.Duration(timeoutSecs) * time.Second,
 	}
+	if args.Insecure {
+		client.Transport = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	}
 
+	// The schema advertises "body"; this used to read only "data", so every
+	// POST body sent through the tool was silently dropped.
+	payload := args.Body
+	if payload == "" {
+		payload = args.Data
+	}
 	var reqBody io.Reader
-	if args.Data != "" {
-		reqBody = bytes.NewBuffer([]byte(args.Data))
+	if payload != "" {
+		reqBody = strings.NewReader(payload)
 	}
 
 	req, err := http.NewRequest(args.Method, args.URL, reqBody)
@@ -73,7 +85,14 @@ func Curl(argsJSON []byte) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, err := io.ReadAll(resp.Body)
+	// Cap the body: an unbounded ReadAll of a huge or endless response
+	// would exhaust the worker's memory.
+	const maxBody = 10 << 20
+	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, maxBody+1))
+	truncated := len(bodyBytes) > maxBody
+	if truncated {
+		bodyBytes = bodyBytes[:maxBody]
+	}
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %v", err)
 	}
@@ -88,12 +107,17 @@ func Curl(argsJSON []byte) (string, error) {
 		Status:     resp.Status,
 		Headers:    respHeaders,
 		Body:       string(bodyBytes),
+		Truncated:  truncated,
 	}
 
-	out, err := json.MarshalIndent(outResp, "", "  ")
-	if err != nil {
+	// No HTML escaping: bodies are usually HTML, and Go's default turns
+	// every < > & into \u003c-style escapes.
+	var out bytes.Buffer
+	enc := json.NewEncoder(&out)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(outResp); err != nil {
 		return "", fmt.Errorf("failed to encode response: %v", err)
 	}
-
-	return string(out), nil
+	return strings.TrimSuffix(out.String(), "\n"), nil
 }

@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 )
 
 // GetUsageArgs defines the parameters for the get_disk_usage tool.
 type GetUsageArgs struct {
-	OutputFormat  string   `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
+	OutputFormat  string   `json:"output_format,omitempty"`   // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 	Path          string   `json:"path"`                      // Path is the absolute directory to start calculating from.
 	MaxDepth      int      `json:"max_depth,omitempty"`       // MaxDepth determines how deep to recurse (0 for summarize only).
 	OneFileSystem bool     `json:"one_file_system,omitempty"` // OneFileSystem prevents traversing into directories on different file systems.
@@ -44,7 +45,7 @@ func Usage(argsJSON []byte) (string, error) {
 
 	var rootDev uint64
 	if stat, ok := rootInfo.Sys().(*syscall.Stat_t); ok {
-		rootDev = stat.Dev
+		rootDev = uint64(stat.Dev)
 	}
 
 	var rootDepth int
@@ -56,90 +57,77 @@ func Usage(argsJSON []byte) (string, error) {
 
 	totalSize := int64(0)
 	dirSizes := make(map[string]int64)
-	var allFiles string
+	var allFiles []entry
+	// Hard-linked files are counted once, like du.
+	seenInodes := make(map[[2]uint64]bool)
 
 	err = filepath.WalkDir(cleanPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
 
-		// Check exclusions
-		for _, pattern := range args.Exclude {
-			matched, _ := filepath.Match(pattern, d.Name())
-			if matched {
-				if d.IsDir() {
-					return filepath.SkipDir
-				}
-				return nil
+		if path != cleanPath && excluded(args.Exclude, path, d.Name()) {
+			if d.IsDir() {
+				return filepath.SkipDir
 			}
+			return nil
 		}
 
 		info, err := d.Info()
 		if err != nil {
 			return nil
 		}
+		stat, hasStat := info.Sys().(*syscall.Stat_t)
 
 		// Cross-mount check
-		if args.OneFileSystem {
-			if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-				if stat.Dev != rootDev {
-					if d.IsDir() {
-						return filepath.SkipDir
-					}
-					return nil
-				}
+		if args.OneFileSystem && hasStat && uint64(stat.Dev) != rootDev {
+			if d.IsDir() {
+				return filepath.SkipDir
 			}
+			return nil
+		}
+
+		if hasStat && !info.IsDir() && stat.Nlink > 1 {
+			key := [2]uint64{uint64(stat.Dev), uint64(stat.Ino)}
+			if seenInodes[key] {
+				return nil
+			}
+			seenInodes[key] = true
 		}
 
 		// Calculate blocks instead of apparent size
 		var size int64
-		if !args.ApparentSize {
-			if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-				size = stat.Blocks * 512 // 512-byte blocks
-			} else {
-				size = info.Size() // fallback
-			}
+		if !args.ApparentSize && hasStat {
+			size = int64(stat.Blocks) * 512 // 512-byte blocks
 		} else {
 			size = info.Size()
 		}
 
-		// Apply threshold logic
-		if args.Threshold > 0 && size < args.Threshold {
-			return nil // skip if smaller
-		} else if args.Threshold < 0 && size > -args.Threshold {
-			return nil // skip if larger
+		// Everything - files and directories' own blocks, as du counts
+		// them - adds to the total and to every ancestor directory at or
+		// above max_depth (max_depth only controls which directories get a
+		// printed line, not what gets summed into them). The threshold
+		// filters printed entries only, never these sums - applying it per
+		// file here used to drop every small file from the totals.
+		totalSize += size
+		if args.MaxDepth > 0 {
+			dir := path
+			if !info.IsDir() {
+				dir = filepath.Dir(path)
+			}
+			for strings.HasPrefix(dir, cleanPath) {
+				if strings.Count(dir, string(os.PathSeparator))-rootDepth <= args.MaxDepth || dir == cleanPath {
+					dirSizes[dir] += size
+				}
+				if args.SeparateDirs || dir == cleanPath || dir == "/" || dir == "." {
+					break // separate_dirs: only the immediate directory
+				}
+				dir = filepath.Dir(dir)
+			}
 		}
 
-		if !info.IsDir() {
-			totalSize += size
-
-			// Accumulate this file's size into every ancestor directory at or
-			// above max_depth (each ancestor's total must include everything
-			// beneath it, however deep - max_depth only controls which
-			// directories get a printed line, not what gets summed into
-			// them). We still walk past deeper ancestors without recording
-			// them, both to reach the shallower ones and to keep dirSizes
-			// bounded to only the depths we'll ever print.
-			if args.MaxDepth > 0 {
-				parent := filepath.Dir(path)
-				for strings.HasPrefix(parent, cleanPath) {
-					parentDepth := strings.Count(parent, string(os.PathSeparator)) - rootDepth
-					if parentDepth <= args.MaxDepth {
-						dirSizes[parent] += size
-					}
-					if args.SeparateDirs {
-						break // only add to immediate parent
-					}
-					if parent == cleanPath || parent == "/" || parent == "." {
-						break
-					}
-					parent = filepath.Dir(parent)
-				}
-			}
-
-			if args.All {
-				allFiles += fmt.Sprintf("%s\t%s\n", formatBytes(uint64(size)), path)
-			}
+		if args.All && !info.IsDir() && passesThreshold(size, args.Threshold) {
+			allFiles = append(allFiles, entry{path, size})
 		}
 		return nil
 	})
@@ -148,6 +136,16 @@ func Usage(argsJSON []byte) (string, error) {
 		return "", fmt.Errorf("error during traversal: %v", err)
 	}
 
+	// Largest first - the point of du is usually finding what's big.
+	var dirs []entry
+	for dir, size := range dirSizes {
+		if passesThreshold(size, args.Threshold) {
+			dirs = append(dirs, entry{dir, size})
+		}
+	}
+	sortBySize(dirs)
+	sortBySize(allFiles)
+
 	if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
 		outObj := map[string]interface{}{
 			"path":       cleanPath,
@@ -155,7 +153,11 @@ func Usage(argsJSON []byte) (string, error) {
 			"human_size": formatBytes(uint64(totalSize)),
 		}
 		if args.MaxDepth > 0 {
-			outObj["directory_sizes"] = dirSizes
+			sizes := make(map[string]int64, len(dirs))
+			for _, e := range dirs {
+				sizes[e.path] = e.size
+			}
+			outObj["directory_sizes"] = sizes
 		}
 		b, _ := json.Marshal(outObj)
 		return string(b), nil
@@ -163,14 +165,18 @@ func Usage(argsJSON []byte) (string, error) {
 
 	var result string
 
-	if args.All && allFiles != "" {
-		result += "Individual files:\n" + allFiles + "---\n"
+	if args.All && len(allFiles) > 0 {
+		result += "Individual files (largest first):\n"
+		for _, e := range allFiles {
+			result += fmt.Sprintf("%s\t%s\n", formatBytes(uint64(e.size)), e.path)
+		}
+		result += "---\n"
 	}
 
 	if args.MaxDepth > 0 {
-		result += fmt.Sprintf("Directory sizes (up to depth %d):\n", args.MaxDepth)
-		for dir, size := range dirSizes {
-			result += fmt.Sprintf("%s\t%s\n", formatBytes(uint64(size)), dir)
+		result += fmt.Sprintf("Directory sizes (up to depth %d, largest first):\n", args.MaxDepth)
+		for _, e := range dirs {
+			result += fmt.Sprintf("%s\t%s\n", formatBytes(uint64(e.size)), e.path)
 		}
 		result += "---\n"
 	}
@@ -178,6 +184,55 @@ func Usage(argsJSON []byte) (string, error) {
 	result += fmt.Sprintf("Total size of %s: %s\n", cleanPath, formatBytes(uint64(totalSize)))
 
 	return result, nil
+}
+
+type entry struct {
+	path string
+	size int64
+}
+
+func sortBySize(entries []entry) {
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].size != entries[j].size {
+			return entries[i].size > entries[j].size
+		}
+		return entries[i].path < entries[j].path
+	})
+}
+
+// passesThreshold mirrors du -t: a positive threshold hides entries smaller
+// than it, a negative one hides entries larger than its absolute value.
+func passesThreshold(size, threshold int64) bool {
+	if threshold > 0 {
+		return size >= threshold
+	}
+	if threshold < 0 {
+		return size <= -threshold
+	}
+	return true
+}
+
+// excluded reports whether path matches any exclude pattern. Patterns
+// containing a "/" match against the full path (so "/proc" or "/var/lib/*"
+// work, and a matched directory excludes everything under it); others match
+// the base name, like du --exclude.
+func excluded(patterns []string, path, name string) bool {
+	for _, pattern := range patterns {
+		if strings.Contains(pattern, "/") {
+			p := filepath.Clean(pattern)
+			if path == p || strings.HasPrefix(path, p+"/") {
+				return true
+			}
+			if matched, _ := filepath.Match(p, path); matched {
+				return true
+			}
+			continue
+		}
+		if matched, _ := filepath.Match(pattern, name); matched {
+			return true
+		}
+	}
+	return false
 }
 
 func formatBytes(b uint64) string {

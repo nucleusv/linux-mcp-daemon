@@ -1,7 +1,6 @@
 package updatefile
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -49,20 +48,24 @@ func Update(argsJSON []byte) (string, error) {
 		return "", fmt.Errorf("invalid line range: %d to %d", *args.StartLine, *args.EndLine)
 	}
 
-	file, err := os.Open(args.Path)
+	info, err := os.Stat(args.Path)
+	if err != nil {
+		return "", fmt.Errorf("failed to stat file: %v", err)
+	}
+	data, err := os.ReadFile(args.Path)
 	if err != nil {
 		return "", fmt.Errorf("failed to open file for reading: %v", err)
 	}
 
+	// Split on "\n" directly rather than with bufio.Scanner, which has a
+	// 64KB line limit and can't tell whether the file ended with a newline -
+	// dropping that final newline glued the next append onto the last line.
+	content := string(data)
+	hadTrailingNewline := strings.HasSuffix(content, "\n")
+	content = strings.TrimSuffix(content, "\n")
 	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	file.Close()
-
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error reading file lines: %v", err)
+	if len(data) > 0 {
+		lines = strings.Split(content, "\n")
 	}
 
 	startIdx := *args.StartLine - 1
@@ -70,19 +73,20 @@ func Update(argsJSON []byte) (string, error) {
 
 	if startIdx >= len(lines) {
 		// Just append at the end if the start line is beyond file
-		lines = append(lines, args.Content)
+		lines = append(lines, strings.TrimSuffix(args.Content, "\n"))
 	} else {
 		if endIdx >= len(lines) {
 			endIdx = len(lines) - 1
 		}
-		
+
 		var newLines []string
 		newLines = append(newLines, lines[:startIdx]...)
-		
-		// Split the new content by lines and append
-		newContentLines := strings.Split(args.Content, "\n")
+
+		// Split the new content by lines and append. A single trailing
+		// newline in the replacement just terminates its last line.
+		newContentLines := strings.Split(strings.TrimSuffix(args.Content, "\n"), "\n")
 		newLines = append(newLines, newContentLines...)
-		
+
 		if endIdx+1 < len(lines) {
 			newLines = append(newLines, lines[endIdx+1:]...)
 		}
@@ -90,7 +94,11 @@ func Update(argsJSON []byte) (string, error) {
 	}
 
 	output := strings.Join(lines, "\n")
-	if err := os.WriteFile(args.Path, []byte(output), 0644); err != nil {
+	if hadTrailingNewline || len(data) == 0 {
+		output += "\n"
+	}
+	// Keep the file's existing permissions rather than resetting to 0644.
+	if err := os.WriteFile(args.Path, []byte(output), info.Mode().Perm()); err != nil {
 		return "", fmt.Errorf("failed to write updated file: %v", err)
 	}
 

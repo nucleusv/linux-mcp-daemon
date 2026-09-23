@@ -32,7 +32,10 @@ func (h *RPCHandler) ProcessJSONRPC(session *Session, req JSONRPCRequest) {
 		resp.Error = map[string]interface{}{"code": -32601, "message": "Method not found"}
 	}
 	respBytes, _ := json.Marshal(resp)
-	log.Printf("Sending response for %s: %s", req.Method, string(respBytes))
+	// Size only: response bodies are tool output - file contents read as
+	// root, process environments, journal lines - and the daemon's own log
+	// is readable by anyone in the adm/systemd-journal groups.
+	log.Printf("Sending response for %s (id=%v): %d bytes, error=%t", req.Method, req.ID, len(respBytes), resp.Error != nil)
 	session.Event <- string(respBytes)
 }
 

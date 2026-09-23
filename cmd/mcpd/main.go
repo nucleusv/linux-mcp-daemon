@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -59,11 +60,23 @@ func main() {
 	// WORKER MODE (Ephemeral Execution)
 	// ==========================================
 	if len(os.Args) > 1 && os.Args[1] == "worker" {
-		if len(os.Args) < 4 {
-			log.Fatalf("Usage: mcpd worker <tool_name> <json_args>")
+		if len(os.Args) < 3 {
+			log.Fatalf("Usage: mcpd worker <tool_name> [json_args]   (json_args read from stdin when omitted)")
 		}
 		toolName := os.Args[2]
-		toolArgs := []byte(os.Args[3])
+		// The daemon sends arguments on stdin (argv is world-readable via
+		// /proc/<pid>/cmdline); a 4th argv is still accepted for manual
+		// debugging.
+		var toolArgs []byte
+		if len(os.Args) >= 4 {
+			toolArgs = []byte(os.Args[3])
+		} else {
+			b, err := io.ReadAll(io.LimitReader(os.Stdin, 64<<20))
+			if err != nil {
+				log.Fatalf("failed to read worker arguments from stdin: %v", err)
+			}
+			toolArgs = b
+		}
 
 		if os.Getenv("MCPD_HOST_ROOT") == "1" {
 			if err := worker.JoinHostMountNamespace(); err != nil {

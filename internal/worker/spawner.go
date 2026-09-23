@@ -35,12 +35,24 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 
 	uid, _ := strconv.Atoi(u.Uid)
 	targetUID := uint32(uid)
+	gid, _ := strconv.Atoi(u.Gid)
+	targetGID := uint32(gid)
+	// Supplementary groups too - without them the worker would keep none
+	// (or, worse, whatever the root master holds).
+	var targetGroups []uint32
+	if ids, err := u.GroupIds(); err == nil {
+		for _, id := range ids {
+			if n, err := strconv.Atoi(id); err == nil {
+				targetGroups = append(targetGroups, uint32(n))
+			}
+		}
+	}
 
 	if privileged {
 		if strings.HasPrefix(toolName, "read_") {
-			targetUID = 0 // Internal resource workers (caller already verified)
+			targetUID, targetGID, targetGroups = 0, 0, []uint32{0} // Internal resource workers (caller already verified)
 		} else if sudoCfg != nil && sudoCfg.CanRunAsRoot(username, toolName) {
-			targetUID = 0 // Elevate to root
+			targetUID, targetGID, targetGroups = 0, 0, []uint32{0} // Elevate to root
 		} else {
 			return "", fmt.Errorf("Permission denied. Hint: You are not authorized to use 'privileged: true' for this tool in mcp-sudo.yaml")
 		}
@@ -54,14 +66,20 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, exe, "worker", toolName, string(toolArgs))
+	// Arguments go over stdin, never argv: argv is world-readable via
+	// /proc/<pid>/cmdline and ps, and tool arguments carry file contents,
+	// HTTP Authorization headers and the like.
+	cmd := exec.CommandContext(ctx, exe, "worker", toolName)
+	cmd.Stdin = bytes.NewReader(toolArgs)
 	if privileged && Containerized {
 		cmd.Env = append(os.Environ(), "MCPD_HOST_ROOT=1")
 	}
 
-	// Enforce strict UID isolation.
+	// Enforce strict UID *and GID* isolation. Setting only Uid used to leave
+	// Gid at its zero value - so every "unprivileged" worker ran with group
+	// root (gid 0) and could use any group-root file permission.
 	cmd.SysProcAttr = &syscall.SysProcAttr{}
-	cmd.SysProcAttr.Credential = &syscall.Credential{Uid: targetUID}
+	cmd.SysProcAttr.Credential = &syscall.Credential{Uid: targetUID, Gid: targetGID, Groups: targetGroups}
 
 	var outBuf bytes.Buffer
 	var errBuf bytes.Buffer
@@ -77,14 +95,14 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 		if errBuf.Len() > 0 {
 			return "", fmt.Errorf("worker execution failed: %v. Stderr: %s", err, errBuf.String())
 		}
-		
+
 		// If it's a standard exit error, provide a helpful hint if they weren't using privileges
 		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() != 0 && !privileged {
 			if sudoCfg != nil && sudoCfg.CanRunAsRoot(username, toolName) {
 				return "", fmt.Errorf("worker failed: %v. Hint: You are authorized to run this tool as root. Try again with 'privileged: true'. Output: %s", err, outBuf.String())
 			}
 		}
-		
+
 		return "", fmt.Errorf("worker execution failed: %v. Output: %s", err, outBuf.String())
 	}
 

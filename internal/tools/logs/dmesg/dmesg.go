@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"regexp"
 )
 
 // DmesgArgs defines the parameters for the logs/dmesg tool.
@@ -12,6 +13,8 @@ type DmesgArgs struct {
 	Level        string `json:"level,omitempty"`         // Level filters by log level (e.g., "err,warn").
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format.
 }
+
+var validLevels = regexp.MustCompile(`^(emerg|alert|crit|err|warn|notice|info|debug)(,(emerg|alert|crit|err|warn|notice|info|debug))*$`)
 
 func Dmesg(argsJSON []byte) (string, error) {
 	var args DmesgArgs
@@ -24,6 +27,9 @@ func Dmesg(argsJSON []byte) (string, error) {
 	cmdArgs := []string{"--human"}
 
 	if args.Level != "" {
+		if !validLevels.MatchString(args.Level) {
+			return "", fmt.Errorf("invalid level %q: expected comma-separated emerg,alert,crit,err,warn,notice,info,debug", args.Level)
+		}
 		cmdArgs = append(cmdArgs, "--level", args.Level)
 	}
 

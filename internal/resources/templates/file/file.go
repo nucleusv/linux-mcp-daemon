@@ -2,6 +2,7 @@ package file
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"strings"
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
@@ -22,6 +23,12 @@ func Handle(uri string, sessionUser string, sudoConfig *config.SudoConfig) (stri
 		tool, path = "files/filetype", trimmed
 	} else if trimmed, ok := strings.CutSuffix(path, "/content"); ok {
 		path = trimmed
+	}
+
+	// Resolve ".." etc. before both the authorization check and the read,
+	// so the worker reads exactly the path that was checked.
+	if strings.HasPrefix(path, "/") {
+		path = filepath.Clean(path)
 	}
 
 	// Determine if we need to run as root based on mcp-sudo.yaml paths list

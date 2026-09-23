@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 )
 
 // DeleteProcessArgs defines the parameters for the processes/delete tool.
@@ -14,6 +16,11 @@ type DeleteProcessArgs struct {
 	PID          int    `json:"pid"`                     // PID is the Process ID to terminate. Required.
 	Signal       string `json:"signal,omitempty"`        // Signal is the signal to send (e.g., "SIGTERM", "SIGKILL"). Defaults to "SIGTERM".
 	Privileged   bool   `json:"privileged,omitempty"`    // Privileged executes the kill command as root.
+}
+
+var validSignals = map[string]bool{
+	"SIGTERM": true, "SIGKILL": true, "SIGHUP": true, "SIGINT": true, "SIGQUIT": true,
+	"SIGUSR1": true, "SIGUSR2": true, "SIGSTOP": true, "SIGCONT": true, "SIGABRT": true,
 }
 
 func Delete(argsJSON []byte) (string, error) {
@@ -28,12 +35,26 @@ func Delete(argsJSON []byte) (string, error) {
 		return "", fmt.Errorf("invalid PID specified")
 	}
 
-	signal := "SIGTERM"
-	if args.Signal != "" {
-		signal = args.Signal
+	// Never signal init or this daemon itself (the worker's parent is the
+	// mcpd master): killing either takes the whole host or the daemon down,
+	// which no "terminate a process" request should be able to do.
+	if args.PID == 1 || args.PID == os.Getppid() || args.PID == os.Getpid() {
+		return "", fmt.Errorf("refusing to signal protected PID %d (init or the mcpd daemon itself)", args.PID)
 	}
 
-	cmd := exec.Command("kill", "-s", signal, strconv.Itoa(args.PID))
+	signal := "SIGTERM"
+	if args.Signal != "" {
+		s := strings.ToUpper(strings.TrimSpace(args.Signal))
+		if !strings.HasPrefix(s, "SIG") {
+			s = "SIG" + s
+		}
+		if !validSignals[s] {
+			return "", fmt.Errorf("invalid signal %q (e.g. SIGTERM, SIGKILL, SIGHUP, SIGINT)", args.Signal)
+		}
+		signal = s
+	}
+
+	cmd := exec.Command("kill", "-s", strings.TrimPrefix(signal, "SIG"), "--", strconv.Itoa(args.PID))
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
