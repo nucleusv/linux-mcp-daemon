@@ -27,6 +27,8 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/partitions"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/performance"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/disks/usage"
+	chmodfile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/chmod"
+	chownfile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/chown"
 	content "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/content"
 	createfile "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/create"
 	filetype "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/files/filetype"
@@ -128,6 +130,8 @@ func main() {
 			"files/update":          updatefile.Update,
 			"files/find":            findfile.Find,
 			"files/filetype":        filetype.Type,
+			"files/chmod":           chmodfile.Chmod,
+			"files/chown":           chownfile.Chown,
 			"read_usb":              usb.ReadUSB,
 			"read_pci":              pci.ReadPCI,
 			"read_dmi":              dmi.ReadDMI,

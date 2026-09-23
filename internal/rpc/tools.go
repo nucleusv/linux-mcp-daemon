@@ -15,7 +15,7 @@ import (
 
 func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 	// Dynamically generate the tools list based on sudo rules.
-	listDesc := "Lists contents of a directory."
+	listDesc := "Lists a directory like ls -la: file type and permissions, link count, owner, group, size, modification time and symlink targets (symlinks are shown, never followed)."
 	if h.SudoConfig.CanRunAsRoot(session.User, "files/list") {
 		listDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
 	}
@@ -65,11 +65,16 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"path":          map[string]interface{}{"type": "string", "description": "Directory path to list"},
-						"all":           map[string]interface{}{"type": "boolean", "description": "Include hidden files (-a)"},
-						"long":          map[string]interface{}{"type": "boolean", "description": "Use long listing format (-l)"},
-						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						"output_format":  map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
+						"path":           map[string]interface{}{"type": "string", "description": "Directory path to list"},
+						"all":            map[string]interface{}{"type": "boolean", "description": "Include dotfiles, . and .. (ls -a)"},
+						"long":           map[string]interface{}{"type": "boolean", "description": "Long listing like ls -l: type+permissions, links, owner, group, size, date, symlink target. Default true; false lists names only"},
+						"human_readable": map[string]interface{}{"type": "boolean", "description": "Sizes like 4.0K, 1.5M (ls -h)"},
+						"sort":           map[string]interface{}{"type": "string", "enum": []string{"name", "size", "time"}, "description": "Sort by name (default), size (largest first) or time (newest first)"},
+						"reverse":        map[string]interface{}{"type": "boolean", "description": "Reverse the sort order (ls -r)"},
+						"dirs_first":     map[string]interface{}{"type": "boolean", "description": "List directories before files"},
+						"numeric_ids":    map[string]interface{}{"type": "boolean", "description": "Show numeric uid/gid instead of names (ls -n)"},
+						"privileged":     map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 					},
 					"required": []string{"path"},
 				},
@@ -157,6 +162,38 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 					},
 					"required": []string{"path"},
+				},
+			},
+			map[string]interface{}{
+				"name":          "files/chmod",
+				"tools_group":   "files",
+				"linuxctl_verb": "chmod",
+				"description":   "Changes a file's or directory's permission bits (chmod). Never follows symbolic links: a path containing a symlink in any component is refused, and recursive changes skip symlinks and report them. Numeric modes follow GNU chmod semantics (on directories a 4-digit mode keeps setuid/setgid; use 5 digits, e.g. 00755, to set them exactly).",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"path":       map[string]interface{}{"type": "string", "description": "Absolute path"},
+						"mode":       map[string]interface{}{"type": "string", "description": "Octal (644, 0755, 4755) or symbolic (u+x, go-w, a=r, +X, u+s, +t; comma-separated)"},
+						"recursive":  map[string]interface{}{"type": "boolean", "description": "Also apply to everything below a directory (symlinks are skipped, never followed)"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - needed for files you don't own"},
+					},
+					"required": []string{"path", "mode"},
+				},
+			},
+			map[string]interface{}{
+				"name":          "files/chown",
+				"tools_group":   "files",
+				"linuxctl_verb": "chown",
+				"description":   "Changes a file's or directory's owner and/or group (chown). Never follows symbolic links: a path containing a symlink in any component is refused, and recursive changes skip symlinks and report them. Changing the owner requires privileged: true.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"path":       map[string]interface{}{"type": "string", "description": "Absolute path"},
+						"owner":      map[string]interface{}{"type": "string", "description": "user, user:group, :group, or user: (the user's login group); names or numeric ids"},
+						"recursive":  map[string]interface{}{"type": "boolean", "description": "Also apply to everything below a directory (symlinks are skipped, never followed)"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - required to change ownership"},
+					},
+					"required": []string{"path", "owner"},
 				},
 			},
 			map[string]interface{}{
@@ -657,6 +694,8 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"files/update":          true,
 			"files/find":            true,
 			"files/filetype":        true,
+			"files/chmod":           true,
+			"files/chown":           true,
 			"services/manage":       true,
 			"services/list":         true,
 			"logs/journal-control":  true,
@@ -700,7 +739,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			}
 			_ = json.Unmarshal(params.Arguments, &baseArgs)
 
-			if (params.Name == "files/list" || params.Name == "files/read" || params.Name == "files/create" || params.Name == "files/update" || params.Name == "files/find" || params.Name == "files/filetype") && baseArgs.Privileged {
+			if (params.Name == "files/list" || params.Name == "files/read" || params.Name == "files/create" || params.Name == "files/update" || params.Name == "files/find" || params.Name == "files/filetype" || params.Name == "files/chmod" || params.Name == "files/chown") && baseArgs.Privileged {
 				checkPath := baseArgs.Path
 				if checkPath == "" && params.Name == "files/find" {
 					checkPath = "/" // files/find's own default

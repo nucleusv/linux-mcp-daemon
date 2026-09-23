@@ -146,6 +146,14 @@ users:
           allowed: true
           paths:
             - /
+        files/chmod:
+          allowed: true
+          paths:
+            - /
+        files/chown:
+          allowed: true
+          paths:
+            - /
         files/find:
           allowed: true
           paths:
