@@ -4,15 +4,20 @@ sidebar_position: 1
 
 # Introduction
 
-Welcome to the **Linux MCP Daemon** documentation!
+Welcome to the **Linux MCPd** documentation!
 
-The Linux MCP Daemon is a high-performance, ultra-secure Model Context Protocol (MCP) server written in Go. It empowers Large Language Models (LLMs) to safely interact with a Linux filesystem.
+Linux MCPd (`mcpd`) is a high-performance, zero-dependency Go daemon that bridges AI agents to a Linux host over the Model Context Protocol (MCP), via HTTP/SSE + JSON-RPC. It's kernel-first: it parses `/proc`, `/sys`, and DBus natively instead of wrapping CLI tools, and covers far more than the filesystem - files, disks, processes, network, devices, kernel parameters, logs, services, users, CPU, memory, and sudo rules.
 
 ## Key Features
 
-- **Blazing Fast**: Written in pure Go, taking advantage of fast static compilation and low memory overhead.
-- **Secure by Design**: Utilizes an **Ephemeral Worker** architecture to completely sandbox AI requests under strict UID controls, preventing privilege escalation.
-- **Intelligent Caching**: Hardened against abuse with `golang.org/x/sync/singleflight` to prevent the AI from spamming expensive I/O operations like recursive disk usage tree traversals.
-- **Dynamic Sudo Rules**: Allows administrators to grant specific users granular root access (`privileged: true`) for specific tools via a `mcp-sudo.yaml` configuration.
+- **Kernel-first, zero-dependency**: reads `/proc`/`/sys`/DBus directly rather than shelling out to CLI tools (with a few documented exceptions like `smartctl` and `traceroute`).
+- **Secure by design**: an **ephemeral worker** architecture spawns a fresh, short-lived process per call under `syscall.Credential{Uid: targetUID}` - the master daemon loop never touches `/proc`/`/sys` or execs a binary directly.
+- **Per-user, per-tool root authorization**: `configs/mcp-sudo.yaml` decides, per bearer-token user and per tool, whether `privileged: true` is honored.
+- **Intelligent caching**: `singleflight` deduplication and TTL caching guard against an agent spamming expensive I/O (e.g. recursive disk usage traversals).
+- **Salted, hashed bearer tokens**: managed entirely locally via `linuxctl <verb> mcpd user`, never over the network.
 
-Explore the sidebar to dive deep into the specific tools (like `list_directory` or `get_disk_free`) or read up on our architectural design choices!
+## Where to go next
+
+- [`linuxctl` CLI](linuxctl/overview) - the schema-discovered `<verb> <group>` command-line client, with a full [command reference](linuxctl/command-reference).
+- [MCP API reference](mcp-api/overview) - every tool, resource, and resource template `mcpd` exposes, each with a runnable `linuxctl` + raw `curl` example and real captured output.
+- [Architecture](architecture/ephemeral-workers) and [Configuration](configuration/daemon) - the worker/privilege model and `configs/*.yaml` reference.

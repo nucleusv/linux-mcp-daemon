@@ -19,7 +19,7 @@ const isGithubPagesDeploy = process.env.DOCS_DEPLOY_TARGET === 'github-pages';
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Linux MCPd',
-  tagline: 'High-performance AI filesystem bridge',
+  tagline: 'Securely bridging AI agents to the Linux host via MCP',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future

@@ -29,13 +29,13 @@ export default function Home() {
   const {siteConfig} = useDocusaurusContext();
   return (
     <Layout
-      title={`Hello from ${siteConfig.title}`}
-      description="Linux MCP Daemon Documentation">
+      title={siteConfig.title}
+      description="Linux MCPd - a zero-dependency Go daemon bridging AI agents to a Linux host via MCP">
       <HomepageHeader />
       <main>
         <div className="container" style={{padding: '2rem 0', textAlign: 'center'}}>
-          <h2>Secure, high-performance filesystem management for AI.</h2>
-          <p>Built with Go, utilizing Ephemeral Workers for complete UID isolation and Singleflight Caching for performance.</p>
+          <h2>Kernel-first Linux introspection and administration for AI agents.</h2>
+          <p>Files, disks, processes, network, devices, kernel, logs, services, users - reachable over MCP (HTTP/SSE + JSON-RPC) or the schema-discovered <code>linuxctl</code> CLI. Ephemeral, per-call workers under real OS UIDs enforce privilege isolation; nothing runs as root by default.</p>
         </div>
       </main>
     </Layout>
