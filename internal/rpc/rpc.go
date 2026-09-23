@@ -1,6 +1,8 @@
 package rpc
 
 import (
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version"
+
 	"encoding/json"
 	"log"
 )
@@ -48,7 +50,7 @@ func (h *RPCHandler) HandleInitialize(resp *JSONRPCResponse) {
 		},
 		"serverInfo": map[string]interface{}{
 			"name":    "linux-mcp-daemon",
-			"version": "1.0.0",
+			"version": version.Version,
 		},
 	}
 }

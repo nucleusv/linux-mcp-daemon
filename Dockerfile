@@ -1,11 +1,18 @@
-# Build stage
-FROM golang:alpine AS builder
+# Build stage. Runs on the build machine's own platform ($BUILDPLATFORM) and
+# cross-compiles for the target - Go does that natively, so multi-arch
+# release builds never compile under slow QEMU emulation.
+FROM --platform=$BUILDPLATFORM golang:alpine AS builder
 
 # Set automatically by BuildKit to match the build's target platform (arm64
 # on Docker Desktop/Apple Silicon, amd64 on a typical x86_64 Linux host) -
 # this was previously hardcoded to arm64, which silently produced a binary
 # that wouldn't run on an amd64 target.
 ARG TARGETARCH
+# Release builds pass these (see .github/workflows/release.yml); local
+# builds report "dev".
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILD_DATE=unknown
 
 WORKDIR /app
 
@@ -18,10 +25,17 @@ RUN go mod download
 COPY . .
 
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -o mcpd ./cmd/mcpd
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
+    -ldflags "-s -w -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Version=${VERSION} -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Commit=${COMMIT} -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Date=${BUILD_DATE}" \
+    -o mcpd ./cmd/mcpd
+# linuxctl too: it's how users and tokens are created, even for a container
+# (docker run ... linuxctl create mcpd user ...).
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
+    -ldflags "-s -w -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Version=${VERSION} -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Commit=${COMMIT} -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Date=${BUILD_DATE}" \
+    -o linuxctl ./cmd/linuxctl
 
-# Docs Build Stage
-FROM node:20-alpine AS docs-builder
+# Docs Build Stage - static output, so it too runs on the build platform.
+FROM --platform=$BUILDPLATFORM node:20-alpine AS docs-builder
 WORKDIR /app/docs/website
 # Copy only package files first for better caching
 COPY docs/website/package.json docs/website/package-lock.json* ./
@@ -57,9 +71,13 @@ RUN apt-get update && apt-get install -y \
     && useradd -m -s /bin/bash privileged
 
 # Copy the binary from the builder stage
-COPY --from=builder /app/mcpd /usr/local/bin/
-# Copy configs
-COPY --from=builder /app/configs ./configs
+COPY --from=builder /app/mcpd /app/linuxctl /usr/local/bin/
+# Copy configs. Defaults to the repo's configs/ (the local Kubernetes dev
+# setup, with its test users). Release images pass
+# CONFIG_DIR=packaging/configs-container: no users, so a public image never
+# ships the test tokens that are published in this repo's docs.
+ARG CONFIG_DIR=configs
+COPY --from=builder /app/${CONFIG_DIR} ./configs
 # Copy compiled documentation website
 COPY --from=docs-builder /app/docs/website/build ./docs/website/build
 # Copy man pages

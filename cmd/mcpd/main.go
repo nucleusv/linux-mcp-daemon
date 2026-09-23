@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version"
+
 	"fmt"
 	"io"
 	"log"
@@ -13,8 +15,8 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/pci"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/devices/usb"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/kernel/modules"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/routes"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/interfaces"
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/network/routes"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/rpc"
 	cpulist "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/list"
 	loadaverage "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/cpu/load-average"
@@ -58,6 +60,11 @@ import (
 )
 
 func main() {
+	if len(os.Args) == 2 && (os.Args[1] == "--version" || os.Args[1] == "-version" || os.Args[1] == "version") {
+		fmt.Println(version.String("mcpd"))
+		return
+	}
+
 	// ==========================================
 	// WORKER MODE (Ephemeral Execution)
 	// ==========================================
@@ -213,14 +220,14 @@ func main() {
 		}
 
 		go func() {
-			log.Printf("Starting Linux MCP Daemon (HTTPS SSE Transport) on %s\n", tlsAddr)
+			log.Printf("Starting Linux MCP Daemon %s (HTTPS SSE Transport) on %s\n", version.Version, tlsAddr)
 			if err := http.ListenAndServeTLS(tlsAddr, daemonConfig.Server.TLS.CertFile, daemonConfig.Server.TLS.KeyFile, handler); err != nil {
 				log.Fatalf("Daemon TLS crashed: %v", err)
 			}
 		}()
 	}
 
-	log.Printf("Starting Linux MCP Daemon (HTTP SSE Transport) on %s\n", addr)
+	log.Printf("Starting Linux MCP Daemon %s (HTTP SSE Transport) on %s\n", version.Version, addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatalf("Daemon crashed: %v", err)
 	}

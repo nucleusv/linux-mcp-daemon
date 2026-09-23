@@ -1,6 +1,8 @@
 # Linux MCPd
 
 [![Docs](https://img.shields.io/badge/docs-nucleusv.github.io-blue)](https://nucleusv.github.io/linux-mcp-daemon/)
+[![Release](https://img.shields.io/github/v/release/nucleusv/linux-mcp-daemon)](https://github.com/nucleusv/linux-mcp-daemon/releases)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
 A high-performance, Go-based Model Context Protocol (MCP) daemon (`mcpd`) designed to securely bridge AI agents directly with the Linux operating system.
 
@@ -21,7 +23,7 @@ AI agent / linuxctl / curl
 │  (auth, rate limiting, │  or execs a binary directly - it only
 │   routing, mcp-sudo)   │  decides *whether* a call is allowed
 └──────────┬─────────────┘
-           │ re-execs itself: `mcpd worker <tool> <json-args>`
+           │ re-execs itself: `mcpd worker <tool>`, args on stdin
            │ as a specific OS user (syscall.Credential{Uid: ...})
            ▼
 ┌───────────────────────┐
@@ -45,7 +47,34 @@ AI agent / linuxctl / curl
 - **High Performance:** Uses `singleflight` deduplication and TTL caching for efficient system introspection.
 - **Docker & Kubernetes Ready:** Fully containerized with a multi-stage Docker build and Kubernetes deployment manifests that allow safe host introspection.
 
-## Getting Started
+## Get started
+
+### Install on Linux (systemd)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash
+```
+
+This downloads the latest release for your architecture (amd64/arm64), **verifies its sha256 checksum**, installs `mcpd` and `linuxctl` to `/usr/local/bin`, writes clean configs to `/etc/mcpd/configs` (no default users or tokens), creates a first user `mcp` and **prints its token once**, and starts the `mcpd` systemd service. Then:
+
+```bash
+export MCP_SERVER=http://127.0.0.1:9091
+export MCP_TOKEN=<token printed by the installer>
+linuxctl get system os-release
+linuxctl get processes top
+```
+
+- **Upgrade:** run the same command again - configs are kept, the service restarts only if `mcpd` changed.
+- **Pin a version / name the user:** `... | sudo bash -s -- --version v0.1.0 --user alice`
+- **Uninstall:** `... | sudo bash -s -- --uninstall` (add `--purge` to delete `/etc/mcpd`)
+- **Container image:** `ghcr.io/nucleusv/linux-mcp-daemon` (amd64/arm64) - setup steps in the [installation docs](https://nucleusv.github.io/linux-mcp-daemon/installation/).
+- **macOS:** download `linuxctl` from the [releases page](https://github.com/nucleusv/linux-mcp-daemon/releases) to drive a remote mcpd.
+
+> mcpd listens on all interfaces over plain HTTP unless TLS is enabled in `daemon.yaml`. Firewall port 9091 to trusted addresses, or enable TLS, before exposing it. Root access for tools is granted per user and per tool in `mcp-sudo.yaml`.
+
+Full guide: [Installation](https://nucleusv.github.io/linux-mcp-daemon/installation/) · [Connect an AI agent](https://nucleusv.github.io/linux-mcp-daemon/ai-agent-configuration/) · [mcp-sudo.yaml](https://nucleusv.github.io/linux-mcp-daemon/configuration/mcp-sudo/)
+
+## Development: build from source
 
 ### 1. Build and Deploy the Server (`mcpd`)
 
@@ -67,7 +96,7 @@ You can build the CLI client directly on your host machine (e.g. macOS):
 ./scripts/build-cli.sh
 ```
 
-### 3. Usage
+### 3. Usage (local development)
 
 The daemon runs on port `9091`. You can connect via your AI client using SSE, or use the `linuxctl` CLI tool:
 
@@ -251,3 +280,11 @@ There's no curl equivalent for this group - see [Daemon User Administration](doc
 ## License
 
 This project is licensed under the MIT License.
+
+## Releases
+
+Pushing a SemVer tag (`git tag -a v0.1.0 -m v0.1.0 && git push origin v0.1.0`) runs [`.github/workflows/release.yml`](.github/workflows/release.yml): tests, then [GoReleaser](.goreleaser.yaml) publishes per-platform archives, `checksums.txt` and a changelog to GitHub Releases, and a multi-arch image to `ghcr.io/nucleusv/linux-mcp-daemon`.
+
+## License
+
+[Apache License 2.0](LICENSE) - see also [NOTICE](NOTICE).

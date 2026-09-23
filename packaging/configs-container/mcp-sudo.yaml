@@ -1,0 +1,5 @@
+# Root authorization: which tools each user may run with `privileged: true`,
+# plus optional per-tool restrictions (paths, network, sysctl). Without an
+# entry here a user can still call every tool - as their own OS account,
+# never as root. See https://nucleusv.github.io/linux-mcp-daemon/configuration/mcp-sudo/
+users: {}

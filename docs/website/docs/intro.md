@@ -18,6 +18,7 @@ Linux MCPd (`mcpd`) is a high-performance, zero-dependency Go daemon that bridge
 
 ## Where to go next
 
+- [Installation](installation) - one command on any systemd Linux host (`curl ... | sudo bash`), the container image, or `linuxctl` for macOS.
 - [`linuxctl` CLI](linuxctl/overview) - the schema-discovered `<verb> <group>` command-line client, with a full [command reference](linuxctl/command-reference).
 - [MCP API reference](mcp-api/overview) - every tool, resource, and resource template `mcpd` exposes, each with a runnable `linuxctl` + raw `curl` example and real captured output.
 - [Architecture](architecture/ephemeral-workers) and [Configuration](configuration/daemon) - the worker/privilege model and `configs/*.yaml` reference.

@@ -1,0 +1,29 @@
+# mcpd daemon configuration - baked into the release container image at
+# /root/configs/daemon.yaml. Mount your own configs directory over it:
+#   -v /etc/mcpd/configs:/root/configs
+server:
+  # mcpd listens on all interfaces. It speaks plain HTTP unless TLS is
+  # enabled below, and bearer tokens travel in every request - so either
+  # enable TLS, or firewall this port to trusted addresses only.
+  port: 9091
+  tls:
+    enabled: false
+    port: 9443
+    cert_file: "/etc/ssl/certs/mcpd.crt"
+    key_file: "/etc/ssl/private/mcpd.key"
+rate_limits:
+  default_rps: 50.0
+  default_burst: 100
+worker:
+  timeout_seconds: 30
+  # true: this is the container image - privileged calls join the real
+  # host's mount namespace (needs --pid host and --privileged). Set false
+  # if the container should only administer itself.
+  containerized: true
+tools:
+  disks/usage:
+    timeout_seconds: 300
+# Users are added with `linuxctl create mcpd user <name> --config-path
+# /etc/mcpd/configs`, which stores only a salted hash of the token. Each
+# user must also exist as an OS account: tools run as that account.
+users: []

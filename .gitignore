@@ -35,3 +35,6 @@ docs/website/.docusaurus/
 # Local Claude Code MCP server config - easy to accidentally commit real
 # tokens via a project-scoped `claude mcp add`; keep this machine-local.
 .mcp.json
+
+# GoReleaser output
+/dist/

@@ -1,0 +1,19 @@
+[Unit]
+Description=Linux MCP Daemon (mcpd)
+Documentation=https://nucleusv.github.io/linux-mcp-daemon/ man:mcpd(8)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Runs as root: mcpd spawns each tool call as a short-lived worker under the
+# calling user's own OS account (or root, where mcp-sudo.yaml allows it),
+# which requires the privilege to switch UIDs.
+User=root
+WorkingDirectory=/etc/mcpd
+ExecStart=/usr/local/bin/mcpd
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

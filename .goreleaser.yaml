@@ -1,0 +1,105 @@
+# GoReleaser config - run by .github/workflows/release.yml on a vX.Y.Z tag.
+# Local dry run (no publishing):  goreleaser release --snapshot --clean
+version: 2
+
+project_name: linux-mcp-daemon
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: mcpd
+    main: ./cmd/mcpd
+    binary: mcpd
+    env: [CGO_ENABLED=0]
+    goos: [linux]   # the daemon is Linux-only (raw syscalls, /proc, /sys)
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: &ldflags
+      - -s -w
+      - -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Version={{ .Version }}
+      - -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Commit={{ .ShortCommit }}
+      - -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Date={{ .Date }}
+
+  # linuxctl is built twice so each archive holds the same binaries on every
+  # platform it covers: Linux archives ship it next to mcpd, macOS archives
+  # (for workstations driving a remote mcpd) hold only the CLI.
+  - id: linuxctl-linux
+    main: ./cmd/linuxctl
+    binary: linuxctl
+    env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: *ldflags
+
+  - id: linuxctl-darwin
+    main: ./cmd/linuxctl
+    binary: linuxctl
+    env: [CGO_ENABLED=0]
+    goos: [darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: *ldflags
+
+archives:
+  # Linux: mcpd + linuxctl + everything scripts/install.sh needs.
+  - id: server
+    ids: [mcpd, linuxctl-linux]
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - NOTICE
+      - README.md
+      - packaging/mcpd.service
+      - packaging/configs/*
+      - docs/man/*
+
+  # macOS: just the CLI.
+  - id: cli-darwin
+    ids: [linuxctl-darwin]
+    formats: [tar.gz]
+    name_template: "linuxctl_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - NOTICE
+      - docs/man/linuxctl.1
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  use: git
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
+  groups:
+    - title: Security
+      regexp: '^.*?\(security\)!?:|^fix\(security\)|^feat\(security\)'
+      order: 0
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:'
+      order: 1
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))??!?:'
+      order: 2
+    - title: Other
+      order: 999
+
+release:
+  github:
+    owner: nucleusv
+    name: linux-mcp-daemon
+  header: |
+    Install or upgrade on Linux (systemd):
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash -s -- --version {{ .Tag }}
+    ```
+
+    Container image: `ghcr.io/nucleusv/linux-mcp-daemon:{{ .Version }}` (linux/amd64, linux/arm64).

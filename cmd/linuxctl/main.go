@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version"
+
 	"bufio"
 	"bytes"
 	"encoding/json"
@@ -20,9 +22,10 @@ import (
 )
 
 var (
-	serverURL  = flag.String("server", defaultServerURL(), "The URL of the mcpd server (default from MCP_SERVER env var)")
-	token      = flag.String("token", "", "Bearer token for authentication")
-	configPath = flag.String("config-path", "./configs", "Local path to the daemon's configs/ directory (used only by the local-only 'mcpd' admin group)")
+	serverURL   = flag.String("server", defaultServerURL(), "The URL of the mcpd server (default from MCP_SERVER env var)")
+	token       = flag.String("token", "", "Bearer token for authentication")
+	showVersion = flag.Bool("version", false, "Print the linuxctl version and exit")
+	configPath  = flag.String("config-path", "./configs", "Local path to the daemon's configs/ directory (used only by the local-only 'mcpd' admin group)")
 )
 
 type JSONRPCRequest struct {
@@ -66,6 +69,11 @@ func defaultServerURL() string {
 func main() {
 	flag.Parse()
 	rawArgs := flag.Args()
+
+	if *showVersion || (len(rawArgs) == 1 && rawArgs[0] == "version") {
+		fmt.Println(version.String("linuxctl"))
+		return
+	}
 
 	// Shell completion - "completion" just prints a script; "__complete" is
 	// the hidden callback that script runs on every Tab press (see
@@ -362,7 +370,7 @@ func printMCPInfo(authToken string) {
 	respRPC := callMethod(authToken, nextID(), "initialize", map[string]interface{}{
 		"protocolVersion": "2024-11-05",
 		"capabilities":    map[string]interface{}{},
-		"clientInfo":      map[string]interface{}{"name": "linuxctl", "version": "1.0.0"},
+		"clientInfo":      map[string]interface{}{"name": "linuxctl", "version": version.Version},
 	})
 	if respRPC.Error != nil {
 		fmt.Printf("Error: %s (Code: %d)\n", respRPC.Error.Message, respRPC.Error.Code)

@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+# Install, upgrade or uninstall linux-mcp-daemon (mcpd + linuxctl) on a
+# systemd Linux host from a GitHub release.
+#
+#   curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash
+#
+# Options (after `bash -s --` when piping):
+#   --version vX.Y.Z   install this release (default: the latest)
+#   --user NAME        MCP user to create on first install (default: mcp);
+#                      its token is printed once. --user "" skips this.
+#   --no-start         install and enable, but don't start the service
+#   --archive FILE     install from a local release tarball instead of
+#                      downloading (offline installs, testing)
+#   --uninstall        stop and remove mcpd (keeps /etc/mcpd)
+#   --purge            with --uninstall: also delete /etc/mcpd
+#
+# Environment variables work too (handy with curl | bash):
+#   MCPD_VERSION=v0.1.0   MCPD_USER=name
+#
+# Re-running on an installed host upgrades the binaries (restarting the
+# service only if they changed); existing configs in /etc/mcpd/configs are
+# never overwritten.
+#
+# Everything runs inside main(), called on the last line: if a
+# `curl | bash` download is cut off midway, bash never executes a
+# half-received script.
+set -euo pipefail
+
+REPO="nucleusv/linux-mcp-daemon"
+BIN_DIR="/usr/local/bin"
+CONF_ROOT="/etc/mcpd"
+CONF_DIR="$CONF_ROOT/configs"
+UNIT="/etc/systemd/system/mcpd.service"
+MAN_DIR="/usr/local/share/man"
+
+VERSION="${MCPD_VERSION:-}"
+MCP_USER="${MCPD_USER-mcp}"
+START=1
+ARCHIVE=""
+UNINSTALL=0
+PURGE=0
+
+say()  { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
+die()  { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+
+# fetch URL OUT - curl, or wget where curl isn't installed.
+fetch() {
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL -o "$2" "$1"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q -O "$2" "$1"
+    else
+        die "curl or wget is required"
+    fi
+}
+
+# sha256 FILE - sha256sum, or shasum where coreutils' tool is missing.
+sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{print $1}'
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{print $1}'
+    else
+        die "sha256sum or shasum is required to verify the download"
+    fi
+}
+
+usage() {
+    cat <<'USAGE'
+Install, upgrade or uninstall linux-mcp-daemon (mcpd + linuxctl).
+
+  curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash -s -- [options]
+
+  --version vX.Y.Z   install this release (default: latest)      env: MCPD_VERSION
+  --user NAME        MCP user created on first install (default: mcp; "" to skip)  env: MCPD_USER
+  --no-start         install and enable, but don't start the service
+  --archive FILE     install from a local release tarball
+  --uninstall        remove mcpd (keeps /etc/mcpd); add --purge to delete it too
+USAGE
+}
+
+main() {
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --version)   VERSION="${2:?--version needs a value}"; shift 2 ;;
+        --user)      MCP_USER="${2-}"; shift 2 ;;
+        --no-start)  START=0; shift ;;
+        --archive)   ARCHIVE="${2:?--archive needs a file}"; shift 2 ;;
+        --uninstall) UNINSTALL=1; shift ;;
+        --purge)     PURGE=1; shift ;;
+        -h|--help)   usage; exit 0 ;;
+        *)           die "unknown option: $1 (see --help)" ;;
+    esac
+done
+
+[ "$(id -u)" -eq 0 ] || die "run as root (sudo bash)"
+[ "$(uname -s)" = "Linux" ] || die "mcpd runs on Linux only (linuxctl for macOS is in the release assets)"
+HAVE_SYSTEMD=0
+if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
+    HAVE_SYSTEMD=1
+fi
+
+# ---------------------------------------------------------------- uninstall
+if [ "$UNINSTALL" -eq 1 ]; then
+    if [ "$HAVE_SYSTEMD" -eq 1 ] && [ -f "$UNIT" ]; then
+        systemctl disable --now mcpd 2>/dev/null || true
+    fi
+    rm -f "$UNIT" "$BIN_DIR/mcpd" "$BIN_DIR/linuxctl" "$MAN_DIR/man8/mcpd.8" "$MAN_DIR/man1/linuxctl.1"
+    [ "$HAVE_SYSTEMD" -eq 1 ] && systemctl daemon-reload
+    if [ "$PURGE" -eq 1 ]; then
+        rm -rf "$CONF_ROOT"
+        say "mcpd uninstalled, $CONF_ROOT deleted"
+    else
+        say "mcpd uninstalled ($CONF_ROOT kept - use --purge to delete it)"
+    fi
+    exit 0
+fi
+
+# ------------------------------------------------------------------ fetch
+case "$(uname -m)" in
+    x86_64|amd64)  ARCH="amd64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
+    *) die "unsupported architecture: $(uname -m) (releases cover amd64 and arm64)" ;;
+esac
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+if [ -n "$ARCHIVE" ]; then
+    [ -f "$ARCHIVE" ] || die "archive not found: $ARCHIVE"
+    say "Installing from local archive $ARCHIVE (checksum not verified)"
+    cp "$ARCHIVE" "$TMP/release.tar.gz"
+else
+    if [ -z "$VERSION" ]; then
+        fetch "https://api.github.com/repos/$REPO/releases/latest" "$TMP/latest.json" \
+            || die "could not query the latest release (try --version vX.Y.Z)"
+        VERSION="$(sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' "$TMP/latest.json" | head -n1)"
+        [ -n "$VERSION" ] || die "could not determine the latest release (try --version vX.Y.Z)"
+    fi
+    case "$VERSION" in v*) ;; *) VERSION="v$VERSION" ;; esac
+    NUM="${VERSION#v}"
+    FILE="linux-mcp-daemon_${NUM}_linux_${ARCH}.tar.gz"
+    BASE="https://github.com/$REPO/releases/download/$VERSION"
+
+    say "Downloading $FILE ($VERSION)"
+    fetch "$BASE/$FILE" "$TMP/$FILE" || die "download failed: $BASE/$FILE"
+    fetch "$BASE/checksums.txt" "$TMP/checksums.txt" || die "download failed: $BASE/checksums.txt"
+
+    say "Verifying sha256 checksum"
+    EXPECTED="$(awk -v f="$FILE" '$2 == f {print $1}' "$TMP/checksums.txt")"
+    [ -n "$EXPECTED" ] || die "$FILE is not listed in checksums.txt"
+    ACTUAL="$(sha256 "$TMP/$FILE")"
+    [ "$EXPECTED" = "$ACTUAL" ] || die "checksum mismatch for $FILE (expected $EXPECTED, got $ACTUAL) - refusing to install"
+    mv "$TMP/$FILE" "$TMP/release.tar.gz"
+fi
+
+mkdir -p "$TMP/x"
+tar -xzf "$TMP/release.tar.gz" -C "$TMP/x"
+for f in mcpd linuxctl packaging/mcpd.service packaging/configs/daemon.yaml packaging/configs/mcp-sudo.yaml; do
+    [ -e "$TMP/x/$f" ] || die "release archive is missing $f"
+done
+
+# ---------------------------------------------------------------- install
+UPGRADE=0
+CHANGED=1
+if [ -x "$BIN_DIR/mcpd" ]; then
+    UPGRADE=1
+    # Like k3s: an unchanged binary means no restart (and no dropped
+    # client sessions) when re-running the installer.
+    if [ "$(sha256 "$BIN_DIR/mcpd")" = "$(sha256 "$TMP/x/mcpd")" ]; then
+        CHANGED=0
+    fi
+fi
+
+say "Installing mcpd and linuxctl to $BIN_DIR"
+install -m 0755 "$TMP/x/mcpd" "$BIN_DIR/mcpd.new"
+install -m 0755 "$TMP/x/linuxctl" "$BIN_DIR/linuxctl.new"
+mv -f "$BIN_DIR/mcpd.new" "$BIN_DIR/mcpd"          # atomic replace, even while running
+mv -f "$BIN_DIR/linuxctl.new" "$BIN_DIR/linuxctl"
+
+if [ -d "$TMP/x/docs/man" ]; then
+    install -D -m 0644 "$TMP/x/docs/man/mcpd.8" "$MAN_DIR/man8/mcpd.8"
+    install -D -m 0644 "$TMP/x/docs/man/linuxctl.1" "$MAN_DIR/man1/linuxctl.1"
+fi
+
+install -d -m 0750 "$CONF_DIR"
+FRESH=0
+for f in daemon.yaml mcp-sudo.yaml; do
+    if [ -e "$CONF_DIR/$f" ]; then
+        say "Keeping existing $CONF_DIR/$f"
+    else
+        install -m 0600 "$TMP/x/packaging/configs/$f" "$CONF_DIR/$f"
+        FRESH=1
+    fi
+done
+
+# First install only: one MCP user, backed by a matching OS account (each
+# tool call runs as that account). Its token is shown exactly once.
+TOKEN_MSG=""
+if [ "$FRESH" -eq 1 ] && [ -n "$MCP_USER" ]; then
+    if ! id "$MCP_USER" >/dev/null 2>&1; then
+        say "Creating OS account $MCP_USER (no login shell)"
+        useradd --system --create-home --shell /usr/sbin/nologin "$MCP_USER"
+    fi
+    OUT="$("$BIN_DIR/linuxctl" create mcpd user "$MCP_USER" --config-path "$CONF_DIR")"
+    TOKEN="$(printf '%s\n' "$OUT" | awk '/Token/ {getline; gsub(/ /, ""); print; exit}')"
+    [ -n "$TOKEN" ] || die "failed to create MCP user $MCP_USER: $OUT"
+    TOKEN_MSG="$TOKEN"
+fi
+
+if [ "$HAVE_SYSTEMD" -eq 1 ]; then
+    install -m 0644 "$TMP/x/packaging/mcpd.service" "$UNIT"
+    systemctl daemon-reload
+    systemctl enable mcpd >/dev/null 2>&1
+    if [ "$START" -eq 1 ] && [ "$CHANGED" -eq 0 ] && [ -z "$TOKEN_MSG" ] && systemctl is-active --quiet mcpd; then
+        say "mcpd binary unchanged - not restarting ($("$BIN_DIR/mcpd" --version))"
+    elif [ "$START" -eq 1 ]; then
+        systemctl restart mcpd
+        sleep 1
+        systemctl is-active --quiet mcpd || die "mcpd failed to start - see: journalctl -u mcpd -n 50"
+        say "mcpd is running ($("$BIN_DIR/mcpd" --version))"
+    else
+        say "mcpd installed and enabled, not started (--no-start)"
+    fi
+else
+    warn "systemd not detected - the service was not installed. Start it manually: cd $CONF_ROOT && $BIN_DIR/mcpd"
+fi
+
+# ------------------------------------------------------------------ report
+missing=""
+for bin in smartctl traceroute file ss journalctl; do
+    command -v "$bin" >/dev/null 2>&1 || missing="$missing $bin"
+done
+[ -n "$missing" ] && warn "optional tools not found:$missing - the tools that wrap them won't work (Debian/Ubuntu: apt install smartmontools traceroute file iproute2)"
+
+PORT="$(awk '/^server:/ {s=1} s && /^  port:/ {print $2; exit}' "$CONF_DIR/daemon.yaml")"
+PORT="${PORT:-9091}"
+echo
+if [ "$UPGRADE" -eq 1 ]; then
+    say "Upgrade complete. Configs in $CONF_DIR were left untouched."
+else
+    say "Installed. mcpd listens on port $PORT on all interfaces."
+fi
+if [ -n "$TOKEN_MSG" ]; then
+    cat <<EOF
+
+  MCP user:  $MCP_USER
+  Token:     $TOKEN_MSG
+             (shown once - only a salted hash is stored; save it now)
+
+  Try it:
+    export MCP_SERVER=http://127.0.0.1:$PORT
+    export MCP_TOKEN=$TOKEN_MSG
+    linuxctl get system os-release
+
+EOF
+fi
+cat <<EOF
+  Security: mcpd speaks plain HTTP unless TLS is enabled in $CONF_DIR/daemon.yaml.
+  Firewall port $PORT to trusted addresses, or enable TLS, before exposing it.
+  Root access for tools is granted per user in $CONF_DIR/mcp-sudo.yaml.
+  Docs: https://nucleusv.github.io/linux-mcp-daemon/
+EOF
+}
+
+main "$@"
