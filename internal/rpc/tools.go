@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	sudorules "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/sudo-rules"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
+	sudorules "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/sudo-rules"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
 )
 
@@ -57,10 +57,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 	toolsList := map[string]interface{}{
 		"tools": []interface{}{
 			map[string]interface{}{
-				"name":        "files/list",
-				"tools_group": "files",
+				"name":          "files/list",
+				"tools_group":   "files",
 				"linuxctl_verb": "list",
-				"description": listDesc,
+				"description":   listDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -74,10 +74,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "files/read",
-				"tools_group": "files",
+				"name":          "files/read",
+				"tools_group":   "files",
 				"linuxctl_verb": "get",
-				"description": "Precision reading of file contents with chunking/streaming support.",
+				"description":   "Precision reading of file contents with chunking/streaming support.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -92,10 +92,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "files/create",
-				"tools_group": "files",
+				"name":          "files/create",
+				"tools_group":   "files",
 				"linuxctl_verb": "create",
-				"description": "Create a new file or replace file contents.",
+				"description":   "Create a new file or replace file contents.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -107,10 +107,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "files/update",
-				"tools_group": "files",
+				"name":          "files/update",
+				"tools_group":   "files",
 				"linuxctl_verb": "update",
-				"description": "Programmatically edit a file by appending text or replacing specific line ranges.",
+				"description":   "Programmatically edit a file by appending text or replacing specific line ranges.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -125,10 +125,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "files/find",
-				"tools_group": "files",
+				"name":          "files/find",
+				"tools_group":   "files",
 				"linuxctl_verb": "find",
-				"description": "Search for files in a directory hierarchy.",
+				"description":   "Search for files in a directory hierarchy.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -145,10 +145,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "files/filetype",
-				"tools_group": "files",
+				"name":          "files/filetype",
+				"tools_group":   "files",
 				"linuxctl_verb": "filetype",
-				"description": filetypeDesc,
+				"description":   filetypeDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -159,10 +159,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "disks/free",
-				"tools_group": "disks",
+				"name":          "disks/free",
+				"tools_group":   "disks",
 				"linuxctl_verb": "free",
-				"description": dfDesc,
+				"description":   dfDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -176,10 +176,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "disks/usage",
-				"tools_group": "disks",
+				"name":          "disks/usage",
+				"tools_group":   "disks",
 				"linuxctl_verb": "usage",
-				"description": duDesc,
+				"description":   duDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -198,10 +198,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "processes/list",
-				"tools_group": "processes",
+				"name":          "processes/list",
+				"tools_group":   "processes",
 				"linuxctl_verb": "get",
-				"description": "Lists running processes on the system. Use this to find a PID, then use the process://{pid}/{target} resource for deep metrics or processes/delete to kill it.",
+				"description":   "Lists running processes on the system. Use this to find a PID, then use the process://{pid}/{target} resource for deep metrics or processes/delete to kill it.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -215,10 +215,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "processes/delete",
-				"tools_group": "processes",
+				"name":          "processes/delete",
+				"tools_group":   "processes",
 				"linuxctl_verb": "delete",
-				"description": "Terminates a specific process by PID.",
+				"description":   "Terminates a specific process by PID.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -231,10 +231,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "network/nslookup",
-				"tools_group": "network",
+				"name":          "network/nslookup",
+				"tools_group":   "network",
 				"linuxctl_verb": "nslookup",
-				"description": "Query DNS records natively.",
+				"description":   "Query DNS records natively.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -245,28 +245,28 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "network/curl",
-				"tools_group": "network",
+				"name":          "network/curl",
+				"tools_group":   "network",
 				"linuxctl_verb": "curl",
-				"description": "Transfer data from a URL using native HTTP client.",
+				"description":   "Transfer data from a URL using native HTTP client.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"url":     map[string]interface{}{"type": "string"},
-						"method":  map[string]interface{}{"type": "string"},
-						"body":    map[string]interface{}{"type": "string", "description": "Request body"},
-						"headers": map[string]interface{}{"type": "object", "description": "Request headers, e.g. {\"Content-Type\": \"application/json\"}", "additionalProperties": map[string]interface{}{"type": "string"}},
+						"url":      map[string]interface{}{"type": "string"},
+						"method":   map[string]interface{}{"type": "string"},
+						"body":     map[string]interface{}{"type": "string", "description": "Request body"},
+						"headers":  map[string]interface{}{"type": "object", "description": "Request headers, e.g. {\"Content-Type\": \"application/json\"}", "additionalProperties": map[string]interface{}{"type": "string"}},
 						"insecure": map[string]interface{}{"type": "boolean", "description": "Skip TLS certificate verification"},
-						"timeout": map[string]interface{}{"type": "number"},
+						"timeout":  map[string]interface{}{"type": "number"},
 					},
 					"required": []string{"url"},
 				},
 			},
 			map[string]interface{}{
-				"name":        "network/arp",
-				"tools_group": "network",
+				"name":          "network/arp",
+				"tools_group":   "network",
 				"linuxctl_verb": "arp",
-				"description": "View the system ARP cache (IP to MAC address mappings).",
+				"description":   "View the system ARP cache (IP to MAC address mappings).",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -275,10 +275,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "network/ping",
-				"tools_group": "network",
+				"name":          "network/ping",
+				"tools_group":   "network",
 				"linuxctl_verb": "ping",
-				"description": "Measure TCP reachability and latency to a host.",
+				"description":   "Measure TCP reachability and latency to a host.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -290,10 +290,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "network/connections",
-				"tools_group": "network",
+				"name":          "network/connections",
+				"tools_group":   "network",
 				"linuxctl_verb": "connections",
-				"description": "Lists active network connections and listening ports. Hint: For physical network links and IPs, use the network://interfaces resource.",
+				"description":   "Lists active network connections and listening ports. Hint: For physical network links and IPs, use the network://interfaces resource.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -305,10 +305,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "memory/usage",
-				"tools_group": "memory",
+				"name":          "memory/usage",
+				"tools_group":   "memory",
 				"linuxctl_verb": "usage",
-				"description": "Returns memory and swap utilization information. Use cpu/load-average to check compute load.",
+				"description":   "Returns memory and swap utilization information. Use cpu/load-average to check compute load.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -318,10 +318,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "services/manage",
-				"tools_group": "system",
+				"name":          "services/manage",
+				"tools_group":   "system",
 				"linuxctl_verb": "services",
-				"description": "Control systemd services (start, stop, restart, enable, disable). To get detailed service properties and state, read the service://{name}/status resource. To view service logs, use the logs/journal-control tool.",
+				"description":   "Control systemd services (start, stop, restart, enable, disable). To get detailed service properties and state, read the service://{name}/status resource. To view service logs, use the logs/journal-control tool.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -333,10 +333,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "services/list",
-				"tools_group": "system",
+				"name":          "services/list",
+				"tools_group":   "system",
 				"linuxctl_verb": "services",
-				"description": "Lists systemd services with optional filtering. Output includes ActiveState, LoadState, and SubState.",
+				"description":   "Lists systemd services with optional filtering. Output includes ActiveState, LoadState, and SubState.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -351,10 +351,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "logs/journal-control",
-				"tools_group": "logs",
+				"name":          "logs/journal-control",
+				"tools_group":   "logs",
 				"linuxctl_verb": "journal",
-				"description": "Queries the systemd journal (journalctl equivalent). Requires privileged: true in containerized deployments, since journalctl only exists on the host, never in this daemon's own image.",
+				"description":   "Queries the systemd journal (journalctl equivalent). Requires privileged: true in containerized deployments, since journalctl only exists on the host, never in this daemon's own image.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -371,10 +371,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "logs/dmesg",
-				"tools_group": "logs",
+				"name":          "logs/dmesg",
+				"tools_group":   "logs",
 				"linuxctl_verb": "dmesg",
-				"description": "Read the kernel ring buffer for hardware/driver logs.",
+				"description":   "Read the kernel ring buffer for hardware/driver logs.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -385,10 +385,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "logs/logins",
-				"tools_group": "logs",
+				"name":          "logs/logins",
+				"tools_group":   "logs",
 				"linuxctl_verb": "logins",
-				"description": loginsDesc,
+				"description":   loginsDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -400,10 +400,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "kernel/system-control",
-				"tools_group": "kernel",
+				"name":          "kernel/system-control",
+				"tools_group":   "kernel",
 				"linuxctl_verb": "sysctl",
-				"description": "Reads or writes kernel parameters (sysctl equivalent) at runtime.",
+				"description":   "Reads or writes kernel parameters (sysctl equivalent) at runtime.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -414,10 +414,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "cpu/list",
-				"tools_group": "cpu",
+				"name":          "cpu/list",
+				"tools_group":   "cpu",
 				"linuxctl_verb": "get",
-				"description": "Retrieves CPU topology and architecture. See cpu/load-average for current utilization.",
+				"description":   "Retrieves CPU topology and architecture. See cpu/load-average for current utilization.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -427,10 +427,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "cpu/load-average",
-				"tools_group": "cpu",
+				"name":          "cpu/load-average",
+				"tools_group":   "cpu",
 				"linuxctl_verb": "load-average",
-				"description": "Retrieves system load averages (1m, 5m, 15m). See cpu/list for hardware topology.",
+				"description":   "Retrieves system load averages (1m, 5m, 15m). See cpu/list for hardware topology.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -438,10 +438,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "disks/list",
-				"tools_group": "disks",
+				"name":          "disks/list",
+				"tools_group":   "disks",
 				"linuxctl_verb": "get",
-				"description": "Lists block devices as a tree (equivalent to lsblk): disks, their partitions, and LVM/dm-crypt/RAID volumes nested under the devices they're built on, with MAJ:MIN, RM, SIZE, RO, TYPE and MOUNTPOINTS. json/yaml output is the same tree under \"blockdevices\" (like lsblk -J), with nested \"children\". To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool. (Use 'privileged: true' in containerized deployments to see the host's mount points.)",
+				"description":   "Lists block devices as a tree (equivalent to lsblk): disks, their partitions, and LVM/dm-crypt/RAID volumes nested under the devices they're built on, with MAJ:MIN, RM, SIZE, RO, TYPE and MOUNTPOINTS. json/yaml output is the same tree under \"blockdevices\" (like lsblk -J), with nested \"children\". To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool. (Use 'privileged: true' in containerized deployments to see the host's mount points.)",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -452,10 +452,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "disks/mounts",
-				"tools_group": "disks",
+				"name":          "disks/mounts",
+				"tools_group":   "disks",
 				"linuxctl_verb": "mounts",
-				"description": mountsDesc,
+				"description":   mountsDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -466,10 +466,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "disks/performance",
-				"tools_group": "disks",
+				"name":          "disks/performance",
+				"tools_group":   "disks",
 				"linuxctl_verb": "performance",
-				"description": "Retrieves granular block device I/O performance metrics (equivalent to iostat). Provides read/write sectors, merged operations, and I/O wait times in milliseconds. Use disks/list first to find valid block devices. If you want static capacity instead, use disks/free.",
+				"description":   "Retrieves granular block device I/O performance metrics (equivalent to iostat). Provides read/write sectors, merged operations, and I/O wait times in milliseconds. Use disks/list first to find valid block devices. If you want static capacity instead, use disks/free.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -479,10 +479,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "disks/health",
-				"tools_group": "disks",
+				"name":          "disks/health",
+				"tools_group":   "disks",
 				"linuxctl_verb": "health",
-				"description": "Retrieves detailed SMART health data for a drive (equivalent to smartctl -j -a). Returns JSON containing self-assessment test results, temperature, wear leveling, and sector errors. Must be run as root (privileged: true). Use this to diagnose failing hardware.",
+				"description":   "Retrieves detailed SMART health data for a drive (equivalent to smartctl -j -a). Returns JSON containing self-assessment test results, temperature, wear leveling, and sector errors. Must be run as root (privileged: true). Use this to diagnose failing hardware.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -492,10 +492,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "disks/partitions",
-				"tools_group": "disks",
+				"name":          "disks/partitions",
+				"tools_group":   "disks",
 				"linuxctl_verb": "partitions",
-				"description": "Retrieves partition boundaries for a drive (start/size, in sectors and bytes), parsed natively from /sys/class/block - no fdisk dependency. Use this to understand the low-level geometry and partition boundaries of a disk.",
+				"description":   "Retrieves partition boundaries for a drive (start/size, in sectors and bytes), parsed natively from /sys/class/block - no fdisk dependency. Use this to understand the low-level geometry and partition boundaries of a disk.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -504,10 +504,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "network/trace-path",
-				"tools_group": "network",
+				"name":          "network/trace-path",
+				"tools_group":   "network",
 				"linuxctl_verb": "trace-path",
-				"description": "Traces the network path to a host (equivalent to traceroute). Useful for debugging routing issues, identifying where packets are dropped, or measuring network latency across hops. Hint: Use network/ping for basic reachability before tracing the path.",
+				"description":   "Traces the network path to a host (equivalent to traceroute). Useful for debugging routing issues, identifying where packets are dropped, or measuring network latency across hops. Hint: Use network/ping for basic reachability before tracing the path.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -518,10 +518,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "system/os-release",
-				"tools_group": "system",
+				"name":          "system/os-release",
+				"tools_group":   "system",
 				"linuxctl_verb": "os-release",
-				"description": "Retrieves Linux distribution and kernel version.",
+				"description":   "Retrieves Linux distribution and kernel version.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -529,10 +529,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "system/packages",
-				"tools_group": "system",
+				"name":          "system/packages",
+				"tools_group":   "system",
 				"linuxctl_verb": "packages",
-				"description": pkgDesc,
+				"description":   pkgDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -542,10 +542,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "users/list",
-				"tools_group": "users",
+				"name":          "users/list",
+				"tools_group":   "users",
 				"linuxctl_verb": "get",
-				"description": usersDesc,
+				"description":   usersDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -556,10 +556,10 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
-				"name":        "auth/sudo-rules",
-				"tools_group": "auth",
+				"name":          "auth/sudo-rules",
+				"tools_group":   "auth",
 				"linuxctl_verb": "sudo-rules",
-				"description": "Returns your authorized tools and privileges from mcp-sudo.yaml.",
+				"description":   "Returns your authorized tools and privileges from mcp-sudo.yaml.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -630,39 +630,39 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 		var execErr error
 
 		standardWorkers := map[string]bool{
-			"files/list":          true,
-			"files/read":          true,
-			"files/create":        true,
-			"files/update":        true,
-			"files/find":          true,
-			"files/filetype":      true,
-			"services/manage":     true,
-			"services/list":       true,
+			"files/list":            true,
+			"files/read":            true,
+			"files/create":          true,
+			"files/update":          true,
+			"files/find":            true,
+			"files/filetype":        true,
+			"services/manage":       true,
+			"services/list":         true,
 			"logs/journal-control":  true,
-			"logs/dmesg":          true,
-			"logs/logins":         true,
+			"logs/dmesg":            true,
+			"logs/logins":           true,
 			"kernel/system-control": true,
-			"disks/free":          true,
-			"disks/usage":         true,
-			"disks/list":          true,
-			"disks/mounts":        true,
-			"disks/performance":   true,
-			"disks/health":        true,
-			"disks/partitions":    true,
-			"processes/list":      true,
-			"processes/delete":    true,
-			"network/connections": true,
-			"network/nslookup":    true,
-			"network/curl":        true,
-			"network/arp":         true,
-			"network/ping":        true,
-			"network/trace-path":  true,
-			"memory/usage":        true,
-			"cpu/list":            true,
-			"cpu/load-average":    true,
-			"system/os-release":   true,
-			"system/packages":     true,
-			"users/list":          true,
+			"disks/free":            true,
+			"disks/usage":           true,
+			"disks/list":            true,
+			"disks/mounts":          true,
+			"disks/performance":     true,
+			"disks/health":          true,
+			"disks/partitions":      true,
+			"processes/list":        true,
+			"processes/delete":      true,
+			"network/connections":   true,
+			"network/nslookup":      true,
+			"network/curl":          true,
+			"network/arp":           true,
+			"network/ping":          true,
+			"network/trace-path":    true,
+			"memory/usage":          true,
+			"cpu/list":              true,
+			"cpu/load-average":      true,
+			"system/os-release":     true,
+			"system/packages":       true,
+			"users/list":            true,
 		}
 
 		if params.Name == "auth/sudo-rules" {
@@ -696,6 +696,22 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 						if b, err := json.Marshal(argMap); err == nil {
 							params.Arguments = b
 						}
+					}
+				}
+			}
+
+			// Outbound network tools get this user's per-tool network
+			// policy injected by the daemon - always set or removed here,
+			// so a caller can never supply their own "_network_policy".
+			if params.Name == "network/curl" || params.Name == "network/ping" {
+				var argMap map[string]interface{}
+				if err := json.Unmarshal(params.Arguments, &argMap); err == nil {
+					delete(argMap, "_network_policy")
+					if pol := h.SudoConfig.NetworkPolicy(session.User, params.Name); pol != nil {
+						argMap["_network_policy"] = pol
+					}
+					if b, err := json.Marshal(argMap); err == nil {
+						params.Arguments = b
 					}
 				}
 			}

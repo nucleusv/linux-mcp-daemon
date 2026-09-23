@@ -1,6 +1,8 @@
 package curl
 
 import (
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/netpolicy"
+
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
@@ -21,6 +23,9 @@ type CurlArgs struct {
 	Insecure     bool              `json:"insecure,omitempty"`      // Insecure skips TLS certificate validation.
 	OutputFormat string            `json:"output_format,omitempty"` // OutputFormat specifies the desired output format. Defaults to text.
 	Timeout      int               `json:"timeout,omitempty"`       // Timeout is the request timeout in seconds. Defaults to 10.
+	// NetworkPolicy is injected by the daemon from mcp-sudo.yaml (never
+	// taken from the caller); nil means unrestricted.
+	NetworkPolicy *netpolicy.Policy `json:"_network_policy,omitempty"`
 }
 
 type CurlResponse struct {
@@ -52,11 +57,24 @@ func Curl(argsJSON []byte) (string, error) {
 		timeoutSecs = 10
 	}
 
-	client := &http.Client{
-		Timeout: time.Duration(timeoutSecs) * time.Second,
+	// Every connection - including each redirect hop - goes through the
+	// policy dialer, which checks the resolved IP and dials exactly it.
+	transport := &http.Transport{
+		DialContext:         args.NetworkPolicy.DialContext,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+	if args.NetworkPolicy == nil {
+		// Unrestricted: keep the default proxy-from-environment behavior.
+		// With a policy, no proxy - it would make the policy check the
+		// proxy's address instead of the real destination.
+		transport.Proxy = http.ProxyFromEnvironment
 	}
 	if args.Insecure {
-		client.Transport = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	client := &http.Client{
+		Timeout:   time.Duration(timeoutSecs) * time.Second,
+		Transport: transport,
 	}
 
 	// The schema advertises "body"; this used to read only "data", so every

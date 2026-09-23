@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/netpolicy"
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,6 +26,11 @@ type PrivilegedConfig struct {
 type ToolPrivilege struct {
 	Allowed bool     `yaml:"allowed"`
 	Paths   []string `yaml:"paths"`
+	// Network restricts where an outbound network tool (network/curl,
+	// network/ping) may connect. Unlike Allowed, which only governs
+	// running as root, it applies to every call of the tool - network
+	// access doesn't depend on the worker's uid. Absent = unrestricted.
+	Network *netpolicy.Policy `yaml:"network,omitempty"`
 }
 
 func LoadSudoConfig(path string) (*SudoConfig, error) {
@@ -41,6 +47,11 @@ func LoadSudoConfig(path string) (*SudoConfig, error) {
 	// Validation
 	for username, userSudo := range cfg.Users {
 		for toolName, privs := range userSudo.Privileged.Tools {
+			if privs.Network != nil {
+				if err := privs.Network.Validate(); err != nil {
+					return nil, fmt.Errorf("validation error in %s: user '%s', tool '%s': %v", path, username, toolName, err)
+				}
+			}
 			if toolName == "list_files" && privs.Allowed {
 				if len(privs.Paths) == 0 {
 					return nil, fmt.Errorf("validation error in %s: user '%s' has list_files allowed but no paths specified. 'paths' array must not be empty", path, username)
@@ -60,6 +71,17 @@ func (c *SudoConfig) CanRunAsRoot(username, toolName string) bool {
 		}
 	}
 	return false
+}
+
+// NetworkPolicy returns the network restrictions configured for this
+// user's use of toolName, or nil for none.
+func (c *SudoConfig) NetworkPolicy(username, toolName string) *netpolicy.Policy {
+	if userSudo, ok := c.Users[username]; ok {
+		if privs, ok := userSudo.Privileged.Tools[toolName]; ok {
+			return privs.Network
+		}
+	}
+	return nil
 }
 
 // GetAllowedPaths fetches the restricted paths for a tool.

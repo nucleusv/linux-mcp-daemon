@@ -29,3 +29,6 @@ This tool acts as a native equivalent of `curl` or `wget`, returning the respons
   "required": ["url"]
 }
 ```
+
+## Destination restrictions
+An optional per-user `network:` block on this tool's entry in `mcp-sudo.yaml` (`deny_private`, `allow`, `deny`) limits which addresses it may connect to - checked on the resolved IP at connect time, including every redirect hop. Unrestricted when absent. See `docs/website/docs/configuration/mcp-sudo.md` ("Restricting network destinations").

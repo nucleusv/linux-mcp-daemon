@@ -173,6 +173,13 @@ users:
           allowed: true
         network/curl:
           allowed: true
+          # Optional per-tool destination restrictions (network/curl and
+          # network/ping). Unlike `allowed` (root only), `network:` applies
+          # to every call of the tool. Absent = unrestricted. Example:
+          # network:
+          #   deny_private: true        # loopback, 10/8, 172.16/12, 192.168/16, 169.254/16, CGNAT, ULA, ...
+          #   allow: ["10.0.5.0/24", "intranet.example.com", "*.corp.example.com"]
+          #   deny: ["10.0.5.66"]       # always wins over allow
         network/nslookup:
           allowed: true
         network/ping:

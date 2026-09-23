@@ -1,6 +1,10 @@
 package ping
 
 import (
+	"context"
+
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/netpolicy"
+
 	"encoding/json"
 	"fmt"
 	"net"
@@ -14,14 +18,17 @@ type PingArgs struct {
 	Port         int    `json:"port,omitempty"`          // Port is the TCP port to ping. Defaults to 80.
 	Timeout      int    `json:"timeout,omitempty"`       // Timeout is the maximum time in seconds to wait for a reply. Defaults to 5.
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
+	// NetworkPolicy is injected by the daemon from mcp-sudo.yaml (never
+	// taken from the caller); nil means unrestricted.
+	NetworkPolicy *netpolicy.Policy `json:"_network_policy,omitempty"`
 }
 
 type PingResponse struct {
-	Host       string  `json:"host"`
-	Port       int     `json:"port"`
-	Success    bool    `json:"success"`
-	LatencyMs  float64 `json:"latency_ms"`
-	Error      string  `json:"error,omitempty"`
+	Host      string  `json:"host"`
+	Port      int     `json:"port"`
+	Success   bool    `json:"success"`
+	LatencyMs float64 `json:"latency_ms"`
+	Error     string  `json:"error,omitempty"`
 }
 
 func Ping(argsJSON []byte) (string, error) {
@@ -49,7 +56,9 @@ func Ping(argsJSON []byte) (string, error) {
 	timeout := time.Duration(timeoutSecs) * time.Second
 
 	start := time.Now()
-	conn, err := net.DialTimeout("tcp", target, timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	conn, err := args.NetworkPolicy.DialContext(ctx, "tcp", target)
 	latency := time.Since(start)
 
 	resp := PingResponse{

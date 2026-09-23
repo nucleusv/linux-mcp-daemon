@@ -25,3 +25,6 @@ This tool establishes a native TCP connection to a specified host and port (defa
   "required": ["host"]
 }
 ```
+
+## Destination restrictions
+An optional per-user `network:` block on this tool's entry in `mcp-sudo.yaml` (`deny_private`, `allow`, `deny`) limits which addresses it may connect to - checked on the resolved IP at connect time. Unrestricted when absent. See `docs/website/docs/configuration/mcp-sudo.md` ("Restricting network destinations").

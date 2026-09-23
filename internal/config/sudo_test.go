@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestPathAllowed(t *testing.T) {
 	cases := []struct {
@@ -58,5 +61,49 @@ func TestCanReadResourceAsRoot(t *testing.T) {
 		if got := c.CanReadResourceAsRoot("u", tc.scheme, tc.path); got != tc.want {
 			t.Errorf("CanReadResourceAsRoot(%q, %q) = %v, want %v", tc.scheme, tc.path, got, tc.want)
 		}
+	}
+}
+
+func TestLoadPerToolNetworkPolicy(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/mcp-sudo.yaml"
+	os.WriteFile(path, []byte(`users:
+  alice:
+    privileged:
+      tools:
+        network/curl:
+          allowed: true
+          network:
+            deny_private: true
+            allow: ["10.0.5.0/24"]
+        network/ping:
+          allowed: true
+`), 0o600)
+	cfg, err := LoadSudoConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pol := cfg.NetworkPolicy("alice", "network/curl")
+	if pol == nil || !pol.DenyPrivate || len(pol.Allow) != 1 {
+		t.Errorf("curl policy not loaded: %+v", pol)
+	}
+	if cfg.NetworkPolicy("alice", "network/ping") != nil {
+		t.Error("ping has no network block - must stay unrestricted")
+	}
+	if cfg.NetworkPolicy("bob", "network/curl") != nil {
+		t.Error("unknown user must be unrestricted")
+	}
+
+	os.WriteFile(path, []byte(`users:
+  alice:
+    privileged:
+      tools:
+        network/curl:
+          allowed: true
+          network:
+            allow: ["10.0.0.0/99"]
+`), 0o600)
+	if _, err := LoadSudoConfig(path); err == nil {
+		t.Error("invalid CIDR accepted at load time")
 	}
 }
