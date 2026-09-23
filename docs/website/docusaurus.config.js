@@ -10,7 +10,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Linux MCP Daemon',
+  title: 'Linux MCPd',
   tagline: 'High-performance AI filesystem bridge',
   favicon: 'img/favicon.ico',
 
@@ -84,7 +84,7 @@ const config = {
         respectPrefersColorScheme: true,
       },
       navbar: {
-        title: 'MCP Daemon',
+        title: 'Linux MCPd',
         logo: {
           alt: 'Logo',
           src: 'img/logo.svg',

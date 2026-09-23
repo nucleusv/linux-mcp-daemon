@@ -1,0 +1,9 @@
+{
+  "label": "CLI / Linuxctl",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "title": "linuxctl CLI",
+    "description": "Every way to use linuxctl: the verb/group grammar, the MCP protocol meta-group, the full per-tool command reference, and local-only daemon user/token administration."
+  }
+}

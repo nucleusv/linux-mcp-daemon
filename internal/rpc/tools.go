@@ -199,13 +199,14 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "processes/list",
 				"tools_group": "processes",
-				"linuxctl_verb": "list",
+				"linuxctl_verb": "get",
 				"description": "Lists running processes on the system. Use this to find a PID, then use the process://{pid}/{target} resource for deep metrics or processes/delete to kill it.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 						"user":          map[string]interface{}{"type": "string", "description": "Filter by username"},
+						"pid":           map[string]interface{}{"type": "integer", "description": "Filter to a single specific PID"},
 						"sort_by":       map[string]interface{}{"type": "string", "description": "Sort by cpu, mem, or pid"},
 						"limit":         map[string]interface{}{"type": "integer", "description": "Limit returned processes"},
 						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
@@ -316,13 +317,13 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "services/manage",
 				"tools_group": "system",
-				"linuxctl_verb": "manage",
+				"linuxctl_verb": "services",
 				"description": "Control systemd services (start, stop, restart, enable, disable). To get detailed service properties and state, read the service://{name}/status resource. To view service logs, use the logs/journal-control tool.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"service":    map[string]interface{}{"type": "string", "description": "Service name (e.g., 'kubelet.service')"},
-						"action":     map[string]interface{}{"type": "string", "description": "Action (start, stop, restart, reload, enable, disable)"},
+						"action":     map[string]interface{}{"type": "string", "enum": []string{"start", "stop", "restart", "reload", "enable", "disable"}, "description": "Action to perform on the service"},
 						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root"},
 					},
 					"required": []string{"service", "action"},
@@ -331,7 +332,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "services/list",
 				"tools_group": "system",
-				"linuxctl_verb": "list",
+				"linuxctl_verb": "services",
 				"description": "Lists systemd services with optional filtering. Output includes ActiveState, LoadState, and SubState.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -349,6 +350,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "logs/journal-control",
 				"tools_group": "logs",
+				"linuxctl_verb": "journal",
 				"description": "Queries the systemd journal (journalctl equivalent). Requires privileged: true in containerized deployments, since journalctl only exists on the host, never in this daemon's own image.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -368,6 +370,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "logs/dmesg",
 				"tools_group": "logs",
+				"linuxctl_verb": "dmesg",
 				"description": "Read the kernel ring buffer for hardware/driver logs.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -381,11 +384,12 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "logs/logins",
 				"tools_group": "logs",
+				"linuxctl_verb": "logins",
 				"description": loginsDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"type":       map[string]interface{}{"type": "string", "description": "\"success\" (default, wraps `last`) or \"failed\" (wraps `lastb`)"},
+						"type":       map[string]interface{}{"type": "string", "enum": []string{"success", "failed"}, "description": "\"success\" (default, wraps `last`) or \"failed\" (wraps `lastb`)"},
 						"limit":      map[string]interface{}{"type": "integer", "description": "Only return this many most recent entries"},
 						"user":       map[string]interface{}{"type": "string", "description": "Only return entries for this username"},
 						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - typically required for type: \"failed\""},
@@ -395,6 +399,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "kernel/system-control",
 				"tools_group": "kernel",
+				"linuxctl_verb": "sysctl",
 				"description": "Reads or writes kernel parameters (sysctl equivalent) at runtime.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -408,6 +413,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "cpu/list",
 				"tools_group": "cpu",
+				"linuxctl_verb": "get",
 				"description": "Retrieves CPU topology and architecture. See cpu/load-average for current utilization.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -420,6 +426,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "cpu/load-average",
 				"tools_group": "cpu",
+				"linuxctl_verb": "load-average",
 				"description": "Retrieves system load averages (1m, 5m, 15m). See cpu/list for hardware topology.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -430,6 +437,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/list",
 				"tools_group": "disks",
+				"linuxctl_verb": "get",
 				"description": "Lists block devices and partitions. To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -442,6 +450,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/mounts",
 				"tools_group": "disks",
+				"linuxctl_verb": "mounts",
 				"description": mountsDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -455,6 +464,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/performance",
 				"tools_group": "disks",
+				"linuxctl_verb": "performance",
 				"description": "Retrieves granular block device I/O performance metrics (equivalent to iostat). Provides read/write sectors, merged operations, and I/O wait times in milliseconds. Use disks/list first to find valid block devices. If you want static capacity instead, use disks/free.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -467,6 +477,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/health",
 				"tools_group": "disks",
+				"linuxctl_verb": "health",
 				"description": "Retrieves detailed SMART health data for a drive (equivalent to smartctl -j -a). Returns JSON containing self-assessment test results, temperature, wear leveling, and sector errors. Must be run as root (privileged: true). Use this to diagnose failing hardware.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -479,6 +490,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "disks/partitions",
 				"tools_group": "disks",
+				"linuxctl_verb": "partitions",
 				"description": "Retrieves partition boundaries for a drive (start/size, in sectors and bytes), parsed natively from /sys/class/block - no fdisk dependency. Use this to understand the low-level geometry and partition boundaries of a disk.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -490,6 +502,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "network/trace-path",
 				"tools_group": "network",
+				"linuxctl_verb": "trace-path",
 				"description": "Traces the network path to a host (equivalent to traceroute). Useful for debugging routing issues, identifying where packets are dropped, or measuring network latency across hops. Hint: Use network/ping for basic reachability before tracing the path.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -503,6 +516,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "system/os-release",
 				"tools_group": "system",
+				"linuxctl_verb": "os-release",
 				"description": "Retrieves Linux distribution and kernel version.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -513,6 +527,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "system/packages",
 				"tools_group": "system",
+				"linuxctl_verb": "packages",
 				"description": pkgDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -525,6 +540,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "users/list",
 				"tools_group": "users",
+				"linuxctl_verb": "get",
 				"description": usersDesc,
 				"inputSchema": map[string]interface{}{
 					"type": "object",
@@ -538,6 +554,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			map[string]interface{}{
 				"name":        "auth/sudo-rules",
 				"tools_group": "auth",
+				"linuxctl_verb": "sudo-rules",
 				"description": "Returns your authorized tools and privileges from mcp-sudo.yaml.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",

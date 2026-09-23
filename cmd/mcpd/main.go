@@ -137,7 +137,8 @@ func main() {
 	// ==========================================
 	// MASTER DAEMON MODE
 	// ==========================================
-	if err := loadConfig("configs/daemon.yaml"); err != nil {
+	daemonConfigPath = "configs/daemon.yaml"
+	if err := loadConfig(daemonConfigPath); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 

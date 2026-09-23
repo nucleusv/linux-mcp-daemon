@@ -1,0 +1,9 @@
+{
+  "label": "Resource Templates",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "title": "Resource Templates",
+    "description": "Every mcpd resource template - a parameterized URI (e.g. file:///{path}) read the same way as a static resource, with a placeholder filled in - each page has a linuxctl and curl example."
+  }
+}

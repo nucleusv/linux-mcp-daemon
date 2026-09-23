@@ -1,0 +1,9 @@
+{
+  "label": "MCP API",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "title": "MCP API Reference",
+    "description": "Every tool, resource, and resource template mcpd exposes over the Model Context Protocol - with a curl example for each, calling the daemon's raw JSON-RPC interface directly."
+  }
+}

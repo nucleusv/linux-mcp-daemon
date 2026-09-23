@@ -3,8 +3,9 @@ set -e
 
 DAEMON_URL=${DAEMON_URL:-"http://localhost:9091"}
 TOKEN=${TOKEN:-"my-test-token-123"}
+PRIV_TOKEN="my-privileged-token-123"
 
-echo "Testing linuxctl CLI..."
+echo "Testing linuxctl CLI (verb/group grammar - see plan/linuxctl-redesign.md)..."
 
 # Ensure we are in the project root
 cd "$(dirname "$0")/.."
@@ -51,37 +52,101 @@ run_tool() {
     sleep 0.3
 }
 
-run_tool "auth sudo-rules" "auth/sudo-rules"
-run_tool "files list --path /var/log --privileged true" "files/list"
-run_tool "files find --path /etc --name hosts*" "files/find"
-run_tool "files filetype --path /etc/hosts" "files/filetype"
-run_tool "disks usage --path /var/log --privileged true" "disks/usage"
-run_tool "disks free --path / --privileged true" "disks/free"
-run_tool "disks list" "disks/list"
-run_tool "disks mounts" "disks/mounts"
-run_tool "disks partitions" "disks/partitions"
-run_tool "disks performance" "disks/performance"
-run_tool "processes list --limit 5" "processes/list"
-run_tool "network connections" "network/connections"
-run_tool "network nslookup --host google.com" "network/nslookup"
-run_tool "network curl --url http://127.0.0.1:9091/ping" "network/curl"
-run_tool "network arp" "network/arp"
-run_tool "network ping --host 127.0.0.1" "network/ping"
-run_tool "memory usage" "memory/usage"
-run_tool "cpu list" "cpu/list"
-run_tool "cpu load-average" "cpu/load-average"
-run_tool "kernel system-control --key net.ipv4.ip_forward" "kernel/system-control"
-run_tool "logs dmesg --privileged true" "logs/dmesg"
-run_tool "logs journal-control --lines 3 --privileged true" "logs/journal-control"
-run_tool "logs journal-control --lines 3 --boot true --privileged true" "logs/journal-control (boot)"
+run_tool "get auth sudo-rules" "auth/sudo-rules"
+run_tool "get files list /var/log --privileged true" "files/list"
+run_tool "get files find /etc --name hosts*" "files/find"
+run_tool "get files filetype /etc/hosts" "files/filetype"
+run_tool "get disks usage /var/log --privileged true" "disks/usage"
+run_tool "get disks free / --privileged true" "disks/free"
+run_tool "get disks" "disks/list (bare)"
+run_tool "get disks mounts" "disks/mounts"
+run_tool "get disks partitions" "disks/partitions"
+run_tool "get disks partitions vda" "disks/partitions (device filter)"
+run_tool "get disks performance" "disks/performance (all devices)"
+run_tool "get disks performance vda" "disks/performance (one device)"
+run_tool "get disks health vda" "disks/health"
+run_tool "get processes --limit 5" "processes/list (bare)"
+run_tool "get network connections" "network/connections"
+run_tool "get network nslookup google.com" "network/nslookup"
+run_tool "get network curl http://127.0.0.1:9091/ping" "network/curl"
+run_tool "get network arp" "network/arp"
+run_tool "get network ping 127.0.0.1" "network/ping"
+run_tool "get memory usage" "memory/usage"
+run_tool "get cpu" "cpu/list (bare)"
+run_tool "get cpu load-average" "cpu/load-average"
+run_tool "get kernel sysctl net.ipv4.ip_forward" "kernel/system-control (read)"
+run_tool "get logs dmesg --privileged true" "logs/dmesg"
+run_tool "get logs journal --lines 3 --privileged true" "logs/journal-control"
+run_tool "get logs journal --lines 3 --boot true --privileged true" "logs/journal-control (boot)"
 # allow_fail=yes: this environment's kind node has no last/lastb binaries at
 # all (a minimal LinuxKit node with no login mechanism) - see
 # investigations/README.md. Expected to fail here; would work on a normal host.
-run_tool "logs logins --privileged true" "logs/logins" "yes"
-run_tool "system os-release" "system/os-release"
-run_tool "system packages" "system/packages"
-run_tool "users list --min_uid 1000" "users/list"
-run_tool "services list --pattern *" "services/list"
+run_tool "get logs logins --privileged true" "logs/logins" "yes"
+run_tool "get system os-release" "system/os-release"
+run_tool "get system packages" "system/packages"
+run_tool "get users --min_uid 1000" "users/list"
+# --pattern kube* not --pattern * : run_tool uses $cmd unquoted (word
+# splitting is required, since it's one string holding a whole multi-token
+# command) - a bare "*" is a real shell glob against the CURRENT DIRECTORY
+# at expansion time, not a literal token, and silently expands to every file
+# in the repo root as separate ignored arguments. "kube*" matches nothing
+# locally so bash leaves it literal, same trick the daemon's own live k8s
+# testing already relied on elsewhere this session.
+run_tool "get system services --pattern kube* --privileged true" "services/list (via system group)"
+
+echo "==========================================="
+echo "   Testing get-one vs get-many, describe,  "
+echo "   top, and mutations (not run via loop -  "
+echo "   these have side effects or need special "
+echo "   handling, not 4x-format repetition)     "
+echo "==========================================="
+
+echo "Testing: get processes <pid> (one result, not the bare many-result form)"
+FIRST_PID=$(./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" get processes --limit 1 --output json | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['pid'])")
+./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" get processes "$FIRST_PID" --output json
+
+echo "Testing: get processes top (fixed cpu+memory+processes recipe)"
+./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" get processes top
+
+echo "Testing: describe files /etc/hosts (aggregates stat+type)"
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" describe files /etc/hosts
+
+echo "Testing: describe disks vda"
+./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" describe disks vda
+
+echo "Testing: describe processes <pid> (aggregates status+cmdline+limits, excludes environ)"
+./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" describe processes "$FIRST_PID"
+
+echo "Testing: describe network interfaces eth0"
+./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" describe network interfaces eth0
+
+echo "Testing: create/update files (mutations, scratch path only)"
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" create files /tmp/linuxctl-grammar-test.txt --content "hello"
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" update files /tmp/linuxctl-grammar-test.txt --content " world" --append true
+
+echo "Testing: update kernel sysctl (no-op - sets to its own current value)"
+CURRENT_IP_FORWARD=$(./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" get kernel sysctl net.ipv4.ip_forward | grep -o '[01]$')
+./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" update kernel sysctl net.ipv4.ip_forward "$CURRENT_IP_FORWARD" --privileged true
+
+echo "Testing: explain <group> meta-verb"
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" explain files
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" explain system
+
+echo "Testing: tool <name> direct escape hatch (symmetric with resource <uri>)"
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" tool files/list --path /tmp
+
+echo "Testing: get mcp <tools|resources|prompts|info> meta-group"
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp tools > /tmp/mcp_tools_out.txt
+grep -q "files/list" /tmp/mcp_tools_out.txt || { echo "❌ FAILED: get mcp tools missing files/list"; exit 1; }
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp resources > /tmp/mcp_resources_out.txt
+grep -q "os://uname" /tmp/mcp_resources_out.txt || { echo "❌ FAILED: get mcp resources missing os://uname"; exit 1; }
+# prompts is a real MCP capability mcpd doesn't implement - this must report
+# that plainly, not silently succeed with an empty list or crash.
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp prompts > /tmp/mcp_prompts_out.txt
+grep -q "does not implement" /tmp/mcp_prompts_out.txt || { echo "❌ FAILED: get mcp prompts did not report the missing capability"; exit 1; }
+./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp info > /tmp/mcp_info_out.txt
+grep -q "protocolVersion" /tmp/mcp_info_out.txt || { echo "❌ FAILED: get mcp info missing protocolVersion"; exit 1; }
+echo "✅ get mcp tools/resources/prompts/info all correct"
 
 echo "==========================================="
 echo "  Testing Resources (JSON & Table outputs) "
@@ -136,7 +201,6 @@ fi
 # privileged - testuser has no service:// grant in mcp-sudo.yaml (only the
 # "privileged" reference account does), so this checks it with that token
 # rather than expanding testuser's grants just for test coverage.
-PRIV_TOKEN="my-privileged-token-123"
 echo "Testing Resource: service://kubelet.service/status (privileged token, JSON Output)"
 ./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" resource "service://kubelet.service/status" --output json
 

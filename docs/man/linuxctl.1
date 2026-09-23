@@ -3,39 +3,77 @@
 linuxctl \- Command line interface for the Linux MCP Daemon
 .SH SYNOPSIS
 .B linuxctl
-[\fIOPTIONS\fR] \fIresources\fR
+[\fIOPTIONS\fR] \fI<verb> <group> [target-keyword] [args]\fR
+.br
+.B linuxctl
+[\fIOPTIONS\fR] \fIdescribe <group> [target-keyword] <name>\fR
+.br
+.B linuxctl
+[\fIOPTIONS\fR] \fIexplain <group>\fR
+.br
+.B linuxctl
+[\fIOPTIONS\fR] \fIget mcp <tools|resources|prompts|info>\fR
+.br
+.B linuxctl
+[\fIOPTIONS\fR] \fItool <group>/<command>\fR [\fI\-\-flag val ...\fR]
 .br
 .B linuxctl
 [\fIOPTIONS\fR] \fIresource <uri>\fR
 .br
 .B linuxctl
-[\fIOPTIONS\fR] \fI<group>/<command>\fR [\fIcommand-options\fR]
+[\fIOPTIONS\fR] \fI<verb> mcpd user <username>\fR
 .SH DESCRIPTION
 .B linuxctl
 is the client utility for interacting with the Linux Model Context Protocol (MCP) Daemon (mcpd). It allows users and AI agents to send commands to the daemon running in the background.
+.PP
+Instead of one flat command per tool, \fBlinuxctl\fR speaks a small, uniform verb/group grammar: every tool, resource, and resource template mcpd exposes is reachable through the same handful of words, discovered dynamically from the daemon's live schema on every invocation. Adding a new tool server-side makes it usable via \fBlinuxctl\fR immediately, with no client changes.
 .SH OPTIONS
 .TP
 .BR \-server \ \fIURL\fR
 The URL of the mcpd server to connect to. Defaults to http://localhost:9091.
 .TP
 .BR \-token \ \fITOKEN\fR
-Bearer token for authentication. If not provided via this flag, the client will look for the \fBMCP_TOKEN\fR environment variable.
+Bearer token for authentication. If not provided via this flag, the client will look for the \fBMCP_TOKEN\fR environment variable. Not needed for the local-only \fBmcpd\fR admin group.
+.TP
+.BR \-config\-path \ \fIDIR\fR
+Local path to the daemon's \fBconfigs/\fR directory. Only used by the local-only \fBmcpd\fR admin group. Defaults to \fB./configs\fR.
+.SH THE GRAMMAR
+.PP
+.B linuxctl <verb> <group> [target-keyword] [name/args]
+.PP
+\fB<group>\fR is always present, always the tool's real \fBtools_group\fR (\fBfiles\fR, \fBdisks\fR, \fBprocesses\fR, \fBnetwork\fR, \fBdevices\fR, \fBkernel\fR, \fBlogs\fR, \fBsystem\fR, \fBusers\fR, \fBcpu\fR, \fBmemory\fR, \fBauth\fR). There is no top-level \fBservices\fR group \- \fBservices/list\fR and \fBservices/manage\fR live under \fBsystem\fR, reached as \fBsystem services\fR.
+.PP
+\fB<verb>\fR is one of exactly two universal words for reads-and-detail, plus a tool's own action word for mutations:
+.TP
+.B get
+The sole read verb, one result or many, no separate \fBlist\fR \- mirrors \fBkubectl\fR exactly (\fBkubectl get pods\fR vs \fBkubectl get pod nginx\fR, same verb, disambiguated by whether a name is given).
+.TP
+.B describe
+Rich, aggregated single-object detail, backed by resource templates. Not redundant with \fBget <group> <name>\fR: \fBget\fR returns the same lightweight format the many-result case uses, just filtered; \fBdescribe\fR combines several reads into one report and deliberately excludes secret-shaped data (e.g. a process's \fBenviron\fR) by default.
+.TP
+.B mutation words
+\fBcreate\fR, \fBupdate\fR, \fBdelete\fR, \fBrestart\fR, \fBstart\fR, \fBstop\fR, \fBenable\fR, \fBdisable\fR keep their own verb directly. The last five are enum values read from a tool's own schema, not hardcoded in the client.
+.PP
+\fB[target-keyword]\fR disambiguates which operation within the group, only needed when the group has more than one candidate under that verb. \fBtop\fR is one such keyword (not a verb) \- \fBget processes top\fR runs a fixed client recipe combining \fBcpu/load-average\fR, \fBmemory/usage\fR, and \fBprocesses/list\fR.
 .SH COMMANDS
 .TP
 .B ping
-Pings the mcpd daemon to verify connectivity and authentication. Returns a success message if the daemon is reachable and the token is valid.
-.TP
-.B resources
-Fetches and lists all statically available resources and resource templates from the daemon.
+Pings the mcpd daemon to verify connectivity and authentication.
 .TP
 .B resource <uri>
-Reads the exact contents of an MCP resource. Use \fB--output\fR to optionally format JSON output as \fBtable\fR or \fBjson\fR.
+Reads the exact contents of an MCP resource directly by URI. URIs use \fBscheme://path\fR syntax, e.g. \fBos://uname\fR, \fBfile:///etc/hosts\fR.
 .TP
-.B <group>/<command>
-Dynamically executes an MCP tool exposed by the daemon. For example, \fBfiles/list\fR or \fBdisks/free\fR. Run \fBlinuxctl\fR without arguments to see available groups, or \fBlinuxctl <group>\fR to see available commands within a group.
+.B explain <group>
+Lists every tool, resource, and template reachable in a group, with the exact verb/keyword for each \- generated dynamically from the live schema.
 .TP
-.B [command-options]
-Arguments specific to the command being executed. You can provide these either positionally (e.g., \fBlinuxctl files/list /var/log\fR) or as explicit flags (e.g., \fB--path /var/log --privileged true\fR). You can also use \fB--output table\fR or \fB--output json\fR to format structural data.
+.B get mcp <tools|resources|prompts|info>
+A reserved meta-group for the MCP protocol's own top-level catalog concepts, not a real \fBtools_group\fR. \fBinfo\fR prints the raw \fBinitialize\fR response (protocol version and declared capabilities); \fBprompts\fR calls the real \fBprompts/list\fR method and reports plainly that this daemon doesn't implement it, rather than pretending the catalog is empty.
+.TP
+.B <verb> <group> [target-keyword] [args]
+The main grammar described above. Arguments can be positional or explicit flags. \fB\-\-output table\fR, \fBwide\fR, \fByaml\fR, or \fBjson\fR formats the result, and is also forwarded as the underlying tool's own \fBoutput_format\fR argument where it has one.
+.TP
+.B tool <group>/<command> [\-\-flag val ...]
+Calls a tool directly by its literal name, symmetric with \fBresource <uri>\fR. Also the pre-redesign flat-syntax escape hatch for anything the verb resolver doesn't yet cover.
 .TP
 .B <verb> mcpd user <username>
 Local-only user/token administration: create, delete, update (rotate token), list, or describe an mcpd bearer-token user. Unlike every other command, this never talks to the daemon over the network - it reads and writes \fBconfigs/daemon.yaml\fR and \fBconfigs/mcp-sudo.yaml\fR directly on disk (path set by \fB\-\-config\-path\fR, default \fB./configs\fR), and needs no \fB\-token\fR/\fB\-server\fR flag. A newly created user's token is printed once, to the terminal only, and is never stored in plaintext - only its salted hash is written to \fBdaemon.yaml\fR.
@@ -65,19 +103,19 @@ Read the system uname as a resource:
 .PP
 Read connected USB devices as a formatted table:
 .IP
-.B linuxctl resource devices://usb --output table
+.B linuxctl get devices usb --output table
 .PP
-Execute a dynamic command with positional arguments:
+List a directory (explicit \fBlist\fR keyword \- see the man text for why files needs it):
 .IP
-.B linuxctl files/list /var/log
+.B linuxctl get files list /var/log --privileged true
 .PP
-Execute a dynamic command with explicit flags:
+Read a single file's contents (bare \- files' only other read candidate):
 .IP
-.B linuxctl disks/free --path / --privileged true
+.B linuxctl get files /etc/hosts
 .PP
-Native partition geometry, parsed from /sys/class/block (no fdisk dependency), with real output:
+Native partition geometry, parsed from /sys/class/block (no fdisk dependency):
 .IP
-.B linuxctl disks partitions --device vda --output json
+.B linuxctl get disks partitions vda --output json
 .nf
 [
   {
@@ -91,16 +129,28 @@ Native partition geometry, parsed from /sys/class/block (no fdisk dependency), w
 ]
 .fi
 .PP
-Read a kernel parameter (sysctl equivalent):
+Read, then write, a kernel parameter (same tool, sysctl equivalent):
 .IP
-.B linuxctl kernel system-control --key net.ipv4.ip_forward
+.B linuxctl get kernel sysctl net.ipv4.ip_forward
 .nf
 net.ipv4.ip_forward = 1
 .fi
+.IP
+.B linuxctl update kernel sysctl net.ipv4.ip_forward 1 --privileged true
 .PP
 Query the systemd journal for the current boot only (requires \fB\-\-privileged true\fR in containerized deployments, since journalctl only exists on the host):
 .IP
-.B linuxctl logs journal-control --unit kubelet.service --boot true --privileged true
+.B linuxctl get logs journal --unit kubelet.service --boot true --privileged true
+.PP
+One result vs many, same underlying tool:
+.IP
+.B linuxctl get processes --sort_by mem --limit 5
+.br
+.B linuxctl get processes 1234
+.PP
+Aggregated single-object detail (combines several reads, excludes environ):
+.IP
+.B linuxctl describe processes 1234
 .PP
 Create a new mcpd user (local-only, prints the token once):
 .IP

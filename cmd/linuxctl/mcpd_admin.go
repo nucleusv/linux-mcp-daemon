@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/yamledit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,86 +41,22 @@ func hashToken(token, salt string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// --- minimal yaml.Node helpers (gopkg.in/yaml.v3) ---
-// These edit the parsed document tree surgically so that comments and
-// formatting elsewhere in the file (e.g. daemon.yaml's worker: section) are
-// preserved - a plain struct unmarshal/marshal round trip would silently
-// drop every comment in the file.
-
-func mapGet(mapping *yaml.Node, key string) *yaml.Node {
-	if mapping == nil {
-		return nil
-	}
-	for i := 0; i+1 < len(mapping.Content); i += 2 {
-		if mapping.Content[i].Value == key {
-			return mapping.Content[i+1]
-		}
-	}
-	return nil
-}
-
-func mapSet(mapping *yaml.Node, key string, value *yaml.Node) {
-	for i := 0; i+1 < len(mapping.Content); i += 2 {
-		if mapping.Content[i].Value == key {
-			mapping.Content[i+1] = value
-			return
-		}
-	}
-	mapping.Content = append(mapping.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: key}, value)
-}
-
-func mapDelete(mapping *yaml.Node, key string) bool {
-	for i := 0; i+1 < len(mapping.Content); i += 2 {
-		if mapping.Content[i].Value == key {
-			mapping.Content = append(mapping.Content[:i], mapping.Content[i+2:]...)
-			return true
-		}
-	}
-	return false
-}
-
-func scalarNode(v string) *yaml.Node {
-	return &yaml.Node{Kind: yaml.ScalarNode, Value: v}
-}
-
-func emptyMapNode() *yaml.Node {
-	return &yaml.Node{Kind: yaml.MappingNode}
-}
-
 func loadYAMLDoc(path string) (*yaml.Node, error) {
-	data, err := os.ReadFile(path)
+	doc, err := yamledit.LoadDoc(path)
 	if err != nil {
-		return nil, err
-	}
-	var doc yaml.Node
-	if err := yaml.Unmarshal(data, &doc); err != nil {
 		return nil, fmt.Errorf("parsing %s: %w", path, err)
 	}
 	if len(doc.Content) == 0 {
 		return nil, fmt.Errorf("%s is empty or not a valid YAML document", path)
 	}
-	return &doc, nil
-}
-
-func saveYAMLDoc(path string, doc *yaml.Node) error {
-	var buf strings.Builder
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2) // matches this project's existing YAML style (yaml.v3 defaults to 4)
-	if err := enc.Encode(doc); err != nil {
-		enc.Close()
-		return err
-	}
-	if err := enc.Close(); err != nil {
-		return err
-	}
-	return os.WriteFile(path, []byte(buf.String()), 0644)
+	return doc, nil
 }
 
 func daemonUsersSeq(root *yaml.Node, create bool) *yaml.Node {
-	seq := mapGet(root, "users")
+	seq := yamledit.MapGet(root, "users")
 	if seq == nil && create {
 		seq = &yaml.Node{Kind: yaml.SequenceNode}
-		mapSet(root, "users", seq)
+		yamledit.MapSet(root, "users", seq)
 	}
 	return seq
 }
@@ -129,7 +66,7 @@ func daemonFindUser(seq *yaml.Node, username string) *yaml.Node {
 		return nil
 	}
 	for _, item := range seq.Content {
-		if u := mapGet(item, "username"); u != nil && u.Value == username {
+		if u := yamledit.MapGet(item, "username"); u != nil && u.Value == username {
 			return item
 		}
 	}
@@ -229,14 +166,26 @@ func mcpdCreateUser(daemonPath, sudoPath, username, setToken string) {
 	hash := hashToken(token, salt)
 	createdAt := time.Now().UTC().Format(time.RFC3339)
 
-	entry := emptyMapNode()
-	mapSet(entry, "username", scalarNode(username))
-	mapSet(entry, "token_salt", scalarNode(salt))
-	mapSet(entry, "token_hash", scalarNode(hash))
-	mapSet(entry, "created_at", scalarNode(createdAt))
+	entry := yamledit.EmptyMapNode()
+	yamledit.MapSet(entry, "username", yamledit.ScalarNode(username))
+	yamledit.MapSet(entry, "token_salt", yamledit.ScalarNode(salt))
+	yamledit.MapSet(entry, "token_hash", yamledit.ScalarNode(hash))
+	yamledit.MapSet(entry, "created_at", yamledit.ScalarNode(createdAt))
+	// pinned_uid/os_uid are deliberately left unset here, not set to a
+	// guessed value - they get populated by mcpd itself, trust-on-first-use,
+	// the first time this user successfully authenticates against a real
+	// running daemon (see cmd/mcpd/uid_pin.go). linuxctl can't safely set
+	// them at create time even if it wanted to: the OS account this
+	// username will map to often doesn't exist yet (create → useradd in the
+	// Dockerfile → rebuild is still an unavoidable three-step process - see
+	// the "Next steps" printed below), and even when it does exist locally,
+	// linuxctl may be running on a different machine entirely from wherever
+	// mcpd is actually deployed. Only the daemon, at the moment it resolves
+	// user.Lookup() for a real authenticated request, knows the UID that
+	// actually matters.
 	seq.Content = append(seq.Content, entry)
 
-	if err := saveYAMLDoc(daemonPath, doc); err != nil {
+	if err := yamledit.SaveDoc(daemonPath, doc); err != nil {
 		fmt.Printf("Error writing %s: %v\n", daemonPath, err)
 		os.Exit(1)
 	}
@@ -247,22 +196,22 @@ func mcpdCreateUser(daemonPath, sudoPath, username, setToken string) {
 		os.Exit(1)
 	}
 	sudoRoot := sudoDoc.Content[0]
-	usersMap := mapGet(sudoRoot, "users")
+	usersMap := yamledit.MapGet(sudoRoot, "users")
 	if usersMap == nil {
-		usersMap = emptyMapNode()
-		mapSet(sudoRoot, "users", usersMap)
+		usersMap = yamledit.EmptyMapNode()
+		yamledit.MapSet(sudoRoot, "users", usersMap)
 	}
-	if mapGet(usersMap, username) != nil {
+	if yamledit.MapGet(usersMap, username) != nil {
 		fmt.Printf("Note: %s had a stale entry for %q - replacing it with a fresh, empty grant block (this is the point of create/delete being atomic: a recreated user never inherits old grants)\n", sudoPath, username)
 	}
-	freshBlock := emptyMapNode()
-	privileged := emptyMapNode()
-	mapSet(privileged, "tools", emptyMapNode())
-	mapSet(privileged, "resources", emptyMapNode())
-	mapSet(freshBlock, "privileged", privileged)
-	mapSet(usersMap, username, freshBlock)
+	freshBlock := yamledit.EmptyMapNode()
+	privileged := yamledit.EmptyMapNode()
+	yamledit.MapSet(privileged, "tools", yamledit.EmptyMapNode())
+	yamledit.MapSet(privileged, "resources", yamledit.EmptyMapNode())
+	yamledit.MapSet(freshBlock, "privileged", privileged)
+	yamledit.MapSet(usersMap, username, freshBlock)
 
-	if err := saveYAMLDoc(sudoPath, sudoDoc); err != nil {
+	if err := yamledit.SaveDoc(sudoPath, sudoDoc); err != nil {
 		fmt.Printf("Error writing %s: %v\n", sudoPath, err)
 		os.Exit(1)
 	}
@@ -293,7 +242,7 @@ func mcpdDeleteUser(daemonPath, sudoPath, username string) {
 	removed := false
 	if seq != nil {
 		for i, item := range seq.Content {
-			if u := mapGet(item, "username"); u != nil && u.Value == username {
+			if u := yamledit.MapGet(item, "username"); u != nil && u.Value == username {
 				seq.Content = append(seq.Content[:i], seq.Content[i+1:]...)
 				removed = true
 				break
@@ -304,7 +253,7 @@ func mcpdDeleteUser(daemonPath, sudoPath, username string) {
 		fmt.Printf("Error: user %q not found in %s\n", username, daemonPath)
 		os.Exit(1)
 	}
-	if err := saveYAMLDoc(daemonPath, doc); err != nil {
+	if err := yamledit.SaveDoc(daemonPath, doc); err != nil {
 		fmt.Printf("Error writing %s: %v\n", daemonPath, err)
 		os.Exit(1)
 	}
@@ -315,10 +264,10 @@ func mcpdDeleteUser(daemonPath, sudoPath, username string) {
 		os.Exit(1)
 	}
 	sudoRoot := sudoDoc.Content[0]
-	if usersMap := mapGet(sudoRoot, "users"); usersMap != nil {
-		mapDelete(usersMap, username)
+	if usersMap := yamledit.MapGet(sudoRoot, "users"); usersMap != nil {
+		yamledit.MapDelete(usersMap, username)
 	}
-	if err := saveYAMLDoc(sudoPath, sudoDoc); err != nil {
+	if err := yamledit.SaveDoc(sudoPath, sudoDoc); err != nil {
 		fmt.Printf("Error writing %s: %v\n", sudoPath, err)
 		os.Exit(1)
 	}
@@ -358,19 +307,41 @@ func mcpdUpdateUser(daemonPath, username, setToken string) {
 	// storage) the same way a normal rotation does - drop the old field,
 	// write the new ones. created_at is left untouched if already present,
 	// so a rotation doesn't look like a brand-new account in `list`.
-	mapDelete(entry, "token")
-	mapSet(entry, "token_salt", scalarNode(salt))
-	mapSet(entry, "token_hash", scalarNode(hash))
-	if mapGet(entry, "created_at") == nil {
-		mapSet(entry, "created_at", scalarNode(time.Now().UTC().Format(time.RFC3339)))
+	yamledit.MapDelete(entry, "token")
+	yamledit.MapSet(entry, "token_salt", yamledit.ScalarNode(salt))
+	yamledit.MapSet(entry, "token_hash", yamledit.ScalarNode(hash))
+	if yamledit.MapGet(entry, "created_at") == nil {
+		yamledit.MapSet(entry, "created_at", yamledit.ScalarNode(time.Now().UTC().Format(time.RFC3339)))
 	}
 
-	if err := saveYAMLDoc(daemonPath, doc); err != nil {
+	// Rotating the token is treated as "I am consciously re-provisioning
+	// this identity" - the same signal that should reset the pinned OS UID
+	// (see cmd/mcpd/uid_pin.go). Without this, rotating a token for a
+	// legitimately reissued OS account (e.g. after a deliberate rebuild)
+	// would leave a stale pin in place that the next real request then
+	// immediately - and incorrectly - trips as a security mismatch.
+	//
+	// SECURITY NOTE / KNOWN LIMITATION: clearing the pin here re-arms
+	// trust-on-first-use, which is necessary for legitimate re-provisioning
+	// but is exactly as strong as TOFU ever is - if an attacker can rotate
+	// this token (e.g. by compromising whoever runs linuxctl locally) *and*
+	// control which OS account authenticates next, they get a fresh, silently
+	// accepted pin. This is a deliberate, bounded trust: linuxctl already
+	// requires local filesystem access to configs/, which this project
+	// treats as the trust boundary for all `mcpd` admin operations (see the
+	// package comment above) - it does not add a new one.
+	uidWasPinned := yamledit.MapDelete(entry, "pinned_uid")
+	yamledit.MapDelete(entry, "os_uid")
+
+	if err := yamledit.SaveDoc(daemonPath, doc); err != nil {
 		fmt.Printf("Error writing %s: %v\n", daemonPath, err)
 		os.Exit(1)
 	}
 
 	fmt.Printf("Rotated token for mcpd user %q.\n", username)
+	if uidWasPinned {
+		fmt.Println("Cleared its pinned OS UID - mcpd will re-pin whatever UID this username resolves to on its next successful call.")
+	}
 	if generated {
 		fmt.Printf("\nNew token (shown once - not stored in plaintext anywhere, save it now):\n  %s\n\n", token)
 	}
@@ -389,21 +360,33 @@ func mcpdListUsers(daemonPath string) {
 		fmt.Println("No mcpd users configured.")
 		return
 	}
-	fmt.Printf("%-20s %-25s %s\n", "USERNAME", "CREATED_AT", "AUTH")
+	fmt.Printf("%-20s %-25s %-30s %s\n", "USERNAME", "CREATED_AT", "AUTH", "PINNED_UID / OS_UID")
 	for _, item := range seq.Content {
 		username := "?"
-		if u := mapGet(item, "username"); u != nil {
+		if u := yamledit.MapGet(item, "username"); u != nil {
 			username = u.Value
 		}
 		createdAt := "-"
-		if c := mapGet(item, "created_at"); c != nil {
+		if c := yamledit.MapGet(item, "created_at"); c != nil {
 			createdAt = c.Value
 		}
 		auth := "salted-hash"
-		if mapGet(item, "token") != nil {
+		if yamledit.MapGet(item, "token") != nil {
 			auth = "PLAINTEXT (legacy - run update to migrate)"
 		}
-		fmt.Printf("%-20s %-25s %s\n", username, createdAt, auth)
+		pinned := "-"
+		if p := yamledit.MapGet(item, "pinned_uid"); p != nil {
+			pinned = p.Value
+		}
+		observed := "-"
+		if o := yamledit.MapGet(item, "os_uid"); o != nil {
+			observed = o.Value
+		}
+		uidStatus := fmt.Sprintf("%s / %s", pinned, observed)
+		if pinned != "-" && observed != "-" && pinned != observed {
+			uidStatus += "  ⚠ MISMATCH"
+		}
+		fmt.Printf("%-20s %-25s %-30s %s\n", username, createdAt, auth, uidStatus)
 	}
 }
 
@@ -418,8 +401,8 @@ func mcpdDescribeUser(sudoPath, username string) {
 		os.Exit(1)
 	}
 	root := doc.Content[0]
-	usersMap := mapGet(root, "users")
-	entry := mapGet(usersMap, username)
+	usersMap := yamledit.MapGet(root, "users")
+	entry := yamledit.MapGet(usersMap, username)
 	if entry == nil {
 		fmt.Printf("No mcp-sudo.yaml grants found for %q (denies everything by default).\n", username)
 		return

@@ -116,6 +116,9 @@ func authenticateRequest(r *http.Request) (string, bool) {
 			sum := sha256.Sum256([]byte(user.TokenSalt + providedToken))
 			computedHash := hex.EncodeToString(sum[:])
 			if subtle.ConstantTimeCompare([]byte(computedHash), []byte(user.TokenHash)) == 1 {
+				if !checkAndPinUID(user.Username) {
+					return "", false
+				}
 				return user.Username, true
 			}
 			continue
@@ -123,6 +126,9 @@ func authenticateRequest(r *http.Request) (string, bool) {
 		// Legacy plaintext accounts not yet migrated - still constant-time,
 		// since a plaintext token is exactly as sensitive as a hash match.
 		if subtle.ConstantTimeCompare([]byte(user.Token), []byte(providedToken)) == 1 && user.Token != "" {
+			if !checkAndPinUID(user.Username) {
+				return "", false
+			}
 			return user.Username, true
 		}
 	}

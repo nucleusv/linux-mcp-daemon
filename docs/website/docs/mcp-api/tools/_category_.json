@@ -1,0 +1,9 @@
+{
+  "label": "Tools",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "title": "Tools",
+    "description": "Every mcpd tool, callable via tools/call - each page has a linuxctl and curl example."
+  }
+}

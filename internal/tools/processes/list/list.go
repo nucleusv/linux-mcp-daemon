@@ -14,6 +14,7 @@ import (
 type GetProcessesArgs struct {
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 	User         string `json:"user"`
+	PID          int    `json:"pid"`
 	SortBy       string `json:"sort_by"`
 	Limit        int    `json:"limit"`
 	Privileged   bool   `json:"privileged"`
@@ -95,6 +96,14 @@ func Processes(argsJSON []byte) (string, error) {
 
 		// Filter by user if requested
 		if args.User != "" && p.User != args.User && strconv.Itoa(p.PID) != args.User {
+			continue
+		}
+
+		// Filter to a single specific PID if requested (linuxctl's `get
+		// processes <pid>` - the "one result" form of the same underlying
+		// list call, mirroring `kubectl get pod x` reusing `kubectl get
+		// pods`'s row format rather than being a separate endpoint).
+		if args.PID != 0 && p.PID != args.PID {
 			continue
 		}
 

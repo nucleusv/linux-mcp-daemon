@@ -51,8 +51,22 @@ type Config struct {
 		TokenSalt string `yaml:"token_salt,omitempty"`
 		TokenHash string `yaml:"token_hash,omitempty"`
 		CreatedAt string `yaml:"created_at,omitempty"`
+		// PinnedUID and OSUID implement trust-on-first-use OS identity
+		// pinning - see cmd/mcpd/uid_pin.go for the full mechanism, rationale,
+		// and its known limitation (it does not reliably catch a username
+		// being reused for a different real person if the OS happens to
+		// reissue the exact same UID, which useradd's gap-filling behavior
+		// makes plausible - see ARCHITECTURE.md). Never set these fields by
+		// hand; they're written only by the daemon itself.
+		PinnedUID string `yaml:"pinned_uid,omitempty"`
+		OSUID     string `yaml:"os_uid,omitempty"`
 	} `yaml:"users"`
 }
+
+// daemonConfigPath is set once in main() alongside loadConfig, and used by
+// uid_pin.go to persist pinned_uid/os_uid updates back to the same file
+// mcpd loaded them from.
+var daemonConfigPath string
 
 var (
 	daemonConfig   Config

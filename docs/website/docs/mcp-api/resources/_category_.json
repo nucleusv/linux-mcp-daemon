@@ -1,0 +1,9 @@
+{
+  "label": "Resources",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "title": "Resources",
+    "description": "Every mcpd static resource, readable via resources/read by its scheme://path URI - each page has a linuxctl and curl example."
+  }
+}
