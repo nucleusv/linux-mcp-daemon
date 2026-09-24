@@ -23,6 +23,8 @@ type GetProcessesArgs struct {
 	SortBy       string `json:"sort_by"`
 	Limit        int    `json:"limit"`
 	Privileged   bool   `json:"privileged"`
+	// HumanReadable prints RSS like 10Mi instead of bytes (text output).
+	HumanReadable bool `json:"human_readable,omitempty"`
 }
 
 type Process struct {
@@ -178,18 +180,24 @@ func Processes(argsJSON []byte) (string, error) {
 		}
 		return string(j), nil
 	}
-	return formatText(procs, args.SortBy == "cpu"), nil
+	return formatText(procs, args.SortBy == "cpu", args.HumanReadable), nil
 }
 
 // formatText prints processes like `ps -eo pid,ppid,user,stat,rss,args`
 // (plus %CPU when it was measured).
-func formatText(procs []Process, withCPU bool) string {
+func formatText(procs []Process, withCPU, humanReadable bool) string {
+	rss := func(kb int64) string {
+		if humanReadable {
+			return humanBytes(kb * 1024)
+		}
+		return fmt.Sprint(kb * 1024)
+	}
 	var b strings.Builder
 	w := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)
 	if withCPU {
-		fmt.Fprintln(w, "PID\tPPID\tUSER\tSTAT\tRSS(KiB)\t%CPU\tCOMMAND")
+		fmt.Fprintln(w, "PID\tPPID\tUSER\tSTAT\tRSS\t%CPU\tCOMMAND")
 	} else {
-		fmt.Fprintln(w, "PID\tPPID\tUSER\tSTAT\tRSS(KiB)\tCOMMAND")
+		fmt.Fprintln(w, "PID\tPPID\tUSER\tSTAT\tRSS\tCOMMAND")
 	}
 	for _, p := range procs {
 		cmd := p.Cmdline
@@ -197,9 +205,9 @@ func formatText(procs []Process, withCPU bool) string {
 			cmd = "[" + p.Comm + "]" // kernel threads have no command line
 		}
 		if withCPU {
-			fmt.Fprintf(w, "%d\t%d\t%s\t%s\t%d\t%.1f\t%s\n", p.PID, p.PPID, p.User, p.State, p.RSS, cpuOf(p), cmd)
+			fmt.Fprintf(w, "%d\t%d\t%s\t%s\t%s\t%.1f\t%s\n", p.PID, p.PPID, p.User, p.State, rss(p.RSS), cpuOf(p), cmd)
 		} else {
-			fmt.Fprintf(w, "%d\t%d\t%s\t%s\t%d\t%s\n", p.PID, p.PPID, p.User, p.State, p.RSS, cmd)
+			fmt.Fprintf(w, "%d\t%d\t%s\t%s\t%s\t%s\n", p.PID, p.PPID, p.User, p.State, rss(p.RSS), cmd)
 		}
 	}
 	w.Flush()
@@ -211,4 +219,22 @@ func cpuOf(p Process) float64 {
 		return 0
 	}
 	return *p.CPUPercent
+}
+
+// humanBytes formats bytes like ps/free -h: 10Mi, 1.8Gi.
+func humanBytes(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%dB", b)
+	}
+	v, exp := float64(b)/unit, 0
+	for v >= unit && exp < 4 {
+		v /= unit
+		exp++
+	}
+	suffix := []string{"Ki", "Mi", "Gi", "Ti", "Pi"}[exp]
+	if v < 10 {
+		return fmt.Sprintf("%.1f%s", v, suffix)
+	}
+	return fmt.Sprintf("%.0f%s", v, suffix)
 }

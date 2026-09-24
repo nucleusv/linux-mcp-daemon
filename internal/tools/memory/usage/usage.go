@@ -11,6 +11,8 @@ import (
 type GetUsageArgs struct {
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 	Detailed     bool   `json:"detailed"`
+	// HumanReadable prints sizes like `free -h` (1.8Gi) instead of bytes.
+	HumanReadable bool `json:"human_readable,omitempty"`
 }
 
 func Usage(argsJSON []byte) (string, error) {
@@ -72,11 +74,15 @@ func Usage(argsJSON []byte) (string, error) {
 		return string(b), nil
 	}
 
-	// Text like `free -h`: sizes in Ki/Mi/Gi, a Swap row.
+	// Text like `free -b`, or `free -h` with human_readable; a Swap row.
+	size := func(b uint64) string { return fmt.Sprint(b) }
+	if args.HumanReadable {
+		size = human
+	}
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%-6s %10s %10s %10s %10s %10s %10s\n", "", "total", "used", "free", "shared", "buff/cache", "available"))
-	sb.WriteString(fmt.Sprintf("%-6s %10s %10s %10s %10s %10s %10s\n", "Mem:", human(total), human(used), human(free), human(mem["Shmem"]), human(buffCache), human(available)))
-	sb.WriteString(fmt.Sprintf("%-6s %10s %10s %10s\n", "Swap:", human(swapTotal), human(swapUsed), human(swapFree)))
+	sb.WriteString(fmt.Sprintf("%-6s %12s %12s %12s %12s %12s %12s\n", "", "total", "used", "free", "shared", "buff/cache", "available"))
+	sb.WriteString(fmt.Sprintf("%-6s %12s %12s %12s %12s %12s %12s\n", "Mem:", size(total), size(used), size(free), size(mem["Shmem"]), size(buffCache), size(available)))
+	sb.WriteString(fmt.Sprintf("%-6s %12s %12s %12s\n", "Swap:", size(swapTotal), size(swapUsed), size(swapFree)))
 	return sb.String(), nil
 }
 

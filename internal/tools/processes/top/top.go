@@ -24,6 +24,9 @@ type TopArgs struct {
 	User         string `json:"user,omitempty"`          // Only processes of this user.
 	OutputFormat string `json:"output_format,omitempty"` // json/yaml/table/wide for structured output.
 	Privileged   bool   `json:"privileged,omitempty"`
+	// HumanReadable shows memory the way top does (MiB header, VIRT/RES/SHR
+	// scaled to m/g); without it, everything in bytes.
+	HumanReadable bool `json:"human_readable,omitempty"`
 }
 
 // Summary is top's header.
@@ -37,6 +40,7 @@ type Summary struct {
 	CPU         CPUPercent `json:"cpu_percent"`
 	MemMiB      MemMiB     `json:"mem_mib"`
 	SwapMiB     SwapMiB    `json:"swap_mib"`
+	kib         memKiB     // exact values behind MemMiB/SwapMiB, for byte output
 }
 
 type Tasks struct {
@@ -56,6 +60,12 @@ type CPUPercent struct {
 	IRQ     float64 `json:"hi"`
 	SoftIRQ float64 `json:"si"`
 	Steal   float64 `json:"st"`
+}
+
+// memKiB holds the header's exact values (the MiB fields are rounded to
+// top's one decimal), for the byte-precise text layout. Not in JSON.
+type memKiB struct {
+	total, free, used, buffCache, swapTotal, swapFree, swapUsed, avail uint64
 }
 
 type MemMiB struct {
@@ -150,9 +160,9 @@ func Top(argsJSON []byte) (string, error) {
 	case "wide":
 		// top's own layout already is the table; wide adds PPID/THR and
 		// the full command line, like `top -c`.
-		return FormatWide(snap), nil
+		return FormatWide(snap, args.HumanReadable), nil
 	}
-	return Format(snap), nil
+	return Format(snap, args.HumanReadable), nil
 }
 
 // Take samples the system twice, interval apart, so %CPU reflects recent
@@ -260,6 +270,10 @@ func Take(interval time.Duration) (Snapshot, error) {
 				Free:     mib(mem.SwapFree),
 				Used:     mib(mem.SwapTotal - mem.SwapFree),
 				AvailMem: mib(mem.Available),
+			},
+			kib: memKiB{
+				total: mem.Total, free: mem.Free, used: mem.Used(), buffCache: mem.BuffCache(),
+				swapTotal: mem.SwapTotal, swapFree: mem.SwapFree, swapUsed: mem.SwapTotal - mem.SwapFree, avail: mem.Available,
 			},
 		},
 		Processes: rows,
@@ -384,15 +398,16 @@ func scaleKiB(kib uint64, width int) string {
 	return strconv.FormatFloat(v, 'f', 0, 64) + "t"
 }
 
-// Format renders the snapshot like `top -b -n 1`.
-func Format(s Snapshot) string { return format(s, false) }
+// Format renders the snapshot like `top -b -n 1` (memory in bytes unless
+// human).
+func Format(s Snapshot, human bool) string { return format(s, false, human) }
 
 // FormatWide adds PPID and thread-count columns and shows each process's
 // full command line (kernel threads, which have none, as [name]) - like
 // `top -c` with extra fields.
-func FormatWide(s Snapshot) string { return format(s, true) }
+func FormatWide(s Snapshot, human bool) string { return format(s, true, human) }
 
-func format(s Snapshot, wide bool) string {
+func format(s Snapshot, wide, human bool) string {
 	var b strings.Builder
 	sm := s.Summary
 	users := "users"
@@ -406,10 +421,28 @@ func format(s Snapshot, wide bool) string {
 	c := sm.CPU
 	fmt.Fprintf(&b, "%%Cpu(s): %4.1f us, %4.1f sy, %4.1f ni, %4.1f id, %4.1f wa, %4.1f hi, %4.1f si, %4.1f st\n",
 		c.User, c.System, c.Nice, c.Idle, c.IOWait, c.IRQ, c.SoftIRQ, c.Steal)
-	fmt.Fprintf(&b, "MiB Mem : %8.1f total, %8.1f free, %8.1f used, %8.1f buff/cache\n",
-		sm.MemMiB.Total, sm.MemMiB.Free, sm.MemMiB.Used, sm.MemMiB.BuffCache)
-	fmt.Fprintf(&b, "MiB Swap: %8.1f total, %8.1f free, %8.1f used. %8.1f avail Mem\n\n",
-		sm.SwapMiB.Total, sm.SwapMiB.Free, sm.SwapMiB.Used, sm.SwapMiB.AvailMem)
+	if human {
+		fmt.Fprintf(&b, "MiB Mem : %8.1f total, %8.1f free, %8.1f used, %8.1f buff/cache\n",
+			sm.MemMiB.Total, sm.MemMiB.Free, sm.MemMiB.Used, sm.MemMiB.BuffCache)
+		fmt.Fprintf(&b, "MiB Swap: %8.1f total, %8.1f free, %8.1f used. %8.1f avail Mem\n\n",
+			sm.SwapMiB.Total, sm.SwapMiB.Free, sm.SwapMiB.Used, sm.SwapMiB.AvailMem)
+	} else {
+		k := sm.kib
+		fmt.Fprintf(&b, "B Mem : %d total, %d free, %d used, %d buff/cache\n",
+			k.total*1024, k.free*1024, k.used*1024, k.buffCache*1024)
+		fmt.Fprintf(&b, "B Swap: %d total, %d free, %d used. %d avail Mem\n\n",
+			k.swapTotal*1024, k.swapFree*1024, k.swapUsed*1024, k.avail*1024)
+	}
+	memCol := func(kib uint64, width int) string {
+		if human {
+			return scaleKiB(kib, width)
+		}
+		return strconv.FormatUint(kib*1024, 10)
+	}
+	virtW, resW := 7, 6
+	if !human {
+		virtW, resW = 12, 11 // bytes are wider
+	}
 
 	// top truncates USER to 8 columns ("privile+"); wide shows full names,
 	// so size the column to the longest one to keep everything aligned.
@@ -420,8 +453,8 @@ func format(s Snapshot, wide bool) string {
 			userW = max(userW, len(r.User))
 		}
 	}
-	fmt.Fprintf(&b, "%7s %-*s %3s %3s %7s %6s %6s %1s %5s %5s %9s%s %s\n",
-		"PID", userW, "USER", "PR", "NI", "VIRT", "RES", "SHR", "S", "%CPU", "%MEM", "TIME+", extraHead, "COMMAND")
+	fmt.Fprintf(&b, "%7s %-*s %3s %3s %*s %*s %*s %1s %5s %5s %9s%s %s\n",
+		"PID", userW, "USER", "PR", "NI", virtW, "VIRT", resW, "RES", resW, "SHR", "S", "%CPU", "%MEM", "TIME+", extraHead, "COMMAND")
 	for _, r := range s.Processes {
 		user := r.User
 		if len(user) > 8 && !wide {
@@ -435,8 +468,8 @@ func format(s Snapshot, wide bool) string {
 				command = "[" + r.Command + "]" // kernel thread, as top -c shows it
 			}
 		}
-		fmt.Fprintf(&b, "%7d %-*s %3s %3d %7s %6s %6s %1s %5.1f %5.1f %9s%s %s\n",
-			r.PID, userW, user, r.PR, r.NI, scaleKiB(r.VirtKiB, 7), scaleKiB(r.ResKiB, 6), scaleKiB(r.ShrKiB, 6),
+		fmt.Fprintf(&b, "%7d %-*s %3s %3d %*s %*s %*s %1s %5.1f %5.1f %9s%s %s\n",
+			r.PID, userW, user, r.PR, r.NI, virtW, memCol(r.VirtKiB, virtW), resW, memCol(r.ResKiB, resW), resW, memCol(r.ShrKiB, resW),
 			r.State, r.CPUPercent, r.MemPercent, r.TimePlus, extra, command)
 	}
 	return b.String()

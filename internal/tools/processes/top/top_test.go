@@ -124,7 +124,8 @@ func TestTakeComputesCPUFromTwoSamples(t *testing.T) {
 
 func TestFormatLayout(t *testing.T) {
 	fakeProc(t)
-	out, err := Top([]byte(`{"interval_ms": 50, "sort_by": "pid"}`))
+	// human_readable: top's own layout.
+	out, err := Top([]byte(`{"interval_ms": 50, "sort_by": "pid", "human_readable": true}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +175,7 @@ func TestWideAlignsLongUsernames(t *testing.T) {
 		{PID: 1, User: "root", PR: "20", Command: "a", Cmdline: "/a"},
 		{PID: 2, User: "privileged", PR: "20", Command: "b", Cmdline: "/b"},
 	}}
-	lines := strings.Split(FormatWide(snap), "\n")
+	lines := strings.Split(FormatWide(snap, true), "\n")
 	head, r1, r2 := lines[6], lines[7], lines[8]
 	// The PR value must sit under the PR header in every row, whatever
 	// the length of the user name before it.
@@ -184,5 +185,21 @@ func TestWideAlignsLongUsernames(t *testing.T) {
 	}
 	if !strings.Contains(r2, "privileged") {
 		t.Errorf("wide must not truncate user names: %q", r2)
+	}
+}
+
+func TestFormatBytes(t *testing.T) {
+	fakeProc(t)
+	out, err := Top([]byte(`{"interval_ms": 50, "sort_by": "pid"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(out, "\n")
+	// 2000 MiB exactly, from the fake meminfo's kB value - not a rounded MiB.
+	if !strings.HasPrefix(lines[3], "B Mem : 2097152000 total,") || !strings.HasPrefix(lines[4], "B Swap: 1048576000 total,") {
+		t.Errorf("header in bytes:\n%s\n%s", lines[3], lines[4])
+	}
+	if !strings.Contains(lines[6], "VIRT") || strings.Contains(out, "MiB") {
+		t.Errorf("unexpected byte layout:\n%s", out)
 	}
 }

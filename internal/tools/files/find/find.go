@@ -16,13 +16,14 @@ import (
 
 // FindFileArgs defines the parameters for the files/find tool.
 type FindFileArgs struct {
-	Path         string `json:"path"`                    // Path is the starting directory for the search. Defaults to "/".
-	Name         string `json:"name,omitempty"`          // Name is the glob pattern to match filenames.
-	Type         string `json:"type,omitempty"`          // Type filters by file type ('f' for file, 'd' for directory, 'l' for symlink).
-	Mtime        string `json:"mtime,omitempty"`         // Mtime filters by modification time (e.g. "+7" for older than 7 days).
-	Size         string `json:"size,omitempty"`          // Size filters by file size (e.g. "+100M" for larger than 100MB).
-	MaxDepth     int    `json:"max_depth,omitempty"`     // MaxDepth restricts the depth of the search.
-	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format. Defaults to text.
+	Path          string `json:"path"`                     // Path is the starting directory for the search. Defaults to "/".
+	Name          string `json:"name,omitempty"`           // Name is the glob pattern to match filenames.
+	Type          string `json:"type,omitempty"`           // Type filters by file type ('f' for file, 'd' for directory, 'l' for symlink).
+	Mtime         string `json:"mtime,omitempty"`          // Mtime filters by modification time (e.g. "+7" for older than 7 days).
+	Size          string `json:"size,omitempty"`           // Size filters by file size (e.g. "+100M" for larger than 100MB).
+	MaxDepth      int    `json:"max_depth,omitempty"`      // MaxDepth restricts the depth of the search.
+	OutputFormat  string `json:"output_format,omitempty"`  // OutputFormat specifies the desired output format. Defaults to text.
+	HumanReadable bool   `json:"human_readable,omitempty"` // HumanReadable prints sizes like 1.5 KiB instead of bytes.
 	// NoFollow is set by the daemon (never the caller) when this runs as
 	// root under a paths: restriction: a symlink in any component of path
 	// is then refused instead of followed out of the allowed directories.
@@ -128,7 +129,10 @@ func Find(argsJSON []byte) (string, error) {
 	for _, m := range matches {
 		size := ""
 		if m.Type != "d" {
-			size = formatBytes(m.Size)
+			size = fmt.Sprint(m.Size)
+			if args.HumanReadable {
+				size = formatBytes(m.Size)
+			}
 		}
 		sb.WriteString(fmt.Sprintf("%-10s %s\n", size, m.Path))
 	}

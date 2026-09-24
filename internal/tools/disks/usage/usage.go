@@ -24,6 +24,7 @@ type GetUsageArgs struct {
 	Threshold     int64    `json:"threshold,omitempty"`       // Threshold filters files. Positive skips smaller files, negative skips larger files.
 	SeparateDirs  bool     `json:"separate_dirs,omitempty"`   // SeparateDirs isolates a directory's size so it does not include subdirectories.
 	Privileged    bool     `json:"privileged,omitempty"`      // Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
+	HumanReadable bool     `json:"human_readable,omitempty"`  // HumanReadable prints sizes like 4.0 KiB (du -h) instead of bytes.
 	// NoFollow is set by the daemon (never the caller) when this runs as
 	// root under a paths: restriction: a symlink in any component of path
 	// is then refused instead of followed out of the allowed directories.
@@ -168,7 +169,9 @@ func Usage(argsJSON []byte) (string, error) {
 		outObj := map[string]interface{}{
 			"path":       cleanPath,
 			"total_size": totalSize,
-			"human_size": formatBytes(uint64(totalSize)),
+		}
+		if args.HumanReadable {
+			outObj["human_size"] = formatBytes(uint64(totalSize))
 		}
 		if args.MaxDepth > 0 {
 			sizes := make(map[string]int64, len(dirs))
@@ -181,12 +184,17 @@ func Usage(argsJSON []byte) (string, error) {
 		return string(b), nil
 	}
 
+	size := func(b int64) string { return fmt.Sprint(b) }
+	if args.HumanReadable {
+		size = func(b int64) string { return formatBytes(uint64(b)) }
+	}
+
 	var result string
 
 	if args.All && len(allFiles) > 0 {
 		result += "Individual files (largest first):\n"
 		for _, e := range allFiles {
-			result += fmt.Sprintf("%s\t%s\n", formatBytes(uint64(e.size)), e.path)
+			result += fmt.Sprintf("%s\t%s\n", size(e.size), e.path)
 		}
 		result += "---\n"
 	}
@@ -194,12 +202,12 @@ func Usage(argsJSON []byte) (string, error) {
 	if args.MaxDepth > 0 {
 		result += fmt.Sprintf("Directory sizes (up to depth %d, largest first):\n", args.MaxDepth)
 		for _, e := range dirs {
-			result += fmt.Sprintf("%s\t%s\n", formatBytes(uint64(e.size)), e.path)
+			result += fmt.Sprintf("%s\t%s\n", size(e.size), e.path)
 		}
 		result += "---\n"
 	}
 
-	result += fmt.Sprintf("Total size of %s: %s\n", cleanPath, formatBytes(uint64(totalSize)))
+	result += fmt.Sprintf("Total size of %s: %s\n", cleanPath, size(totalSize))
 
 	return result, nil
 }

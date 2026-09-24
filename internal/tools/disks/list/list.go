@@ -19,6 +19,8 @@ type GetBlockDevicesArgs struct {
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 	All          bool   `json:"all"`                     // All includes empty devices and RAM disks, like `lsblk -a`.
 	Privileged   bool   `json:"privileged,omitempty"`    // Privileged runs as root - in containerized deployments this reads the host's mount table for MOUNTPOINTS.
+	// HumanReadable shows SIZE like lsblk (60G); without it, bytes (lsblk -b).
+	HumanReadable bool `json:"human_readable,omitempty"`
 }
 
 // BlockDevice mirrors one entry of `lsblk -J`'s "blockdevices" tree, plus
@@ -102,6 +104,12 @@ func List(argsJSON []byte) (string, error) {
 	for _, name := range names {
 		if !hasParent[name] {
 			roots = append(roots, devices[name])
+		}
+	}
+	// SIZE (and "size") in bytes by default, like lsblk -b.
+	if !args.HumanReadable {
+		for _, dev := range devices {
+			dev.Size = strconv.FormatUint(dev.SizeBytes, 10)
 		}
 	}
 
