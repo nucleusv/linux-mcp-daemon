@@ -17,8 +17,12 @@ import (
 var (
 	caCertFlag      = flag.String("ca-cert", "", "Trust this certificate (PEM) for the mcpd server - e.g. its self-signed cert (default from MCP_CA_CERT)")
 	fingerprintFlag = flag.String("tls-fingerprint", "", "Trust the mcpd server whose certificate has this SHA-256 fingerprint (default from MCP_TLS_FINGERPRINT; mcpd logs it at startup)")
-	insecureFlag    = flag.Bool("insecure", false, "Skip TLS certificate verification (or MCP_INSECURE=1) - for testing only")
+	insecureFlag    = flag.Bool("tls-insecure", false, "Skip TLS certificate verification, like curl -k (or MCP_TLS_INSECURE=1) - for testing only")
 )
+
+func init() {
+	flag.BoolVar(insecureFlag, "k", false, "Short for -tls-insecure")
+}
 
 // localCertPaths are where a self-signed mcpd certificate is found on the
 // daemon's own host, trusted automatically when readable.
@@ -39,15 +43,15 @@ var (
 // httpClient returns the client every request to mcpd goes through. Trust,
 // in order: a pinned fingerprint (MCP_TLS_FINGERPRINT), a given
 // certificate (MCP_CA_CERT), the system's roots plus the local mcpd
-// certificate when readable; or nothing at all with MCP_INSECURE=1.
+// certificate when readable; or nothing at all with MCP_TLS_INSECURE=1.
 func httpClient() (*http.Client, error) {
 	clientOnce.Do(func() {
 		cfg := &tls.Config{MinVersion: tls.VersionTLS12}
 		fp := firstNonEmpty(*fingerprintFlag, os.Getenv("MCP_TLS_FINGERPRINT"))
 		ca := firstNonEmpty(*caCertFlag, os.Getenv("MCP_CA_CERT"))
 		switch {
-		case *insecureFlag || os.Getenv("MCP_INSECURE") == "1":
-			fmt.Fprintln(os.Stderr, "Warning: TLS certificate verification is off (--insecure / MCP_INSECURE)")
+		case *insecureFlag || os.Getenv("MCP_TLS_INSECURE") == "1":
+			fmt.Fprintln(os.Stderr, "Warning: TLS certificate verification is off (-tls-insecure / -k / MCP_TLS_INSECURE)")
 			cfg.InsecureSkipVerify = true
 		case fp != "":
 			want, err := tlsutil.NormalizeFingerprint(fp)

@@ -54,8 +54,8 @@ linuxctl completion <bash|zsh>
 - `MCP_CA_CERT` (or `-ca-cert`)
   Trust this certificate file (PEM) - e.g. a copy of the host's `/etc/mcpd/configs/tls/mcpd.crt`. Without either, `linuxctl` trusts the system's CAs plus, on the daemon's own host, its certificate when readable.
 
-- `MCP_INSECURE=1` (or `-insecure`)
-  Skip certificate verification. For testing only.
+- `MCP_TLS_INSECURE=1` (or `-tls-insecure`, short `-k` as in curl)
+  Skip certificate verification. For testing only: any certificate is accepted, a forged one too, and the token is sent to it - pin the fingerprint instead.
 
 ## Quick example
 

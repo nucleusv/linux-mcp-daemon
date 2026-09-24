@@ -97,8 +97,8 @@ Trust the server whose certificate has this SHA-256 fingerprint (\fBsha256:\fIhe
 .B MCP_CA_CERT
 Trust this PEM certificate file for the server.
 .TP
-.B MCP_INSECURE
-Set to 1 to skip certificate verification (testing only).
+.B MCP_TLS_INSECURE
+Set to 1 to skip certificate verification, like \fBcurl \-k\fR (testing only); or pass \fB\-tls\-insecure\fR / \fB\-k\fR. Any certificate is then accepted, a forged one too, and the token is sent to it.
 .SH EXAMPLES
 .PP
 Ping the daemon using the default server and a specific token:
