@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"debug/elf"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,12 +15,18 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/nucleusv/linux-mcp-daemon/internal/fsafe"
 )
 
 // FileTypeArgs defines the parameters for files/filetype and the
 // file://{path}/type resource.
 type FileTypeArgs struct {
 	Path string `json:"path"` // Path is the absolute path to the file. Required.
+	// NoFollow is set by the daemon (never the caller) when this runs as
+	// root under a paths: restriction: a symlink in any path component is
+	// then refused instead of followed out of the allowed directories.
+	NoFollow bool `json:"_no_follow,omitempty"`
 }
 
 // sniffLen is how much of a file is read to identify it. Every signature
@@ -34,7 +41,11 @@ func Type(argsJSON []byte) (string, error) {
 	if args.Path == "" {
 		return "", fmt.Errorf("path argument is required")
 	}
-	mime, err := Detect(args.Path)
+	detect := Detect
+	if args.NoFollow {
+		detect = DetectNoFollow
+	}
+	mime, err := detect(args.Path)
 	if err != nil {
 		return "", err
 	}
@@ -48,26 +59,72 @@ func Detect(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	switch mode := info.Mode(); {
-	case mode&os.ModeSymlink != 0:
-		return "inode/symlink", nil
-	case mode.IsDir():
-		return "inode/directory", nil
-	case mode&os.ModeCharDevice != 0:
-		return "inode/chardevice", nil
-	case mode&os.ModeDevice != 0:
-		return "inode/blockdevice", nil
-	case mode&os.ModeNamedPipe != 0:
-		return "inode/fifo", nil
-	case mode&os.ModeSocket != 0:
-		return "inode/socket", nil
+	if t := inodeType(info.Mode()); t != "" {
+		return t, nil
 	}
-
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
+	return detectOpen(f, filepath.Base(path))
+}
+
+// DetectNoFollow is Detect without following a symlink in any directory
+// component either; the file itself, if a symlink, is still reported as
+// inode/symlink without being read.
+func DetectNoFollow(path string) (string, error) {
+	clean := filepath.Clean(path)
+	parent, err := fsafe.Open(filepath.Dir(clean))
+	if err != nil {
+		return "", err
+	}
+	defer parent.Close()
+	if clean == "/" {
+		return "inode/directory", nil
+	}
+	n, err := parent.Child(filepath.Base(clean))
+	if errors.Is(err, fsafe.ErrSymlink) {
+		return "inode/symlink", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	defer n.Close()
+	info, err := os.Stat(n.ProcPath()) // this exact inode (checked not to be a symlink)
+	if err != nil {
+		return "", err
+	}
+	if t := inodeType(info.Mode()); t != "" {
+		return t, nil
+	}
+	f, err := n.Reopen(os.O_RDONLY)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	return detectOpen(f, filepath.Base(clean))
+}
+
+func inodeType(mode os.FileMode) string {
+	switch {
+	case mode&os.ModeSymlink != 0:
+		return "inode/symlink"
+	case mode.IsDir():
+		return "inode/directory"
+	case mode&os.ModeCharDevice != 0:
+		return "inode/chardevice"
+	case mode&os.ModeDevice != 0:
+		return "inode/blockdevice"
+	case mode&os.ModeNamedPipe != 0:
+		return "inode/fifo"
+	case mode&os.ModeSocket != 0:
+		return "inode/socket"
+	}
+	return ""
+}
+
+func detectOpen(f *os.File, name string) (string, error) {
 	head := make([]byte, sniffLen)
 	n, err := io.ReadFull(f, head)
 	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
@@ -80,7 +137,7 @@ func Detect(path string) (string, error) {
 	if bytes.HasPrefix(head, []byte("\x7fELF")) {
 		return elfType(f), nil
 	}
-	return sniff(head, filepath.Base(path)), nil
+	return sniff(head, name), nil
 }
 
 // magic lists signatures http.DetectContentType doesn't know, or names

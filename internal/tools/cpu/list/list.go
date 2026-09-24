@@ -29,7 +29,7 @@ func List(argsJSON []byte) (string, error) {
 	// Parse basic CPU info
 	var processors []map[string]string
 	var currentProc map[string]string
-	
+
 	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -40,7 +40,7 @@ func List(argsJSON []byte) (string, error) {
 			}
 			continue
 		}
-		
+
 		parts := strings.SplitN(line, ":", 2)
 		if len(parts) == 2 {
 			if currentProc == nil {
@@ -88,6 +88,6 @@ func List(argsJSON []byte) (string, error) {
 		sb.WriteString(fmt.Sprintf("CPU MHz/BogoMIPS: %s\n", mhz))
 		sb.WriteString(fmt.Sprintf("Cache Size: %s\n", cache))
 	}
-	
+
 	return sb.String(), nil
 }

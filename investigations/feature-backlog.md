@@ -87,6 +87,12 @@ Suggested mapping of what exists today:
 Carry structured fields (`user`, `session`, `tool`, `privileged`, `duration_ms`, `exit`) rather than formatted strings. Keep the existing safeguards: arguments go through `redactArgs`, responses are logged by size only - **debug must never dump tool output or tokens**. Optional: change the level at runtime (SIGHUP re-reading `logging`, or a `linuxctl` admin command) so debugging a live host doesn't need a restart.
 **Test plan**: at `info`, a tool call writes exactly one call line (plus one audit line if mutating) and no per-request JSON-RPC lines; at `debug`, the session lifecycle and RPC lines appear; at `warn`, a throttled or hijack attempt still logs while normal calls don't; `format: json` output parses line by line; grep every level's output for a known test token and a known file's contents to prove neither leaks.
 
+### 21. Native `files/find` (no find(1)), parallel, with the same filters
+**Now**: `files/find` runs the system `find` with validated arguments (`-P`, never follows symlinks; with `_no_follow` the start directory is opened without symlinks and searched as `.`). It works, but it's one of the last tools wrapping a binary.
+**Build**: a Go walker with the same filters (`name` glob, `type`, `mtime`, `size`, `max_depth`, virtual-FS pruning), walking directories concurrently for speed comparable to GNU find, and descriptor-relative (openat with O_NOFOLLOW, as `internal/fsafe`) so a directory swapped for a symlink mid-walk can't redirect it.
+**Status**: deferred at the user's request (2026-09-24) - a first attempt was interrupted by the assistant's safety filter; the user sent feedback about it. Try again later.
+**Test plan**: same results as `find` (sorted paths) on a host tree and on generated trees with every filter; symlink loops and swapped directories never escape the start directory; runtime within ~2x of GNU find on a large tree.
+
 ## Explicitly not recommended (from `plan/linux-admin-roadmap.md`, reaffirmed by this investigation)
 
 Disk partitioning (write) and firewall rules (write) both remain correctly deferred pending the dry-run/confirmation governance design — nothing in this investigation's live testing changed that assessment; if anything, the real, currently-full disk found in `disk-storage.md` makes it *more* important that any future write-capable disk tool ships with strong safeguards from day one, not less.

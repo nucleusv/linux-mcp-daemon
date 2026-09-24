@@ -13,8 +13,8 @@ import (
 // GetMountsArgs are the tool's input arguments.
 type GetMountsArgs struct {
 	OutputFormat string `json:"output_format,omitempty"` // Desired output format (json/yaml/table/wide). Defaults to text.
-	FSType       string `json:"fs_type,omitempty"`        // Optional filter: only include mounts of this filesystem type (e.g. "ext4", "overlay").
-	Privileged   bool   `json:"privileged,omitempty"`     // Run as root.
+	FSType       string `json:"fs_type,omitempty"`       // Optional filter: only include mounts of this filesystem type (e.g. "ext4", "overlay").
+	Privileged   bool   `json:"privileged,omitempty"`    // Run as root.
 }
 
 // Mount describes a single mounted filesystem.

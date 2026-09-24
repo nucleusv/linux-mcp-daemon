@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nucleusv/linux-mcp-daemon/internal/fsafe"
 	"golang.org/x/sys/unix"
 )
 
@@ -27,6 +28,10 @@ type GetListOfFilesArgs struct {
 	DirsFirst     bool   `json:"dirs_first,omitempty"`     // Directories before files (ls --group-directories-first).
 	NumericIDs    bool   `json:"numeric_ids,omitempty"`    // Show uid/gid numbers instead of names (ls -n).
 	Privileged    bool   `json:"privileged,omitempty"`     // Run as root (if authorized in mcp-sudo.yaml).
+	// NoFollow is set by the daemon (never the caller) when this runs as
+	// root under a paths: restriction: a symlink in any path component is
+	// then refused instead of followed out of the allowed directories.
+	NoFollow bool `json:"_no_follow,omitempty"`
 }
 
 // Entry is one directory entry, with everything `ls -l` shows.
@@ -69,6 +74,21 @@ func ListOfFiles(argsJSON []byte) (string, error) {
 	long := args.Long == nil || *args.Long
 
 	dir := filepath.Clean(args.Path)
+	parent := filepath.Dir(dir)
+	if args.NoFollow {
+		// Read the directory through a descriptor reached without symlinks;
+		// entries are then looked up relative to it (names are shown as is).
+		n, err := fsafe.Open(dir)
+		if err != nil {
+			return "", fmt.Errorf("failed to read directory: %v", err)
+		}
+		defer n.Close()
+		if !n.IsDir() {
+			return "", fmt.Errorf("failed to read directory: %s: not a directory", dir)
+		}
+		dir = n.ProcPath()
+		parent = dir + "/.."
+	}
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
 		return "", fmt.Errorf("failed to read directory: %v", err)
@@ -86,7 +106,7 @@ func ListOfFiles(argsJSON []byte) (string, error) {
 	}
 	if args.All {
 		add(".", dir)
-		add("..", filepath.Dir(dir))
+		add("..", parent)
 	}
 	for _, e := range dirEntries {
 		if !args.All && strings.HasPrefix(e.Name(), ".") {

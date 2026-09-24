@@ -202,6 +202,17 @@ func (c *SudoConfig) GetAllowedPaths(username, toolName string) []string {
 	return nil
 }
 
+// CoversRoot reports whether an allowed-paths list includes "/" - then
+// every path is allowed and following symlinks can't lead anywhere new.
+func CoversRoot(allowed []string) bool {
+	for _, a := range allowed {
+		if strings.HasPrefix(a, "/") && filepath.Clean(a) == "/" {
+			return true
+		}
+	}
+	return false
+}
+
 // PathAllowed reports whether path lies inside one of the allowed
 // directories, returning the cleaned path the caller must then operate on.
 // The check is lexical and boundary-aware: path is cleaned first (so

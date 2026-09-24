@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/nucleusv/linux-mcp-daemon/internal/fsafe"
 )
 
 // ReadFileArgs defines the parameters for the files/read tool.
@@ -16,7 +18,11 @@ type ReadFileArgs struct {
 	Offset    *int64 `json:"offset,omitempty"`     // Offset is the starting byte offset. Takes precedence if limit is set and lines are not.
 	Limit     *int64 `json:"limit,omitempty"`      // Limit is the maximum number of bytes to read. Defaults to 10KB safely.
 	StartLine *int   `json:"start_line,omitempty"` // StartLine is the starting line number (1-indexed). Takes precedence over byte offsets.
-	EndLine   *int   `json:"end_line,omitempty"`   // EndLine is the inclusive ending line number. 
+	EndLine   *int   `json:"end_line,omitempty"`   // EndLine is the inclusive ending line number.
+	// NoFollow is set by the daemon (never the caller) when this runs as
+	// root under a paths: restriction: a symlink in any path component is
+	// then refused instead of followed out of the allowed directories.
+	NoFollow bool `json:"_no_follow,omitempty"`
 }
 
 const maxSafeBytes = 10240 // 10KB fallback
@@ -31,7 +37,13 @@ func Read(argsJSON []byte) (string, error) {
 		return "", fmt.Errorf("path argument is required")
 	}
 
-	file, err := os.Open(args.Path)
+	var file *os.File
+	var err error
+	if args.NoFollow {
+		file, err = fsafe.OpenFile(args.Path, os.O_RDONLY)
+	} else {
+		file, err = os.Open(args.Path)
+	}
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %v", err)
 	}
@@ -116,7 +128,7 @@ func Read(argsJSON []byte) (string, error) {
 			}
 			return string(buf[:n]), nil
 		}
-		
+
 		// If limit is nil but offset is provided, read remaining file (up to safe max)
 		buf = make([]byte, maxSafeBytes)
 		n, err := io.ReadFull(file, buf)

@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/nucleusv/linux-mcp-daemon/internal/fsafe"
 )
 
 // FindFileArgs defines the parameters for the files/find tool.
@@ -20,6 +22,10 @@ type FindFileArgs struct {
 	Size         string `json:"size,omitempty"`          // Size filters by file size (e.g. "+100M" for larger than 100MB).
 	MaxDepth     int    `json:"max_depth,omitempty"`     // MaxDepth restricts the depth of the search.
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format. Defaults to text.
+	// NoFollow is set by the daemon (never the caller) when this runs as
+	// root under a paths: restriction: a symlink in any component of path
+	// is then refused instead of followed out of the allowed directories.
+	NoFollow bool `json:"_no_follow,omitempty"`
 }
 
 // Match is one search result.
@@ -54,6 +60,32 @@ func Find(argsJSON []byte) (string, error) {
 		return "", err
 	}
 
+	// find never follows symlinks while walking (-P), but the kernel does
+	// resolve every component of the start path. With NoFollow, the start
+	// directory is opened without following any, made the working
+	// directory, and searched as "." - results are mapped back below.
+	root := ""
+	if args.NoFollow {
+		root = cmdArgs[0]
+		n, err := fsafe.Open(root)
+		if err != nil {
+			return "", fmt.Errorf("cannot search %s: %v", root, err)
+		}
+		err = n.Chdir()
+		n.Close()
+		if err != nil {
+			return "", fmt.Errorf("cannot search %s: %v", root, err)
+		}
+		for i, a := range cmdArgs {
+			switch {
+			case a == root:
+				cmdArgs[i] = "."
+			case strings.HasPrefix(a, root+"/"):
+				cmdArgs[i] = "." + strings.TrimPrefix(a, root)
+			}
+		}
+	}
+
 	cmd := exec.Command("find", cmdArgs...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -69,6 +101,15 @@ func Find(argsJSON []byte) (string, error) {
 	}
 
 	matches := parseOutput(stdout.String())
+	if root != "" {
+		for i := range matches {
+			if matches[i].Path == "." {
+				matches[i].Path = root
+			} else {
+				matches[i].Path = filepath.Join(root, strings.TrimPrefix(matches[i].Path, "./"))
+			}
+		}
+	}
 
 	if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
 		b, err := json.Marshal(matches)

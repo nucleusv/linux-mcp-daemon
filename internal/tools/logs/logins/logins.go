@@ -12,9 +12,9 @@ import (
 // GetLoginsArgs are the tool's input arguments.
 type GetLoginsArgs struct {
 	Type       string `json:"type,omitempty"`       // "success" (default, wraps `last`) or "failed" (wraps `lastb`).
-	Limit      int    `json:"limit,omitempty"`       // Only return this many most recent entries.
-	User       string `json:"user,omitempty"`        // Only return entries for this username.
-	Privileged bool   `json:"privileged,omitempty"`  // Run as root - typically required for type: "failed" (btmp is usually root-only readable).
+	Limit      int    `json:"limit,omitempty"`      // Only return this many most recent entries.
+	User       string `json:"user,omitempty"`       // Only return entries for this username.
+	Privileged bool   `json:"privileged,omitempty"` // Run as root - typically required for type: "failed" (btmp is usually root-only readable).
 }
 
 // validUsername is deliberately strict: last/lastb take the username as a

@@ -37,7 +37,7 @@ func OSRelease(argsJSON []byte) (string, error) {
 		release := charsToString(uts.Release[:])
 		version := charsToString(uts.Version[:])
 		machine := charsToString(uts.Machine[:])
-		
+
 		kernelInfo = fmt.Sprintf("%s %s %s %s %s", sysname, nodename, release, version, machine)
 		out.WriteString("Kernel Info:\n")
 		out.WriteString(kernelInfo)

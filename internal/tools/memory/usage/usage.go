@@ -10,7 +10,7 @@ import (
 
 type GetUsageArgs struct {
 	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
-	Detailed bool `json:"detailed"`
+	Detailed     bool   `json:"detailed"`
 }
 
 func Usage(argsJSON []byte) (string, error) {
@@ -49,7 +49,7 @@ func Usage(argsJSON []byte) (string, error) {
 	buffers := mem["Buffers"]
 	cached := mem["Cached"]
 	sReclaimable := mem["SReclaimable"]
-	
+
 	buffCache := buffers + cached + sReclaimable
 	used := total - free - buffCache
 
@@ -70,6 +70,6 @@ func Usage(argsJSON []byte) (string, error) {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("%-12s %-12s %-12s %-12s %-12s %-12s %-12s\n", "TYPE", "TOTAL", "USED", "FREE", "SHARED", "BUFF/CACHE", "AVAILABLE"))
 	sb.WriteString(fmt.Sprintf("%-12s %-12d %-12d %-12d %-12d %-12d %-12d\n", "Mem:", total, used, free, mem["Shmem"], buffCache, available))
-	
+
 	return sb.String(), nil
 }

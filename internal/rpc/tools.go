@@ -770,6 +770,9 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			}
 			_ = json.Unmarshal(params.Arguments, &baseArgs)
 
+			// _no_follow is the daemon's to set, never the caller's.
+			params.Arguments = withoutKey(params.Arguments, "_no_follow")
+
 			// Tools with a path argument, run as root, are limited to their
 			// grant's paths: always for files/* (no paths = no root), and
 			// for the others whenever the grant lists paths.
@@ -789,6 +792,13 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 					var argMap map[string]interface{}
 					if err := json.Unmarshal(params.Arguments, &argMap); err == nil {
 						argMap["path"] = cleanPath
+						// A lexical path check says nothing about where a
+						// symlink under an allowed directory leads. Unless the
+						// grant covers "/" anyway, the worker must not follow
+						// symlinks in any component of the path.
+						if !config.CoversRoot(allowedPaths) {
+							argMap["_no_follow"] = true
+						}
 						if b, err := json.Marshal(argMap); err == nil {
 							params.Arguments = b
 						}
@@ -930,4 +940,22 @@ func logToolCall(session *Session, params CallToolParams, loggedArgs string, sta
 	default:
 		logging.Info("tool call", attrs...)
 	}
+}
+
+// withoutKey returns the JSON object args without key (args unchanged if
+// it isn't an object or lacks key).
+func withoutKey(args json.RawMessage, key string) json.RawMessage {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(args, &m); err != nil {
+		return args
+	}
+	if _, ok := m[key]; !ok {
+		return args
+	}
+	delete(m, key)
+	b, err := json.Marshal(m)
+	if err != nil {
+		return args
+	}
+	return b
 }

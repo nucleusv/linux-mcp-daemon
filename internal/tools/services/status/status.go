@@ -15,11 +15,11 @@ type ServiceStatusArgs struct {
 }
 
 type ServiceStatus struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	LoadState   string `json:"load_state"`
-	ActiveState string `json:"active_state"`
-	SubState    string `json:"sub_state"`
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	LoadState    string `json:"load_state"`
+	ActiveState  string `json:"active_state"`
+	SubState     string `json:"sub_state"`
 	FragmentPath string `json:"fragment_path"`
 }
 

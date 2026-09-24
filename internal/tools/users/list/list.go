@@ -13,8 +13,8 @@ import (
 // GetUsersArgs are the tool's input arguments.
 type GetUsersArgs struct {
 	OutputFormat string `json:"output_format,omitempty"` // Desired output format (json/yaml/table/wide). Defaults to text.
-	MinUID       int    `json:"min_uid,omitempty"`        // Only include users with UID >= this value (e.g. 1000 to exclude system accounts).
-	Privileged   bool   `json:"privileged,omitempty"`     // Run as root.
+	MinUID       int    `json:"min_uid,omitempty"`       // Only include users with UID >= this value (e.g. 1000 to exclude system accounts).
+	Privileged   bool   `json:"privileged,omitempty"`    // Run as root.
 }
 
 // User describes one entry from /etc/passwd, augmented with group info.

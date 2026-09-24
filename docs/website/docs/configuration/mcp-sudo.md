@@ -53,6 +53,8 @@ In this example, if the AI is authenticated as `alice`, it can list protected ro
 | `files/list`, `files/read`, `files/create`, `files/update`, `files/find`, `files/filetype`, `files/chmod`, `files/chown` | no root at all | root only inside the listed paths |
 | `disks/usage`, `disks/free` | root on any path | root only inside the listed paths |
 
+**Symlinks.** The path check is on the path as written, and a symlink under an allowed directory could lead anywhere (`/var/www/x -> /etc/shadow`). So when a root call is limited by `paths:` - any list that doesn't include `/` - the tool doesn't follow symlinks in **any** component of the path: `files/read`, `files/create`, `files/update`, `files/list`, `files/filetype`, `files/find` and `disks/usage` open the path one component at a time with `O_NOFOLLOW` and refuse (`refusing to follow a symbolic link`) instead of escaping. A symlink as the last component is still *reported* by `files/list` and `files/filetype` (`inode/symlink`), just never followed. `files/chmod` and `files/chown` never follow symlinks at all. With `paths: ["/"]` everything is allowed anyway, so symlinks are followed as usual (`/etc/resolv.conf` is one).
+
 Calls without `privileged: true` aren't limited by `paths:` - they run as the user's own OS account, which the kernel limits. `paths:` on any other tool is an error when the file is checked (`linuxctl edit`, `daemon/reload-config`): it would look like a restriction while restricting nothing. (At startup it's only a warning, so an upgrade can't stop the daemon.)
 
 ## File permission tools (`files/chmod`, `files/chown`)

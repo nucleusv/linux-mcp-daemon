@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+
+	"github.com/nucleusv/linux-mcp-daemon/internal/fsafe"
 )
 
 // GetUsageArgs defines the parameters for the get_disk_usage tool.
@@ -22,6 +24,10 @@ type GetUsageArgs struct {
 	Threshold     int64    `json:"threshold,omitempty"`       // Threshold filters files. Positive skips smaller files, negative skips larger files.
 	SeparateDirs  bool     `json:"separate_dirs,omitempty"`   // SeparateDirs isolates a directory's size so it does not include subdirectories.
 	Privileged    bool     `json:"privileged,omitempty"`      // Privileged executes the tool as the root user (if authorized in mcp-sudo.yaml).
+	// NoFollow is set by the daemon (never the caller) when this runs as
+	// root under a paths: restriction: a symlink in any component of path
+	// is then refused instead of followed out of the allowed directories.
+	NoFollow bool `json:"_no_follow,omitempty"`
 }
 
 // GetDiskUsage calculates disk usage by traversing a directory tree (equivalent to du -sh).
@@ -36,6 +42,18 @@ func Usage(argsJSON []byte) (string, error) {
 	}
 
 	cleanPath := filepath.Clean(args.Path)
+
+	// With NoFollow the start path must not pass through a symlink. This is
+	// a check before the walk, not a descriptor-anchored walk like
+	// files/find's: this tool only reports sizes, and the walk itself never
+	// follows symlinks (filepath.WalkDir).
+	if args.NoFollow {
+		n, err := fsafe.Open(cleanPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to access path %s: %v", cleanPath, err)
+		}
+		n.Close()
+	}
 
 	// Ensure the root path exists and get root device ID
 	rootInfo, err := os.Stat(cleanPath)

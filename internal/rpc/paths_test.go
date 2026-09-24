@@ -99,3 +99,20 @@ func TestToolCallLogging(t *testing.T) {
 		t.Errorf("denied call not logged at warn:\n%s", buf.String())
 	}
 }
+
+func TestNoFollowHelpers(t *testing.T) {
+	for _, c := range []struct {
+		allowed []string
+		want    bool
+	}{
+		{[]string{"/"}, true}, {[]string{"/tmp", "//"}, true}, {[]string{"/tmp"}, false}, {nil, false}, {[]string{"relative"}, false},
+	} {
+		if got := config.CoversRoot(c.allowed); got != c.want {
+			t.Errorf("CoversRoot(%v) = %t", c.allowed, got)
+		}
+	}
+	got := string(withoutKey(json.RawMessage(`{"path":"/tmp","_no_follow":false}`), "_no_follow"))
+	if strings.Contains(got, "_no_follow") || !strings.Contains(got, `"path":"/tmp"`) {
+		t.Errorf("withoutKey: %s", got)
+	}
+}

@@ -8,7 +8,7 @@ import (
 
 // GetFreeArgs defines the parameters for the get_disk_free tool.
 type GetFreeArgs struct {
-	OutputFormat string `json:"output_format,omitempty"` // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
+	OutputFormat  string `json:"output_format,omitempty"`  // OutputFormat specifies the desired output format (e.g. "json"). Defaults to text.
 	Path          string `json:"path"`                     // Path is the absolute directory or mount point to check.
 	Inodes        bool   `json:"inodes,omitempty"`         // Inodes requests the total and free inode index counts instead of byte usage.
 	HumanReadable bool   `json:"human_readable,omitempty"` // HumanReadable formats the raw byte counts into human-readable strings (e.g. 24.5 GiB).
@@ -59,7 +59,7 @@ func Free(argsJSON []byte) (string, error) {
 
 	if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
 		data := map[string]interface{}{
-			"path":       args.Path,
+			"path":        args.Path,
 			"total_bytes": totalBytes,
 			"used_bytes":  usedBytes,
 			"free_bytes":  freeBytes,

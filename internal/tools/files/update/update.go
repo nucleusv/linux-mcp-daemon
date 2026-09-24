@@ -3,8 +3,11 @@ package updatefile
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+
+	"github.com/nucleusv/linux-mcp-daemon/internal/fsafe"
 )
 
 // UpdateFileArgs defines the parameters for the files/update tool.
@@ -14,6 +17,10 @@ type UpdateFileArgs struct {
 	Append    bool   `json:"append,omitempty"`     // Append adds the content to the very end of the file.
 	StartLine *int   `json:"start_line,omitempty"` // StartLine specifies the beginning of the line range to replace (1-indexed).
 	EndLine   *int   `json:"end_line,omitempty"`   // EndLine specifies the end of the line range to replace.
+	// NoFollow is set by the daemon (never the caller) when this runs as
+	// root under a paths: restriction: a symlink in any path component is
+	// then refused instead of followed out of the allowed directories.
+	NoFollow bool `json:"_no_follow,omitempty"`
 }
 
 func Update(argsJSON []byte) (string, error) {
@@ -27,7 +34,13 @@ func Update(argsJSON []byte) (string, error) {
 	}
 
 	if args.Append {
-		file, err := os.OpenFile(args.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		var file *os.File
+		var err error
+		if args.NoFollow {
+			file, err = fsafe.CreateFile(args.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644, false)
+		} else {
+			file, err = os.OpenFile(args.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		}
 		if err != nil {
 			return "", fmt.Errorf("failed to open file for append: %v", err)
 		}
@@ -48,13 +61,22 @@ func Update(argsJSON []byte) (string, error) {
 		return "", fmt.Errorf("invalid line range: %d to %d", *args.StartLine, *args.EndLine)
 	}
 
-	info, err := os.Stat(args.Path)
-	if err != nil {
-		return "", fmt.Errorf("failed to stat file: %v", err)
+	// Read and rewrite through one descriptor: the file written is the
+	// file read, and with NoFollow it was reached without any symlink.
+	var f *os.File
+	var err error
+	if args.NoFollow {
+		f, err = fsafe.OpenFile(args.Path, os.O_RDWR)
+	} else {
+		f, err = os.OpenFile(args.Path, os.O_RDWR, 0)
 	}
-	data, err := os.ReadFile(args.Path)
 	if err != nil {
-		return "", fmt.Errorf("failed to open file for reading: %v", err)
+		return "", fmt.Errorf("failed to open file: %v", err)
+	}
+	defer f.Close()
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file: %v", err)
 	}
 
 	// Split on "\n" directly rather than with bufio.Scanner, which has a
@@ -97,8 +119,11 @@ func Update(argsJSON []byte) (string, error) {
 	if hadTrailingNewline || len(data) == 0 {
 		output += "\n"
 	}
-	// Keep the file's existing permissions rather than resetting to 0644.
-	if err := os.WriteFile(args.Path, []byte(output), info.Mode().Perm()); err != nil {
+	// Rewritten in place, so the file keeps its permissions and owner.
+	if err := f.Truncate(0); err != nil {
+		return "", fmt.Errorf("failed to write updated file: %v", err)
+	}
+	if _, err := f.WriteAt([]byte(output), 0); err != nil {
 		return "", fmt.Errorf("failed to write updated file: %v", err)
 	}
 

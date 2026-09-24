@@ -54,7 +54,7 @@ func Performance(args []byte) (string, error) {
 		if line == "" {
 			continue
 		}
-		
+
 		fields := strings.Fields(line)
 		if len(fields) < 14 {
 			continue // skip malformed lines or incomplete stats
