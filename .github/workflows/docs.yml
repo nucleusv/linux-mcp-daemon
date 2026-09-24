@@ -33,6 +33,11 @@ jobs:
 
       - name: Build
         working-directory: docs/website
+        env:
+          # baseUrl /linux-mcp-daemon/ for GitHub Pages (docusaurus.config.js);
+          # without it the build targets the daemon image's /docs/ and every
+          # asset and link on the published site breaks.
+          DOCS_DEPLOY_TARGET: github-pages
         run: |
           npm ci
           npm run build
@@ -48,6 +53,9 @@ jobs:
           find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a docs/website/build/. site/
           touch site/.nojekyll
+          # Refuse to publish a build made for another baseUrl.
+          grep -q 'href="/linux-mcp-daemon/' site/index.html || grep -q 'href=/linux-mcp-daemon/' site/index.html \
+            || { echo "build is not for /linux-mcp-daemon/ - not publishing"; exit 1; }
           cd site
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
