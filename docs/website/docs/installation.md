@@ -128,7 +128,7 @@ Changes:
 
 `linuxctl` writes the files and then asks the running mcpd to reload them (as the `mcp` user - that's what `MCP_TOKEN` and `sudo -E` are for), so `alice` can connect right away - no restart. (Its "Next steps" repeat the `useradd` you already ran. The full path matters on RHEL, Rocky, Alma and Fedora, whose `sudo` doesn't search `/usr/local/bin`: `sudo linuxctl` fails there with `command not found`.) If it prints `Not applied: user mcp is not authorized to run daemon/reload-config` instead, your install predates that tool - see [Upgrading from v0.1.0](#upgrading).
 
-`alice` can now call every tool as her own OS account. To let her run specific tools as root, grant them in `mcp-sudo.yaml` - `sudo -E /usr/local/bin/linuxctl edit mcpd config sudo --config-path /etc/mcpd/configs` opens it in your editor, checks it when you save (like `visudo`) and applies it; see [mcp-sudo.yaml](./configuration/mcp-sudo). More commands (list, rotate, delete): [Daemon User Administration](./linuxctl/mcpd-admin).
+`alice` can now call every tool as her own OS account. To let her run specific tools as root, grant them in `mcp-sudo.yaml` - `sudo -E /usr/local/bin/linuxctl edit mcpd config sudo --config-path /etc/mcpd/configs` opens it in your editor, checks it when you save (like `visudo`) and applies it; see [mcp-sudo.yaml](./configuration/mcp-sudo), and before granting anything as root, [Permissions and Risks](./configuration/permissions-and-risks) - some grants amount to full root. More commands (list, rotate, delete): [Daemon User Administration](./linuxctl/mcpd-admin).
 
 ### Uninstalling
 
@@ -260,7 +260,7 @@ Shell completion: see [Autocompletion](./linuxctl/autocompletion).
 ## Before exposing mcpd
 
 - mcpd listens on **all interfaces**, over **TLS** by default (a self-signed certificate - clients pin its fingerprint or trust the file; or install a CA-issued one, see [Daemon configuration](./configuration/daemon)). Don't turn on plain HTTP (`server.http`) for anything but a trusted network or a TLS-terminating proxy: bearer tokens travel in every request. Firewalling the port to the addresses that need it is still a good idea.
-- Tokens only authenticate; what a user may do **as root** is granted per tool in `mcp-sudo.yaml` - see [mcp-sudo.yaml](./configuration/mcp-sudo). Without grants, a user can call every tool, but only as its own OS account.
+- Tokens only authenticate; what a user may do **as root** is granted per tool in `mcp-sudo.yaml` - see [mcp-sudo.yaml](./configuration/mcp-sudo). Without grants, a user can call every tool, but only as its own OS account. Map each MCP user to a dedicated, unprivileged OS account (not root, not in `docker`/`lxd`/`disk`), and read [Permissions and Risks](./configuration/permissions-and-risks) before granting root.
 - To add more users, see [Adding more users](#adding-more-users) above.
 
 ## Connecting an AI agent

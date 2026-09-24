@@ -93,11 +93,11 @@ Carry structured fields (`user`, `session`, `tool`, `privileged`, `duration_ms`,
 **Status**: deferred at the user's request (2026-09-24) - a first attempt was interrupted by the assistant's safety filter; the user sent feedback about it. Try again later.
 **Test plan**: same results as `find` (sorted paths) on a host tree and on generated trees with every filter; symlink loops and swapped directories never escape the start directory; runtime within ~2x of GNU find on a large tree.
 
-### 22. README: what the daemon is for
+### 22. ~~README: what the daemon is for~~ — done (README "Why" section)
 **Now**: README says what mcpd does, not why someone would run it.
 **Build**: a short "Why / use cases" section near the top: incident triage and on-call (an agent reading disks, processes, sockets, journal - structured, as the calling user); audits and inventory across hosts; giving an agent *bounded* root (per tool, per path, per sysctl key, per network destination) instead of SSH root or a shell MCP server; every change audit-logged. Plus what it deliberately isn't (no arbitrary shell, no file deletion) and how it compares to SSH-shell MCP servers and osquery.
 
-### 23. Docs: a page on mcp-sudo defaults and the risks of granting root
+### 23. ~~Docs: a page on mcp-sudo defaults and the risks of granting root~~ — done (`configuration/permissions-and-risks.md`, linked from mcp-sudo, installation and README; also closed the uid 0 MCP-user hole it turned up)
 **Now**: `configuration/mcp-sudo.md` describes the options; the defaults and their consequences are spread over it.
 **Build**: a dedicated page - what a user can do with no entry, with `allowed` only, with `paths`, `network`, `sysctl` (the defaults table), each shown on a concrete config and the calls it allows/refuses. Then the risks, bluntly: which grants amount to full root (`files/update`/`create` on `/`, `files/chmod`/`chown` on `/`, `services/manage`, `kernel/system-control` without `write_keys` - e.g. `kernel.core_pattern`, `processes/delete`, `file://` `""` reads `/etc/shadow`), least-privilege recipes for common roles (read-only diagnostics, log reader, web-server operator), and a checklist before granting. The same warning, short, in README and installation.
 
@@ -105,7 +105,7 @@ Carry structured fields (`user`, `session`, `tool`, `privileged`, `duration_ms`,
 **Now**: most MCP API and linuxctl pages show output captured in the Kubernetes dev node (a minimal LinuxKit VM: no DMI, no `last`, container paths).
 **Build**: recapture every tool page's linuxctl and raw JSON-RPC output on a real systemd host (the VPS), without secrets (no /etc/shadow, no client IPs, no tokens), and note the host once per page.
 
-### 25. TLS on by default
+### 25. ~~TLS on by default~~ — done (`server.tls` on 9091 with a generated self-signed cert, plain HTTP off; linuxctl fingerprint/CA trust)
 **Now**: plain HTTP unless `server.tls` is configured by hand with an existing certificate; bearer tokens travel in clear text.
 **Build**: TLS enabled by default: install.sh / the packages / the container generate a self-signed certificate (or take a provided one / ACME) on first install; `linuxctl` trusts it via a pinned CA or fingerprint; plain HTTP only when explicitly enabled (e.g. behind a TLS-terminating proxy). In progress (2026-09-24).
 

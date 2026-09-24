@@ -6,6 +6,10 @@ sidebar_position: 3
 
 Unlike traditional API servers, the Linux MCP Daemon implements a secure Privilege Escalation mechanism similar to Unix `sudoers`. This is controlled entirely by `configs/mcp-sudo.yaml`.
 
+:::warning
+Some grants that look narrow amount to full root on the host (writes to `/etc`, `services/manage`, sysctl writes without `write_keys`). Before granting anything, read [Permissions and Risks](./permissions-and-risks): what a user can do with no grant, what each grant adds, and least-privilege recipes.
+:::
+
 ## How it works
 
 When an AI sends a tool execution request (e.g., `files/list`), it can optionally attach `"privileged": true` to the JSON-RPC arguments.

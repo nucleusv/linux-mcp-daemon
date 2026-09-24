@@ -10,7 +10,18 @@ A high-performance, Go-based Model Context Protocol (MCP) daemon (`mcpd`) design
 
 This project implements a zero-dependency (kernel-first) philosophy. It allows AI agents to introspect and interact with the host Linux system directly via raw syscalls and the Virtual File System (`/proc`, `/sys`) without requiring bloated third-party parsing libraries.
 
-Communication happens directly between the AI agent and the daemon via HTTP Server-Sent Events (SSE) and JSON-RPC over port 9091.
+Communication happens directly between the AI agent and the daemon via Server-Sent Events (SSE) and JSON-RPC over HTTPS on port 9091 (TLS is on by default, with a self-signed certificate generated on first start).
+
+## Why
+
+An AI agent that helps run a server needs to see it - load, memory, disks, processes, services, logs, the network - and sometimes to act on it. The usual way is an SSH shell, and a shell is everything at once: any command, any file the account can reach, with `sudo` all of root, and hard to tell afterwards what was done. `mcpd` gives the agent typed tools instead of a shell:
+
+- **Diagnose without a shell.** "Why is the site slow?" - `processes/top`, `memory/usage`, `disks/usage`, `logs/journal-control`, `logs/dmesg`, `network/connections`, `services/list` answer it, with structured output (`json`/`yaml`) the agent doesn't have to scrape from `top` or `df`.
+- **Root per tool, not per session.** A user runs every tool as its own OS account; root is granted per tool in `mcp-sudo.yaml` and limited by paths, network destinations and sysctl keys - "may read `/var/log` as root and restart services" rather than "is root".
+- **One agent, one account, one token.** Each agent gets its own user, and every call is logged with the user, tool, arguments (secrets redacted) and result - an audit trail of what the agent did.
+- **Small and self-contained.** One static Go binary, reading `/proc`, `/sys` and systemd over D-Bus itself; it runs on a bare host, in Docker or in Kubernetes, and `linuxctl` gives people the same tools as a kubectl-like CLI.
+
+> **Grant carefully.** A root grant is root for an agent that follows instructions found in what it reads. Some grants that look narrow are full root (writes to `/etc`, `services/manage`, sysctl writes). Read [Permissions and Risks](https://nucleusv.github.io/linux-mcp-daemon/configuration/permissions-and-risks) before granting anything.
 
 ## How It Works
 
