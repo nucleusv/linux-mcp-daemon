@@ -19,7 +19,7 @@ Every tool call runs in a separate worker process, as the **OS account with the 
 
 So the OS account is the first permission, and it matters as much as the grants:
 
-- An MCP user must not be a **root account**. mcpd refuses every call of a user whose account has uid 0 (it would be root without any grant), and `linuxctl create mcpd user` won't create one.
+- An MCP user must not be a **root account** - it would be root on every call, without any grant. A `users.yaml` listing a user whose OS account has uid 0 is a config error: mcpd doesn't start with it, `daemon/reload-config` and `linuxctl edit mcpd config users` reject it, `linuxctl create mcpd user` won't create one, and a worker refuses to run as one.
 - **Groups count.** An account in `docker`, `lxd` or `disk` is root in all but name (it can start a privileged container, or read raw disks); `adm` and `systemd-journal` read every log. Create a dedicated account for each agent, in no such group: `useradd --system --no-create-home agent-web`.
 
 ## The defaults

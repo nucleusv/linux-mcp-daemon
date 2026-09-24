@@ -187,3 +187,16 @@ func TestListeners(t *testing.T) {
 		t.Errorf("default TLS files: %s %s", cert, key)
 	}
 }
+
+func TestRootAccountUserRejected(t *testing.T) {
+	users := "users:\n  - username: root\n    token_salt: aa\n    token_hash: bb\n"
+	for _, strict := range []bool{true, false} {
+		if _, err := ParseUsersConfig([]byte(users), strict); err == nil || !strings.Contains(err.Error(), "uid 0") {
+			t.Errorf("strict=%v: want a uid 0 error, got %v", strict, err)
+		}
+	}
+	daemon := "server:\n  port: 9091\nusers:\n  - username: root\n    token: secret\n"
+	if _, err := ParseDaemonConfig([]byte(daemon), false); err == nil || !strings.Contains(err.Error(), "uid 0") {
+		t.Errorf("daemon.yaml users: want a uid 0 error, got %v", err)
+	}
+}

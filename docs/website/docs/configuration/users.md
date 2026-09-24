@@ -18,7 +18,7 @@ users:
     token: "secret456"   # legacy plaintext form - still supported; `linuxctl update mcpd user bob` migrates it
 ```
 
-- **`username`** binds the token to the user's grants in [`mcp-sudo.yaml`](./mcp-sudo), **and** must be a real OS account: every tool call runs as that account (`SpawnWorker` resolves it with `user.Lookup()`). A user without grants can still call every tool - as their own OS account, never as root.
+- **`username`** binds the token to the user's grants in [`mcp-sudo.yaml`](./mcp-sudo), **and** must be a real OS account: every tool call runs as that account (`SpawnWorker` resolves it with `user.Lookup()`). A user without grants can still call every tool - as their own OS account, never as root. The account must not be root: a user whose OS account has uid 0 would be root on every call, so it's a config error - mcpd won't start with it, and a reload or `linuxctl edit` rejects it. Use a dedicated, unprivileged account per agent (see [Permissions and Risks](./permissions-and-risks)).
 - **`token_salt` + `token_hash`**: `sha256(salt + token)`, hex. The token itself is stored nowhere - it's printed once when created or rotated. **Don't hand-write a `token_hash`**: the salt must be freshly random per user, and a hash that doesn't exactly match simply never authenticates. The daemon also accepts the legacy plaintext `token` field so existing accounts don't need a hard cutover.
 - **`pinned_uid` / `os_uid`**: trust-on-first-use OS identity pinning, written by mcpd on a user's first successful call. If the username later resolves to a different UID (the OS account was deleted and recreated), mcpd refuses that user's calls until `linuxctl update mcpd user <name>` re-provisions it. Never set these by hand.
 

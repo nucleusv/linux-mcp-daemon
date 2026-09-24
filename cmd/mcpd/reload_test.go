@@ -148,18 +148,18 @@ func authAs(token string) (string, bool) {
 }
 
 func TestReloadConfig(t *testing.T) {
-	setupConfigDir(t, "users:\n"+userEntry("root", "tok-root"), "users: {}\n")
+	setupConfigDir(t, "users:\n"+userEntry("agent", "tok-root"), "users: {}\n")
 
 	if _, ok := authAs("tok-new"); ok {
 		t.Fatal("unknown token authenticated")
 	}
 
-	// Add a second token for root's replacement user and grant a tool.
-	os.WriteFile(filepath.Join(configDir, config.UsersFile), []byte("users:\n"+userEntry("root", "tok-new")), 0600)
-	os.WriteFile(sudoConfigPath(), []byte("users:\n  root:\n    privileged:\n      tools:\n        daemon/reload-config: {allowed: true}\n"), 0600)
+	// Add a second token for agent's replacement user and grant a tool.
+	os.WriteFile(filepath.Join(configDir, config.UsersFile), []byte("users:\n"+userEntry("agent", "tok-new")), 0600)
+	os.WriteFile(sudoConfigPath(), []byte("users:\n  agent:\n    privileged:\n      tools:\n        daemon/reload-config: {allowed: true}\n"), 0600)
 
-	// An open session of root must be closed: its token changed.
-	s := &rpc.Session{ID: "s1", User: "root", Event: make(chan string), Done: make(chan struct{})}
+	// An open session of agent must be closed: its token changed.
+	s := &rpc.Session{ID: "s1", User: "agent", Event: make(chan string), Done: make(chan struct{})}
 	sessionsMu.Lock()
 	sessions[s.ID] = s
 	sessionsMu.Unlock()
@@ -174,7 +174,7 @@ func TestReloadConfig(t *testing.T) {
 			for j := 0; j < 50; j++ {
 				authAs("tok-root")
 				authAs("tok-new")
-				rpcHandler.Sudo().CanRunAsRoot("root", "daemon/reload-config")
+				rpcHandler.Sudo().CanRunAsRoot("agent", "daemon/reload-config")
 			}
 		}()
 	}
@@ -183,7 +183,7 @@ func TestReloadConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"user root: token changed", "grants root: + daemon/reload-config (root)", "Closed 1 session(s)"} {
+	for _, want := range []string{"user agent: token changed", "grants agent: + daemon/reload-config (root)", "Closed 1 session(s)"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("reload output lacks %q:\n%s", want, out)
 		}
@@ -196,19 +196,19 @@ func TestReloadConfig(t *testing.T) {
 	if _, ok := authAs("tok-root"); ok {
 		t.Error("old token still authenticates after reload")
 	}
-	if u, ok := authAs("tok-new"); !ok || u != "root" {
+	if u, ok := authAs("tok-new"); !ok || u != "agent" {
 		t.Error("new token doesn't authenticate after reload")
 	}
-	if !rpcHandler.Sudo().CanRunAsRoot("root", "daemon/reload-config") {
+	if !rpcHandler.Sudo().CanRunAsRoot("agent", "daemon/reload-config") {
 		t.Error("new grant not in effect after reload")
 	}
 
 	// An invalid file (misspelled key) is rejected and changes nothing.
-	os.WriteFile(sudoConfigPath(), []byte("users:\n  root:\n    privileged:\n      tools:\n        files/read: {allowed: true, path: [/]}\n"), 0600)
+	os.WriteFile(sudoConfigPath(), []byte("users:\n  agent:\n    privileged:\n      tools:\n        files/read: {allowed: true, path: [/]}\n"), 0600)
 	if _, err := reloadConfig("tester"); err == nil || !strings.Contains(err.Error(), "stays in effect") {
 		t.Errorf("invalid config: err = %v", err)
 	}
-	if !rpcHandler.Sudo().CanRunAsRoot("root", "daemon/reload-config") || rpcHandler.Sudo().CanRunAsRoot("root", "files/read") {
+	if !rpcHandler.Sudo().CanRunAsRoot("agent", "daemon/reload-config") || rpcHandler.Sudo().CanRunAsRoot("agent", "files/read") {
 		t.Error("a rejected reload changed the rules in effect")
 	}
 	if _, ok := authAs("tok-new"); !ok {

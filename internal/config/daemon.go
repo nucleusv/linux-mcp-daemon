@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
@@ -265,6 +266,11 @@ func validateUsers(users []DaemonUser) error {
 		}
 		if u.TokenHash != "" && u.TokenSalt == "" {
 			return fmt.Errorf("user %q has token_hash but no token_salt", u.Username)
+		}
+		// Calls run as the OS account named like the user; a uid 0 one would
+		// be root on every call, past every limit in mcp-sudo.yaml.
+		if acct, err := user.Lookup(u.Username); err == nil && acct.Uid == "0" {
+			return fmt.Errorf("user %q is a root account (uid 0) on this host - MCP users must map to unprivileged OS accounts; grant root per tool in mcp-sudo.yaml instead", u.Username)
 		}
 	}
 	return nil
