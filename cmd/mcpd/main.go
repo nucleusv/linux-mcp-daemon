@@ -235,10 +235,6 @@ func main() {
 	mux.HandleFunc("/sse", handleSSE)
 	mux.HandleFunc("/message", handleMessage)
 
-	// Serve documentation
-	fs := http.FileServer(http.Dir("docs/website/build"))
-	mux.Handle("/docs/", http.StripPrefix("/docs/", fs))
-
 	handler := loggingMiddleware(mux)
 
 	serve(handler)

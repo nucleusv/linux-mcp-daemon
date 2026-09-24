@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/imgs/mcpd-badge.png" alt="mcpd: a penguin in sunglasses" width="260"></p>
+
 # Linux MCPd
 
 [![Docs](https://img.shields.io/badge/docs-nucleusv.github.io-blue)](https://nucleusv.github.io/linux-mcp-daemon/)

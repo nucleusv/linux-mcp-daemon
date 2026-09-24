@@ -33,11 +33,6 @@ jobs:
 
       - name: Build
         working-directory: docs/website
-        env:
-          # baseUrl /linux-mcp-daemon/ for GitHub Pages (docusaurus.config.js);
-          # without it the build targets the daemon image's /docs/ and every
-          # asset and link on the published site breaks.
-          DOCS_DEPLOY_TARGET: github-pages
         run: |
           npm ci
           npm run build

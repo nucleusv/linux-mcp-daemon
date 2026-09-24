@@ -34,19 +34,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
     -ldflags "-s -w -X github.com/nucleusv/linux-mcp-daemon/internal/version.Version=${VERSION} -X github.com/nucleusv/linux-mcp-daemon/internal/version.Commit=${COMMIT} -X github.com/nucleusv/linux-mcp-daemon/internal/version.Date=${BUILD_DATE}" \
     -o linuxctl ./cmd/linuxctl
 
-# Docs Build Stage - static output, so it too runs on the build platform.
-FROM --platform=$BUILDPLATFORM node:20-alpine AS docs-builder
-WORKDIR /app/docs/website
-# Copy only package files first for better caching
-COPY docs/website/package.json docs/website/package-lock.json* ./
-RUN npm ci || npm install
-# Copy the rest of the documentation files
-COPY docs/website .
-# Images shared with the repo README (served via staticDirectories '../imgs').
-COPY docs/imgs /app/docs/imgs
-# Build the Docusaurus site
-RUN npm run build
-
 # Use ubuntu instead of alpine for a full environment
 FROM ubuntu:24.04
 
@@ -87,8 +74,6 @@ ENV MCPD_CONFIG_DIR=/etc/mcpd/configs
 COPY --from=builder /app/${CONFIG_DIR} /etc/mcpd/configs
 # users.yaml holds token hashes (git doesn't keep its 0600).
 RUN ln -s /etc/mcpd/configs /root/configs && chmod 600 /etc/mcpd/configs/*.yaml
-# Copy compiled documentation website
-COPY --from=docs-builder /app/docs/website/build ./docs/website/build
 # Copy man pages
 COPY --from=builder /app/docs/man/linuxctl.1 /usr/local/share/man/man1/
 COPY --from=builder /app/docs/man/mcpd.8 /usr/local/share/man/man8/

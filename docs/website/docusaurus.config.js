@@ -8,14 +8,6 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
-// This same build output backs two different deployments that need different
-// baseUrls: the Dockerfile bundles it into the daemon image, served at
-// /docs/ by cmd/mcpd/main.go's http.StripPrefix("/docs/", ...); GitHub Pages
-// serves the whole gh-pages branch at the repo root, i.e. /linux-mcp-daemon/.
-// `npm run deploy` (docs/website/package.json) sets this env var; the
-// Dockerfile's plain `npm run build` doesn't, so it keeps the /docs/ default.
-const isGithubPagesDeploy = process.env.DOCS_DEPLOY_TARGET === 'github-pages';
-
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Linux MCPd',
@@ -30,7 +22,8 @@ const config = {
   // Set the production url of your site here
   url: 'https://nucleusv.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
-  baseUrl: isGithubPagesDeploy ? '/linux-mcp-daemon/' : '/docs/',
+  // GitHub Pages serves the gh-pages branch at the repo's path.
+  baseUrl: '/linux-mcp-daemon/',
 
   // docs/imgs holds images shared with the repo README (e.g. the
   // architecture diagram), served from here too so there's one copy.
@@ -89,16 +82,15 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      // Replace with your project's social card
-      image: 'img/docusaurus-social-card.jpg',
+      image: 'img/mcpd-social-card.jpg',
       colorMode: {
         respectPrefersColorScheme: true,
       },
       navbar: {
         title: 'Linux MCPd',
         logo: {
-          alt: 'Logo',
-          src: 'img/logo.svg',
+          alt: 'mcpd penguin logo',
+          src: 'img/logo.png',
         },
         items: [
           {

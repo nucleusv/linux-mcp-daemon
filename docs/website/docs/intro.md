@@ -4,6 +4,8 @@ sidebar_position: 1
 
 # Introduction
 
+<p align="center"><img src={require('@site/static/img/mcpd-badge.png').default} alt="mcpd: a penguin in sunglasses" width="240" /></p>
+
 Welcome to the **Linux MCPd** documentation!
 
 Linux MCPd (`mcpd`) is a high-performance, zero-dependency Go daemon that bridges AI agents to a Linux host over the Model Context Protocol (MCP), via HTTP/SSE + JSON-RPC. It's kernel-first: it parses `/proc`, `/sys`, and DBus natively instead of wrapping CLI tools, and covers far more than the filesystem - files, disks, processes, network, devices, kernel parameters, logs, services, users, CPU, memory, and sudo rules.
