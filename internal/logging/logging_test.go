@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -38,7 +39,7 @@ func TestLevels(t *testing.T) {
 		Access("uri", "/sse")
 		out := buf.String()
 		for _, m := range []string{"debug", "info", "warn", "error", "audit", "access"} {
-			has := strings.Contains(out, "msg="+m)
+			has := strings.Contains(out, " "+strings.ToUpper(levelOf(m))+" ") && strings.Contains(out, m)
 			if has != contains(c.want, m) {
 				t.Errorf("level %q: message %q logged=%t, want %t\n%s", c.cfg.Level, m, has, !has, out)
 			}
@@ -108,7 +109,33 @@ func TestFatalIgnoresLevel(t *testing.T) {
 	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
 		t.Fatalf("want exit 1, got %v", err)
 	}
-	if !strings.Contains(string(out), `level=ERROR msg="cannot serve HTTP"`) || strings.Contains(string(out), "hidden") {
+	if !strings.Contains(string(out), `ERROR cannot serve HTTP addr=:9091`) || strings.Contains(string(out), "hidden") {
 		t.Errorf("fatal line missing or level not applied:\n%s", out)
+	}
+}
+
+// levelOf is the level each test message is logged at.
+func levelOf(m string) string {
+	switch m {
+	case "audit", "access":
+		return "info"
+	}
+	return m
+}
+
+func TestTextFormat(t *testing.T) {
+	buf := capture(t, Config{})
+	Info("tool call", "user", "alice", "args", `{"path":"/tmp/a b"}`)
+	Error("cannot serve HTTP", "err", "line1\nline2")
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("want 2 lines (values with newlines stay on one line), got:\n%s", buf.String())
+	}
+	re := regexp.MustCompile(`^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}(Z|[+-]\d\d:\d\d) INFO  tool call user=alice args="\{\\"path\\":\\"/tmp/a b\\"\}"$`)
+	if !re.MatchString(lines[0]) {
+		t.Errorf("info line: %q", lines[0])
+	}
+	if !strings.Contains(lines[1], " ERROR cannot serve HTTP err=") || strings.Contains(buf.String(), "time=") || strings.Contains(buf.String(), "level=") || strings.Contains(buf.String(), "msg=") {
+		t.Errorf("unexpected format:\n%s", buf.String())
 	}
 }

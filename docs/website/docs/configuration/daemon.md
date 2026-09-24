@@ -57,7 +57,20 @@ logging:
   access_log: true   # one line per HTTP request, at any level
 ```
 
-mcpd logs to stderr (the systemd journal, `docker logs`, `kubectl logs`) with Go's `log/slog`, as `key=value` text or one JSON object per line - use `json` when journald, Loki or ELK should pick the fields apart.
+mcpd logs to stderr (the systemd journal, `docker logs`, `kubectl logs`) with Go's `log/slog`, one line per event. `format: text` puts time, level and message first, then the fields as `key=value`:
+
+```text
+2026-09-24T10:41:26.138Z INFO  tool call user=testuser session=6471f456fbb2aa86-1 tool=system/os-release privileged=false duration_ms=4 ok=true args={}
+2026-09-24T10:41:26.147Z WARN  tool call denied user=testuser session=7c63513180d95a29-2 tool=disks/usage privileged=true duration_ms=0 ok=false args="{\"path\":\"/root\",\"privileged\":true}" error="Permission denied. Hint: You are not authorized to use 'privileged: true' for this tool in mcp-sudo.yaml"
+2026-09-24T10:41:28.180Z INFO  config reloaded audit=true user=privileged changes=0 detail=""
+2026-09-24T10:41:30.249Z ERROR cannot serve HTTP addr=:9091 err="listen tcp :9091: bind: address already in use"
+```
+
+`format: json` writes one JSON object per line with every field keyed (`time`, `level`, `msg`, ...) - use it when journald, Loki or ELK should pick the fields apart:
+
+```json
+{"time":"2026-09-24T10:41:26.138Z","level":"INFO","msg":"tool call","user":"testuser","session":"6471f456fbb2aa86-1","tool":"system/os-release","privileged":false,"duration_ms":4,"ok":true,"args":"{}"}
+```
 
 | Level | What it adds |
 |---|---|
@@ -68,7 +81,7 @@ mcpd logs to stderr (the systemd journal, `docker logs`, `kubectl logs`) with Go
 
 Two kinds of lines are written at **any** level:
 - **audit** (`audit=true`): every call that changes the host - `files/create`, `files/update`, `files/chmod`, `files/chown`, `processes/delete`, `services/manage`, `kernel/system-control` with a value - and every config reload with its list of changes. Turning detail down never hides who changed what.
-- **access** (`msg=access`): one line per HTTP request, while `access_log` is on.
+- **access**: one line per HTTP request (`INFO  access client=... user=... method=... uri=... status=... duration_ms=...`), while `access_log` is on.
 
 Nothing is logged that could leak: arguments are redacted (`content`, `token`, `value`, headers, ...), tool output is never logged (responses by size only, at debug), and tokens appear nowhere. The level, format and access log can be changed without a restart - edit `daemon.yaml` and reload (see below).
 

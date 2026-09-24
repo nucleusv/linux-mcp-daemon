@@ -95,7 +95,7 @@ func TestToolCallLogging(t *testing.T) {
 	buf.Reset()
 	logging.Configure(logging.Config{Level: "info"})
 	callTool(t, h, "alice", "files/list", `{"path": "/root", "privileged": true}`)
-	if !strings.Contains(buf.String(), "level=WARN") || !strings.Contains(buf.String(), `msg="tool call denied"`) {
+	if !strings.Contains(buf.String(), " WARN  tool call denied ") {
 		t.Errorf("denied call not logged at warn:\n%s", buf.String())
 	}
 }

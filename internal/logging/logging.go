@@ -89,7 +89,7 @@ func Configure(c Config) {
 	if f == "json" {
 		h = slog.NewJSONHandler(output, opts)
 	} else {
-		h = slog.NewTextHandler(output, opts)
+		h = newTextHandler(output, opts)
 	}
 	handler.Store(&h)
 	slog.SetDefault(slog.New(h))
