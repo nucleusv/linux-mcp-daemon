@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 # Sudo Privileges
@@ -119,6 +119,28 @@ users:
 **For read-only access, don't grant `allowed` at all.** Reading needs no root - only about 67 of ~2700 parameters are root-readable only (for example `net.ipv4.tcp_fastopen_key`, a secret key) - and without root the OS refuses every write.
 
 Without a `sysctl:` block, writes are unrestricted - the default, unchanged. (An earlier `read_only` option was removed as redundant with not granting `allowed`; a leftover `read_only` key makes the config fail to load rather than being silently ignored.) The check runs in the daemon itself, before any worker is spawned, against the key in its normalized dotted form (so `net/ipv4/ip_forward` and `net.ipv4.ip_forward` are the same key). Invalid `write_keys` patterns stop the config from loading.
+
+## Applying config changes (`daemon/reload-config`)
+
+[`daemon/reload-config`](../mcp-api/tools/daemon/reload-config) makes the running daemon re-read `daemon.yaml`, `users.yaml` and this file, without a restart. It's the one tool whose `allowed: true` is not about running as root: it's the permission to call it at all. Users without the grant don't see it in `tools/list`.
+
+```yaml
+users:
+  alice:
+    privileged:
+      tools:
+        daemon/reload-config:
+          allowed: true
+```
+
+The tool only **reads** the files - there is deliberately no MCP tool that edits them, so no agent can grant itself anything. The files are changed on the host (`linuxctl create|update|delete mcpd user`, `linuxctl edit mcpd config sudo`), and those commands call the tool afterwards themselves. `scripts/install.sh` grants it to the first user it creates.
+
+Every change is validated before it's applied, strictly: a misspelled key (`path:` for `paths:`) is an error instead of a restriction silently left out, and an invalid file leaves the running config untouched. The reload's reply - and the daemon log, as `[CONFIG] reloaded by user=...` - lists what changed:
+
+```
+Changes:
+  grants testuser: + disks/usage (root; paths [/var])
+```
 
 ## Full reference example
 

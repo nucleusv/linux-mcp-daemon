@@ -270,7 +270,7 @@ func positionalWords(words []string) []string {
 	return out
 }
 
-var mcpdAdminVerbs = []string{"create", "delete", "update", "list", "describe"}
+var mcpdAdminVerbs = []string{"create", "delete", "update", "list", "describe", "edit"}
 
 // completeWords returns candidates for the last word in words (the one
 // being typed), given the ones before it.
@@ -290,15 +290,22 @@ func completeWords(reg Registry, words []string) []string {
 		return sorted(groupsForVerb(reg, positional[0]))
 	case 2:
 		return sorted(keywordsFor(reg, positional[0], positional[1]))
+	case 3:
+		if positional[0] == "edit" && positional[1] == "mcpd" && positional[2] == "config" {
+			return sorted(mapKeys(editConfigFiles))
+		}
 	}
 	return nil
 }
 
 func topLevelVerbs(reg Registry) []string {
-	verbs := []string{"get", "describe", "explain", "tool", "resource", "completion", "ping", "create", "update", "delete", "list"}
+	verbs := []string{"get", "describe", "explain", "tool", "resource", "completion", "ping", "create", "update", "delete", "list", "edit"}
 	for _, t := range reg.Tools {
 		if isMutationOnly(t) {
 			verbs = append(verbs, requiredEnumValues(t)...)
+		}
+		if t.Name == "daemon/reload-config" { // listed only for users granted it
+			verbs = append(verbs, t.LinuxctlVerb)
 		}
 	}
 	return verbs
@@ -368,6 +375,9 @@ func groupsForVerb(reg Registry, verb string) []string {
 func keywordsFor(reg Registry, verb, group string) []string {
 	var kws []string
 	if group == "mcpd" {
+		if verb == "edit" {
+			return []string{"config"}
+		}
 		return []string{"user"}
 	}
 	switch verb {
@@ -467,4 +477,12 @@ func sorted(list []string) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+func mapKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }

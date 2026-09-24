@@ -1,8 +1,10 @@
 package main
 
 import (
-	"os"
+	"fmt"
+	"log"
 	"sync"
+	"sync/atomic"
 
 	"golang.org/x/sync/singleflight"
 
@@ -10,68 +12,29 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/cache"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/rpc"
-	"gopkg.in/yaml.v3"
 )
 
-type Config struct {
-	Server struct {
-		Port int `yaml:"port"`
-		TLS  struct {
-			Enabled  bool   `yaml:"enabled"`
-			Port     int    `yaml:"port"`
-			CertFile string `yaml:"cert_file"`
-			KeyFile  string `yaml:"key_file"`
-		} `yaml:"tls"`
-	} `yaml:"server"`
-	RateLimits struct {
-		DefaultRPS   float64 `yaml:"default_rps"`
-		DefaultBurst int     `yaml:"default_burst"`
-	} `yaml:"rate_limits"`
-	Worker struct {
-		TimeoutSeconds int `yaml:"timeout_seconds"`
-		// Containerized indicates this daemon process itself runs inside a
-		// container with its own private root filesystem (e.g. Kubernetes),
-		// as opposed to running directly on the host with no container
-		// boundary. When true, every privileged (root) worker call also
-		// joins the real host's mount namespace before running - see
-		// internal/worker/hostns.go. Set false when mcpd runs directly on
-		// the host.
-		Containerized bool `yaml:"containerized"`
-	} `yaml:"worker"`
-	Tools map[string]struct {
-		TimeoutSeconds int `yaml:"timeout_seconds"`
-	} `yaml:"tools"`
-	Users []struct {
-		Username string `yaml:"username"`
-		// Token is the legacy plaintext field. New/rotated users
-		// (via `linuxctl create|update mcpd user`) use TokenSalt+TokenHash
-		// instead - see authenticateRequest in http.go. Both are supported
-		// simultaneously so migration doesn't require a hard cutover.
-		Token     string `yaml:"token,omitempty"`
-		TokenSalt string `yaml:"token_salt,omitempty"`
-		TokenHash string `yaml:"token_hash,omitempty"`
-		CreatedAt string `yaml:"created_at,omitempty"`
-		// PinnedUID and OSUID implement trust-on-first-use OS identity
-		// pinning - see cmd/mcpd/uid_pin.go for the full mechanism, rationale,
-		// and its known limitation (it does not reliably catch a username
-		// being reused for a different real person if the OS happens to
-		// reissue the exact same UID, which useradd's gap-filling behavior
-		// makes plausible - see ARCHITECTURE.md). Never set these fields by
-		// hand; they're written only by the daemon itself.
-		PinnedUID string `yaml:"pinned_uid,omitempty"`
-		OSUID     string `yaml:"os_uid,omitempty"`
-	} `yaml:"users"`
-}
+// Config is daemon.yaml (see internal/config).
+type Config = config.DaemonConfig
 
-// daemonConfigPath is set once in main() alongside loadConfig, and used by
-// uid_pin.go to persist pinned_uid/os_uid updates back to the same file
-// mcpd loaded them from.
-var daemonConfigPath string
+// configDir holds daemon.yaml, users.yaml and mcp-sudo.yaml, relative to
+// mcpd's working directory.
+const (
+	configDir      = "configs"
+	sudoConfigPath = configDir + "/" + config.SudoFile
+)
 
 var (
-	daemonConfig   Config
-	sudoConfig     *config.SudoConfig
-	limiterManager *auth.LimiterManager
+	// daemonConfig is replaced by reloadConfig (daemon/reload-config) and
+	// its users updated in place by checkAndPinUID; both hold cfgMu, and
+	// readers take cfgMu.RLock.
+	daemonConfig Config
+	// usersPath is the file daemonConfig.Users was loaded from (users.yaml,
+	// or daemon.yaml in configs predating it) - where UID pins are saved.
+	usersPath string
+	cfgMu     sync.RWMutex
+
+	limiterManager atomic.Pointer[auth.LimiterManager]
 	rpcHandler     *rpc.RPCHandler
 
 	sessions       = make(map[string]*rpc.Session)
@@ -84,13 +47,26 @@ var (
 	resourceCache = cache.NewTTLCache()
 )
 
-
-
-
-func loadConfig(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
+// loadConfig reads daemon.yaml and the users. At startup, unknown keys are
+// only warned about, so an upgrade can't stop the daemon over a key an
+// older version accepted; a reload (reloadConfig) rejects them.
+func loadConfig() (Config, string, error) {
+	c, users, err := config.LoadConfigDir(configDir, true)
+	if err == nil {
+		return c, users, nil
 	}
-	return yaml.Unmarshal(data, &daemonConfig)
+	lenient, lusers, lerr := config.LoadConfigDir(configDir, false)
+	if lerr != nil {
+		return c, "", lerr
+	}
+	log.Printf("WARNING: %v - ignoring the unknown key(s); daemon/reload-config and linuxctl edit will refuse this file until it's fixed", err)
+	return lenient, lusers, nil
+}
+
+// legacyUsersWarning is set when users still live in daemon.yaml.
+func legacyUsersWarning(c Config, users string) string {
+	if users != configDir+"/"+config.DaemonFile || len(c.Users) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("users are still listed in %s/%s - they now belong in %s/%s (linuxctl moves them on its next user change)", configDir, config.DaemonFile, configDir, config.UsersFile)
 }

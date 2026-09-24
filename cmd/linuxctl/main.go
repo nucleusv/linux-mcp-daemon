@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"text/tabwriter"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -111,73 +112,9 @@ func main() {
 	}
 
 	// 2. Connect to SSE
-	req, err := http.NewRequest("GET", *serverURL+"/sse", nil)
-	if err != nil {
-		fmt.Printf("Failed to create SSE request: %v\n", err)
+	if err := connect(authToken, firstWord); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
-	}
-	req.Header.Set("Authorization", "Bearer "+authToken)
-	req.Header.Set("Accept", "text/event-stream")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("Failed to connect to daemon: %v\n", err)
-		os.Exit(1)
-	}
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("Daemon returned status: %s\n%s\n", resp.Status, string(body))
-		os.Exit(1)
-	}
-
-	// 3. Start SSE reader loop
-	go func() {
-		defer resp.Body.Close()
-		reader := bufio.NewReader(resp.Body)
-		var eventName string
-
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err != io.EOF {
-					fmt.Printf("\nSSE stream error: %v\n", err)
-				}
-				return
-			}
-			line = strings.TrimSpace(line)
-
-			if strings.HasPrefix(line, "event: ") {
-				eventName = strings.TrimPrefix(line, "event: ")
-			} else if strings.HasPrefix(line, "data: ") {
-				data := strings.TrimPrefix(line, "data: ")
-				if eventName == "endpoint" {
-					postEndpoint = *serverURL + data
-				} else if eventName == "message" {
-					if firstWord == "stdio" {
-						// Transparently forward all JSON-RPC messages to stdout for Claude Desktop
-						fmt.Println(data)
-					} else {
-						var rpcResp JSONRPCResponse
-						if err := json.Unmarshal([]byte(data), &rpcResp); err == nil {
-							chanMutex.Lock()
-							if ch, ok := responseChans[rpcResp.ID]; ok {
-								ch <- rpcResp
-								delete(responseChans, rpcResp.ID)
-							}
-							chanMutex.Unlock()
-						}
-					}
-				}
-			} else if line == "" {
-				eventName = ""
-			}
-		}
-	}()
-
-	// Wait for endpoint
-	for postEndpoint == "" {
-		// active busy wait for simplicity, should be quick
 	}
 
 	if firstWord == "__complete" {
@@ -198,7 +135,7 @@ func main() {
 			}
 			postReq.Header.Set("Authorization", "Bearer "+authToken)
 			postReq.Header.Set("Content-Type", "application/json")
-			postResp, err := client.Do(postReq)
+			postResp, err := http.DefaultClient.Do(postReq)
 			if err == nil {
 				postResp.Body.Close()
 			}
@@ -781,10 +718,105 @@ func printFormatted(text, outputFormat string) {
 		printLines(buf.String())
 	default:
 		fmt.Print(text)
+		if text != "" && !strings.HasSuffix(text, "\n") {
+			fmt.Println() // don't leave the shell prompt glued to the output
+		}
+	}
+}
+
+// connect opens the SSE stream to *serverURL and waits until the daemon
+// announces the endpoint for POSTing requests. Responses arriving on the
+// stream are routed to responseChans (or, for firstWord "stdio", printed).
+func connect(authToken, firstWord string) error {
+	req, err := http.NewRequest("GET", *serverURL+"/sse", nil)
+	if err != nil {
+		return fmt.Errorf("Failed to create SSE request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+authToken)
+	req.Header.Set("Accept", "text/event-stream")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("Failed to connect to daemon: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return fmt.Errorf("Daemon returned status: %s\n%s", resp.Status, string(body))
+	}
+
+	endpoint := make(chan string, 1)
+	streamEnded := make(chan struct{})
+	go func() {
+		defer close(streamEnded)
+		defer resp.Body.Close()
+		reader := bufio.NewReader(resp.Body)
+		var eventName string
+
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				if err != io.EOF {
+					fmt.Printf("\nSSE stream error: %v\n", err)
+				}
+				return
+			}
+			line = strings.TrimSpace(line)
+
+			if strings.HasPrefix(line, "event: ") {
+				eventName = strings.TrimPrefix(line, "event: ")
+			} else if strings.HasPrefix(line, "data: ") {
+				data := strings.TrimPrefix(line, "data: ")
+				if eventName == "endpoint" {
+					select {
+					case endpoint <- *serverURL + data:
+					default:
+					}
+				} else if eventName == "message" {
+					if firstWord == "stdio" {
+						// Transparently forward all JSON-RPC messages to stdout for Claude Desktop
+						fmt.Println(data)
+					} else {
+						var rpcResp JSONRPCResponse
+						if err := json.Unmarshal([]byte(data), &rpcResp); err == nil {
+							chanMutex.Lock()
+							if ch, ok := responseChans[rpcResp.ID]; ok {
+								ch <- rpcResp
+								delete(responseChans, rpcResp.ID)
+							}
+							chanMutex.Unlock()
+						}
+					}
+				}
+			} else if line == "" {
+				eventName = ""
+			}
+		}
+	}()
+
+	select {
+	case postEndpoint = <-endpoint:
+		return nil
+	case <-streamEnded:
+		return fmt.Errorf("mcpd closed the connection before it was ready")
+	case <-time.After(15 * time.Second):
+		return fmt.Errorf("mcpd at %s did not answer within 15s", *serverURL)
 	}
 }
 
 func callMethod(authToken string, id string, method string, params interface{}) JSONRPCResponse {
+	resp, err := tryCallMethod(authToken, id, method, params, 0)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return resp
+}
+
+// tryCallMethod sends one JSON-RPC request over the connected session and
+// waits for its response (at most timeout, if non-zero).
+func tryCallMethod(authToken string, id string, method string, params interface{}, timeout time.Duration) (JSONRPCResponse, error) {
 	reqRPC := JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      id,
@@ -805,16 +837,22 @@ func callMethod(authToken string, id string, method string, params interface{}) 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("Failed to POST JSON-RPC: %v\n", err)
-		os.Exit(1)
+		return JSONRPCResponse{}, fmt.Errorf("Failed to POST JSON-RPC: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		b, _ := io.ReadAll(resp.Body)
-		fmt.Printf("Failed to submit request (HTTP %d): %s\n", resp.StatusCode, string(b))
-		os.Exit(1)
+		return JSONRPCResponse{}, fmt.Errorf("Failed to submit request (HTTP %d): %s", resp.StatusCode, string(b))
 	}
 
-	return <-ch
+	if timeout == 0 {
+		return <-ch, nil
+	}
+	select {
+	case r := <-ch:
+		return r, nil
+	case <-time.After(timeout):
+		return JSONRPCResponse{}, fmt.Errorf("no response from mcpd within %s", timeout)
+	}
 }

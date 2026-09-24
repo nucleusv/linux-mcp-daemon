@@ -53,7 +53,7 @@ FROM ubuntu:24.04
 WORKDIR /root/
 
 # Install some basic tools and certificates, and create OS accounts matching
-# configs/daemon.yaml's users (SpawnWorker does user.Lookup() against the OS
+# configs/users.yaml's users (SpawnWorker does user.Lookup() against the OS
 # passwd db for every tool call, privileged or not, to resolve a UID)
 RUN apt-get update && apt-get install -y \
     ca-certificates \

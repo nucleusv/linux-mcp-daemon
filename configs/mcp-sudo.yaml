@@ -120,6 +120,8 @@ users:
       tools:
         auth/sudo-rules:
           allowed: true
+        daemon/reload-config:
+          allowed: true
         cpu/list:
           allowed: true
         cpu/load-average:

@@ -107,7 +107,11 @@ func authenticateRequest(r *http.Request) (string, bool) {
 		return "", false
 	}
 	providedToken := strings.TrimPrefix(authHeader, "Bearer ")
-	for _, user := range daemonConfig.Users {
+	cfgMu.RLock()
+	// A copy: checkAndPinUID updates entries in place under cfgMu.
+	users := append(daemonConfig.Users[:0:0], daemonConfig.Users...)
+	cfgMu.RUnlock()
+	for _, user := range users {
 		if user.TokenHash != "" {
 			// Salted-hash accounts (created or rotated via `linuxctl create|update
 			// mcpd user`) - compare hash(salt+provided) against the stored hash
@@ -152,6 +156,7 @@ func handleSSE(w http.ResponseWriter, r *http.Request) {
 		ID:    uniqueSessionID,
 		User:  sessionUser,
 		Event: make(chan string, 10),
+		Done:  make(chan struct{}),
 	}
 	sessions[uniqueSessionID] = session
 	sessionsMu.Unlock()
@@ -182,6 +187,9 @@ func handleSSE(w http.ResponseWriter, r *http.Request) {
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
 			}
+		case <-session.Done:
+			log.Printf("SSE connection closed by the server for user=%s session=%s (config reload)", username, uniqueSessionID)
+			return
 		case <-r.Context().Done():
 			log.Printf("SSE connection closed for user=%s session=%s", username, uniqueSessionID)
 			return
@@ -227,7 +235,7 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !limiterManager.Allow(username) {
+	if !limiterManager.Load().Allow(username) {
 		log.Printf("[THROTTLED] User %s exceeded rate limits", username)
 		http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 		return

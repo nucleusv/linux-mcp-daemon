@@ -19,8 +19,8 @@ The script:
 
 1. downloads the release archive for your architecture (amd64 or arm64) and **verifies its sha256** against the release's `checksums.txt` - a mismatch aborts the install;
 2. installs `mcpd` and `linuxctl` to `/usr/local/bin` and the man pages (`man mcpd`, `man linuxctl`);
-3. creates `/etc/mcpd/configs/daemon.yaml` and `mcp-sudo.yaml` from clean templates - **no users, no default tokens**;
-4. creates one MCP user, `mcp`, backed by an OS account of the same name with no login shell (each tool call runs as that account), and **prints its token once** - only a salted hash is stored;
+3. creates `/etc/mcpd/configs/daemon.yaml`, `users.yaml` and `mcp-sudo.yaml` from clean templates - **no users, no default tokens**;
+4. creates one MCP user, `mcp`, backed by an OS account of the same name with no login shell (each tool call runs as that account), and **prints its token once** - only a salted hash is stored. `mcp` may also apply config changes ([`daemon/reload-config`](./mcp-api/tools/daemon/reload-config)), so users you add later take effect without a restart;
 5. installs the `mcpd` systemd service, enables and starts it.
 
 ```text
@@ -92,12 +92,14 @@ Run the same command again. Binaries are replaced (the service is restarted only
 Each MCP user needs an OS account of the same name - every tool call runs as that account. For a user `alice`:
 
 ```bash
+export MCP_SERVER=http://127.0.0.1:9091 MCP_TOKEN=<the mcp user's token>
 sudo useradd --system --shell /usr/sbin/nologin alice
-sudo /usr/local/bin/linuxctl create mcpd user alice --config-path /etc/mcpd/configs   # prints alice's token once
-sudo systemctl restart mcpd
+sudo -E /usr/local/bin/linuxctl create mcpd user alice --config-path /etc/mcpd/configs   # prints alice's token once
 ```
 
-(The full path matters on RHEL, Rocky, Alma and Fedora, whose `sudo` doesn't search `/usr/local/bin`: `sudo linuxctl` fails there with `command not found`.) `alice` can now call every tool as her own OS account; to let her run specific tools as root, grant them in `/etc/mcpd/configs/mcp-sudo.yaml` - see [mcp-sudo.yaml](./configuration/mcp-sudo) - and restart mcpd again. More commands (list, rotate, delete): [Daemon User Administration](./linuxctl/mcpd-admin).
+`linuxctl` writes the files and then asks the running mcpd to reload them (as the `mcp` user - that's what `MCP_TOKEN` and `sudo -E` are for), so `alice` can connect right away - no restart. (The full path matters on RHEL, Rocky, Alma and Fedora, whose `sudo` doesn't search `/usr/local/bin`: `sudo linuxctl` fails there with `command not found`.)
+
+`alice` can now call every tool as her own OS account. To let her run specific tools as root, grant them in `mcp-sudo.yaml` - `sudo -E /usr/local/bin/linuxctl edit mcpd config sudo --config-path /etc/mcpd/configs` opens it in your editor, checks it when you save (like `visudo`) and applies it; see [mcp-sudo.yaml](./configuration/mcp-sudo). More commands (list, rotate, delete): [Daemon User Administration](./linuxctl/mcpd-admin).
 
 ### Uninstalling
 
@@ -130,9 +132,10 @@ sudo mkdir -p /etc/mcpd/configs
 sudo docker run --rm -v /etc/mcpd/configs:/out --entrypoint cp $IMAGE -r /root/configs/. /out/
 sudo chmod 600 /etc/mcpd/configs/*.yaml    # they will hold token hashes
 
-# 2. Create a user and print its token (once) - save it
+# 2. Create a user and print its token (once) - save it. It may also apply
+#    config changes later (daemon/reload-config); mcpd isn't running yet.
 sudo docker run --rm -v /etc/mcpd/configs:/root/configs $IMAGE \
-  linuxctl create mcpd user privileged --config-path /root/configs
+  linuxctl create mcpd user privileged --grant daemon/reload-config --no-reload --config-path /root/configs
 
 # 3. Run, administering the real host
 sudo docker run -d --name mcpd --restart unless-stopped \
@@ -142,7 +145,7 @@ sudo docker run -d --name mcpd --restart unless-stopped \
   $IMAGE
 ```
 
-Step 2's "Next steps" text is written for the systemd install - in the container ignore its `useradd` and `systemctl` lines (the account already exists in the image, and step 3 starts mcpd with the new user).
+Step 2's "Next steps" text is written for the systemd install - in the container ignore its `useradd` line (the account already exists in the image, and step 3 starts mcpd with the new user).
 
 Try it - the image contains `linuxctl`, so you don't need it on the host:
 
@@ -160,13 +163,15 @@ or from any machine with `linuxctl` installed: `export MCP_SERVER=http://<host>:
     privileged:
       privileged:
         tools:
+          daemon/reload-config:
+            allowed: true
           system/os-release:
             allowed: true
         resources: {}
   ```
 
-  then `sudo docker restart mcpd` and call `linuxctl get system os-release --privileged true` - it now reports the host's OS. All options: [mcp-sudo.yaml](./configuration/mcp-sudo).
-- The image ships **no users and no tokens** - step 2 is required. After adding or changing users or grants, `sudo docker restart mcpd`.
+  then apply it with `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl reload daemon` and call `linuxctl get system os-release --privileged true` - it now reports the host's OS. If the file has a mistake, the reload says so and mcpd keeps the config it has. All options: [mcp-sudo.yaml](./configuration/mcp-sudo).
+- The image ships **no users and no tokens** - step 2 is required. After adding or changing users (`docker run --rm ... linuxctl create mcpd user ...` as in step 2) or grants, apply them with `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl reload daemon` - or `sudo docker restart mcpd`.
 
 ## macOS: the CLI
 

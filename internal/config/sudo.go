@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/netpolicy"
-	"gopkg.in/yaml.v3"
 )
 
 type SudoConfig struct {
@@ -96,9 +95,33 @@ func LoadSudoConfig(path string) (*SudoConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	cfg, err := ParseSudoConfig(data, false)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return cfg, nil
+}
 
+// LoadSudoConfigStrict is LoadSudoConfig rejecting unknown keys too: a
+// misspelled key (`path:` for `paths:`) is an error rather than a rule
+// silently left out. Used by daemon/reload-config and linuxctl edit.
+func LoadSudoConfigStrict(path string) (*SudoConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := ParseSudoConfig(data, true)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return cfg, nil
+}
+
+// ParseSudoConfig parses and validates mcp-sudo.yaml; strict rejects
+// unknown keys.
+func ParseSudoConfig(data []byte, strict bool) (*SudoConfig, error) {
 	var cfg SudoConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	if err := decodeYAML(data, &cfg, strict); err != nil {
 		return nil, err
 	}
 
@@ -107,22 +130,22 @@ func LoadSudoConfig(path string) (*SudoConfig, error) {
 		for toolName, privs := range userSudo.Privileged.Tools {
 			if privs.Sysctl != nil {
 				if privs.Sysctl.RemovedReadOnly != nil {
-					return nil, fmt.Errorf("validation error in %s: user '%s', tool '%s': sysctl.read_only is no longer supported - for read-only access remove `allowed` (reading needs no root, and without root the OS refuses writes); to limit writes use sysctl.write_keys", path, username, toolName)
+					return nil, fmt.Errorf("user '%s', tool '%s': sysctl.read_only is no longer supported - for read-only access remove `allowed` (reading needs no root, and without root the OS refuses writes); to limit writes use sysctl.write_keys", username, toolName)
 				}
 				for _, p := range privs.Sysctl.WriteKeys {
 					if err := validSysctlPattern(p); err != nil {
-						return nil, fmt.Errorf("validation error in %s: user '%s', tool '%s': invalid sysctl.write_keys pattern %q: %v", path, username, toolName, p, err)
+						return nil, fmt.Errorf("user '%s', tool '%s': invalid sysctl.write_keys pattern %q: %v", username, toolName, p, err)
 					}
 				}
 			}
 			if privs.Network != nil {
 				if err := privs.Network.Validate(); err != nil {
-					return nil, fmt.Errorf("validation error in %s: user '%s', tool '%s': %v", path, username, toolName, err)
+					return nil, fmt.Errorf("user '%s', tool '%s': %v", username, toolName, err)
 				}
 			}
 			if toolName == "list_files" && privs.Allowed {
 				if len(privs.Paths) == 0 {
-					return nil, fmt.Errorf("validation error in %s: user '%s' has list_files allowed but no paths specified. 'paths' array must not be empty", path, username)
+					return nil, fmt.Errorf("user '%s' has list_files allowed but no paths specified. 'paths' array must not be empty", username)
 				}
 			}
 		}

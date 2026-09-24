@@ -277,6 +277,20 @@ Your authorized privileged tools:
 {"Tools": {...}, "Resources": {...}}
 ```
 
+## daemon
+
+Only for users granted `daemon/reload-config` in `mcp-sudo.yaml` - see [daemon/reload-config](../mcp-api/tools/daemon/reload-config).
+
+```bash
+$ linuxctl reload daemon
+Reloaded configs/daemon.yaml, configs/users.yaml and configs/mcp-sudo.yaml.
+Changes:
+  user testuser: added
+  grants testuser: + disks/usage (root; paths [/var])
+```
+
+Editing the config files themselves is local-only: `linuxctl <verb> mcpd user ...` and `linuxctl edit mcpd config ...` - see [Daemon User Administration](./mcpd-admin).
+
 ## Resource templates directly (bypassing the verb grammar)
 
 The `resource <uri>` command still works as a direct escape hatch to any resource, including templates:

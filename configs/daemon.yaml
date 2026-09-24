@@ -18,16 +18,3 @@ worker:
 tools:
   disks/usage:
     timeout_seconds: 300
-users:
-  - username: "testuser"
-    token_salt: eb4aa215d12c3f338efcc3fa1430387e
-    token_hash: ce795277eaf5967025aef258587f21cc404e72a0be8354010810f030275514d1
-    created_at: 2026-09-23T00:28:15Z
-  - username: "unpriviliged"
-    token_salt: 24e97e684ad482a6dbfddc5bee6a8cf7
-    token_hash: 6a4397e9b43d32dcf11a13e46de8e79c4cf1005ca2df1f35fd8a44b24b334562
-    created_at: 2026-09-23T00:28:15Z
-  - username: "privileged"
-    token_salt: 2c1d471f5ea8985d0743849cfb9c83b5
-    token_hash: 17ef71389d0ef5cd51c35f7e54f945a634c85795a5ef66db696f2341b11b489d
-    created_at: 2026-09-23T00:28:15Z

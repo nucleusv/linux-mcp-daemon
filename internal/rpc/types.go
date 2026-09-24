@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"encoding/json"
+	"sync"
 	"time"
 )
 
@@ -9,6 +10,19 @@ type Session struct {
 	ID    string
 	User  string
 	Event chan string
+	// Done is closed by Close to end the SSE stream from the server side
+	// (e.g. the user was removed by a config reload).
+	Done      chan struct{}
+	closeOnce sync.Once
+}
+
+// Close ends the session's SSE stream. Safe to call more than once.
+func (s *Session) Close() {
+	s.closeOnce.Do(func() {
+		if s.Done != nil {
+			close(s.Done)
+		}
+	})
 }
 
 // MCP JSON-RPC Structures

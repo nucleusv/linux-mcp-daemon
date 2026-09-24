@@ -1,0 +1,5 @@
+# mcpd users: who may connect, and with which token (only a salted hash is
+# stored). Managed with `linuxctl create|update|delete mcpd user`. Each user
+# must also exist as an OS account: tools run as that account. What a user
+# may do as root is set in mcp-sudo.yaml.
+users: []

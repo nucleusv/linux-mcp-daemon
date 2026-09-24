@@ -14,44 +14,47 @@ import (
 )
 
 func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
+	// One snapshot per request: a concurrent reload can't change the rules
+	// between the authorization check and the call it authorizes.
+	sudoCfg := h.Sudo()
 	// Dynamically generate the tools list based on sudo rules.
 	listDesc := "Lists a directory like ls -la: file type and permissions, link count, owner, group, size, modification time and symlink targets (symlinks are shown, never followed)."
-	if h.SudoConfig.CanRunAsRoot(session.User, "files/list") {
+	if sudoCfg.CanRunAsRoot(session.User, "files/list") {
 		listDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
 	}
 
 	dfDesc := "Returns disk space statistics (df -h). Use disks/list to see all block devices."
-	if h.SudoConfig.CanRunAsRoot(session.User, "disks/free") {
+	if sudoCfg.CanRunAsRoot(session.User, "disks/free") {
 		dfDesc += " (Authorized for 'privileged: true')"
 	}
 
 	duDesc := "Calculates the total disk space utilized by a specific directory (du -sh). Use disks/free for overall partition stats."
-	if h.SudoConfig.CanRunAsRoot(session.User, "disks/usage") {
+	if sudoCfg.CanRunAsRoot(session.User, "disks/usage") {
 		duDesc += " (Authorized for 'privileged: true' to traverse protected subdirectories)"
 	}
 
 	filetypeDesc := "Determines a file's MIME type (equivalent to `file -b --mime-type`). Use files/stat for size/permissions/ownership instead."
-	if h.SudoConfig.CanRunAsRoot(session.User, "files/filetype") {
+	if sudoCfg.CanRunAsRoot(session.User, "files/filetype") {
 		filetypeDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
 	}
 
 	pkgDesc := "Lists installed packages, auto-detecting the package manager (dpkg, apk; rpm-based systems aren't supported natively yet)."
-	if h.SudoConfig.CanRunAsRoot(session.User, "system/packages") {
+	if sudoCfg.CanRunAsRoot(session.User, "system/packages") {
 		pkgDesc += " (Authorized for 'privileged: true' - when this daemon runs containerized, that automatically queries the real host's packages, not this container's own image.)"
 	}
 
 	mountsDesc := "Lists mounted filesystems (device, mount point, type, options) - equivalent to `mount`/`findmnt`'s basic view. Use disks/list for block devices instead."
-	if h.SudoConfig.CanRunAsRoot(session.User, "disks/mounts") {
+	if sudoCfg.CanRunAsRoot(session.User, "disks/mounts") {
 		mountsDesc += " (Authorized for 'privileged: true' - when this daemon runs containerized, that automatically shows the real host's mount table, not this container's own.)"
 	}
 
 	usersDesc := "Lists user accounts from /etc/passwd (uid, gid, home, shell, group memberships). Never reads /etc/shadow - this reports account identity, not credentials."
-	if h.SudoConfig.CanRunAsRoot(session.User, "users/list") {
+	if sudoCfg.CanRunAsRoot(session.User, "users/list") {
 		usersDesc += " (Authorized for 'privileged: true' - when this daemon runs containerized, that automatically lists the real host's users, not this container's own.)"
 	}
 
 	loginsDesc := "Lists login history (wraps `last`) or failed login attempts (`type: \"failed\"`, wraps `lastb`). Returns raw text, not JSON - last/lastb's output isn't safe to hand-parse into structured data reliably."
-	if h.SudoConfig.CanRunAsRoot(session.User, "logs/logins") {
+	if sudoCfg.CanRunAsRoot(session.User, "logs/logins") {
 		loginsDesc += " (Authorized for 'privileged: true' - typically required for type: \"failed\", since btmp is usually root-only readable. When this daemon runs containerized, privileged also automatically reads the real host's login history.)"
 	}
 
@@ -626,6 +629,19 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			},
 		},
 	}
+	// Shown only to users granted it: everyone else couldn't call it anyway.
+	if sudoCfg.CanRunAsRoot(session.User, "daemon/reload-config") {
+		toolsList["tools"] = append(toolsList["tools"].([]interface{}), map[string]interface{}{
+			"name":          "daemon/reload-config",
+			"tools_group":   "daemon",
+			"linuxctl_verb": "reload",
+			"description":   "Re-reads mcpd's config files (daemon.yaml, users.yaml, mcp-sudo.yaml) and applies them without restarting mcpd: users and tokens, per-user grants, rate limits and tool timeouts. It only reads the files - they are edited on the host (linuxctl). They are validated first, strictly (a misspelled key is an error): if any is invalid, nothing changes and the error is returned. Returns what changed (users added/removed, tokens and grants changed). Sessions of removed users, and of users whose token changed, are closed. Server settings (port, TLS, worker.containerized) still need a restart. Only for users granted daemon/reload-config in mcp-sudo.yaml.",
+			"inputSchema": map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		})
+	}
 	resp.Result = toolsList
 
 }
@@ -678,6 +694,9 @@ func redactValue(v interface{}) interface{} {
 }
 
 func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp *JSONRPCResponse) {
+	// One snapshot per request: a concurrent reload can't change the rules
+	// between the authorization check and the call it authorizes.
+	sudoCfg := h.Sudo()
 	var params CallToolParams
 	if err := json.Unmarshal(req.Params, &params); err == nil {
 
@@ -726,9 +745,19 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"users/list":            true,
 		}
 
-		if params.Name == "auth/sudo-rules" {
+		if params.Name == "daemon/reload-config" {
+			// Runs in the master: it only re-reads mcpd's own config files.
+			if !sudoCfg.CanRunAsRoot(session.User, params.Name) {
+				execErr = fmt.Errorf("user %s is not authorized to run %s (grant it in mcp-sudo.yaml)", session.User, params.Name)
+			} else if h.ReloadConfig == nil {
+				execErr = fmt.Errorf("config reload is not available")
+			} else {
+				resultText, execErr = h.ReloadConfig(session.User)
+			}
+
+		} else if params.Name == "auth/sudo-rules" {
 			// No need to spawn an isolated worker to read our own memory config
-			resultText, execErr = sudorules.SudoRules(params.Arguments, session.User, h.SudoConfig)
+			resultText, execErr = sudorules.SudoRules(params.Arguments, session.User, sudoCfg)
 
 		} else if standardWorkers[params.Name] {
 
@@ -744,7 +773,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 				if checkPath == "" && params.Name == "files/find" {
 					checkPath = "/" // files/find's own default
 				}
-				cleanPath, allowed := config.PathAllowed(checkPath, h.SudoConfig.GetAllowedPaths(session.User, params.Name))
+				cleanPath, allowed := config.PathAllowed(checkPath, sudoCfg.GetAllowedPaths(session.User, params.Name))
 				if !allowed {
 					execErr = fmt.Errorf("user %s is not authorized to run %s on path %s as root", session.User, params.Name, baseArgs.Path)
 				} else {
@@ -773,7 +802,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 				if err != nil {
 					execErr = err
 				} else if sc.Key != "" && sc.Value != "" {
-					if ok, reason := h.SudoConfig.CanWriteSysctl(session.User, systemcontrol.NormalizeKey(sc.Key)); !ok {
+					if ok, reason := sudoCfg.CanWriteSysctl(session.User, systemcontrol.NormalizeKey(sc.Key)); !ok {
 						execErr = fmt.Errorf("%s", reason)
 					}
 				}
@@ -786,7 +815,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 				var argMap map[string]interface{}
 				if err := json.Unmarshal(params.Arguments, &argMap); err == nil {
 					delete(argMap, "_network_policy")
-					if pol := h.SudoConfig.NetworkPolicy(session.User, params.Name); pol != nil {
+					if pol := sudoCfg.NetworkPolicy(session.User, params.Name); pol != nil {
 						argMap["_network_policy"] = pol
 					}
 					if b, err := json.Marshal(argMap); err == nil {
@@ -796,10 +825,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			}
 
 			// Resolve execution timeout (check tool override, fallback to global worker default)
-			executionTimeout := h.WorkerTimeoutSec
-			if toolCfg, ok := h.ToolsConfig[params.Name]; ok && toolCfg.TimeoutSeconds > 0 {
-				executionTimeout = toolCfg.TimeoutSeconds
-			}
+			executionTimeout := h.timeoutFor(params.Name)
 
 			if execErr == nil {
 				// Use the Ephemeral Worker Spawner with caching for heavy tools
@@ -814,7 +840,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 						resultText = entry.Result
 					} else {
 						v, err, _ := h.RequestGroup.Do(cacheKey, func() (interface{}, error) {
-							res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, h.SudoConfig, executionTimeout)
+							res, exErr := worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoCfg, executionTimeout)
 							if exErr == nil {
 								h.CacheMu.Lock()
 								h.RpcCache[cacheKey] = CacheEntry{
@@ -833,7 +859,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 						}
 					}
 				} else {
-					resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, h.SudoConfig, executionTimeout)
+					resultText, execErr = worker.SpawnWorker(session.User, params.Name, params.Arguments, baseArgs.Privileged, sudoCfg, executionTimeout)
 				}
 			}
 

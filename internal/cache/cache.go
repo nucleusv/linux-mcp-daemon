@@ -61,3 +61,11 @@ func (c *TTLCache) Delete(key string) {
 	defer c.mu.Unlock()
 	delete(c.items, key)
 }
+
+// Clear removes every item, e.g. after a config reload changed who may
+// read what.
+func (c *TTLCache) Clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.items = make(map[string]CacheItem)
+}

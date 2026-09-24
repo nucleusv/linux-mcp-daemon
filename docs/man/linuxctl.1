@@ -76,7 +76,13 @@ The main grammar described above. Arguments can be positional or explicit flags.
 Calls a tool directly by its literal name, symmetric with \fBresource <uri>\fR. Also the pre-redesign flat-syntax escape hatch for anything the verb resolver doesn't yet cover.
 .TP
 .B <verb> mcpd user <username>
-Local-only user/token administration: create, delete, update (rotate token), list, or describe an mcpd bearer-token user. Unlike every other command, this never talks to the daemon over the network - it reads and writes \fBconfigs/daemon.yaml\fR and \fBconfigs/mcp-sudo.yaml\fR directly on disk (path set by \fB\-\-config\-path\fR, default \fB./configs\fR), and needs no \fB\-token\fR/\fB\-server\fR flag. A newly created user's token is printed once, to the terminal only, and is never stored in plaintext - only its salted hash is written to \fBdaemon.yaml\fR.
+User/token administration: create, delete, update (rotate token), list, or describe an mcpd bearer-token user. Edits \fBconfigs/users.yaml\fR and \fBconfigs/mcp-sudo.yaml\fR directly on disk (path set by \fB\-\-config\-path\fR, default \fB./configs\fR); there is no MCP tool that edits them. A newly created user's token is printed once, to the terminal only, and is never stored in plaintext - only its salted hash is written to \fBusers.yaml\fR. \fB\-\-grant\fR \fITOOL,...\fR lets a new user run those tools as root. After a change, asks the running daemon to re-read its files (\fBdaemon/reload-config\fR, with \fBMCP_SERVER\fR and \fBMCP_TOKEN\fR); \fB\-\-no\-reload\fR skips that.
+.TP
+.B edit mcpd config [sudo|users|daemon]
+Edits one config file like \fBvisudo\fR(8): a copy is opened in \fB$VISUAL\fR or \fB$EDITOR\fR and, on save, checked with the same strict parser mcpd uses; only a valid file replaces the original, and the daemon is then reloaded. An invalid edit can be edited again or discarded.
+.TP
+.B reload daemon
+Makes the running mcpd re-read daemon.yaml, users.yaml and mcp-sudo.yaml without a restart (\fBdaemon/reload-config\fR; needs that tool granted in mcp-sudo.yaml). Prints what changed; an invalid file leaves the running config untouched.
 .SH ENVIRONMENT
 .TP
 .B MCP_TOKEN

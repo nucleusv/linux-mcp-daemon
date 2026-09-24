@@ -165,13 +165,16 @@ func main() {
 	// ==========================================
 	// MASTER DAEMON MODE
 	// ==========================================
-	daemonConfigPath = "configs/daemon.yaml"
-	if err := loadConfig(daemonConfigPath); err != nil {
+	var err error
+	daemonConfig, usersPath, err = loadConfig()
+	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+	if w := legacyUsersWarning(daemonConfig, usersPath); w != "" {
+		log.Printf("WARNING: %s", w)
+	}
 
-	var err error
-	sudoConfig, err = config.LoadSudoConfig("configs/mcp-sudo.yaml")
+	sudoConfig, err := config.LoadSudoConfig(sudoConfigPath)
 	if err != nil {
 		log.Fatalf("Failed to load mcp-sudo.yaml: %v", err)
 	}
@@ -187,15 +190,9 @@ func main() {
 		}
 	}
 
-	limiterManager = auth.NewLimiterManager(daemonConfig.RateLimits.DefaultRPS, daemonConfig.RateLimits.DefaultBurst)
+	limiterManager.Store(auth.NewLimiterManager(daemonConfig.RateLimits.DefaultRPS, daemonConfig.RateLimits.DefaultBurst))
 
 	addr := fmt.Sprintf(":%d", daemonConfig.Server.Port)
-	if daemonConfig.Server.Port == 0 {
-		addr = ":9091"
-	}
-	if daemonConfig.Worker.TimeoutSeconds == 0 {
-		daemonConfig.Worker.TimeoutSeconds = 30
-	}
 
 	rpcHandler = rpc.NewRPCHandler(
 		sudoConfig,
@@ -206,6 +203,7 @@ func main() {
 		&cacheMu,
 		resourceCache,
 	)
+	rpcHandler.ReloadConfig = reloadConfig
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sse", handleSSE)
@@ -219,9 +217,6 @@ func main() {
 
 	if daemonConfig.Server.TLS.Enabled {
 		tlsAddr := fmt.Sprintf(":%d", daemonConfig.Server.TLS.Port)
-		if daemonConfig.Server.TLS.Port == 0 {
-			tlsAddr = ":9443"
-		}
 
 		go func() {
 			log.Printf("Starting Linux MCP Daemon %s (HTTPS SSE Transport) on %s\n", version.Version, tlsAddr)

@@ -6,7 +6,13 @@ sidebar_position: 1
 
 The core settings for the Linux MCP Daemon are defined in `configs/daemon.yaml`.
 
-This file controls the global web server configuration, connection timeouts, rate limiting, and user authentication tokens.
+This file controls the global web server configuration, connection timeouts and rate limiting. The config directory holds three files:
+
+| File | What it holds |
+|---|---|
+| `daemon.yaml` | server, worker, rate limits, tool timeouts (this page) |
+| [`users.yaml`](./users) | who may connect: usernames and salted token hashes (mode `0600`) |
+| [`mcp-sudo.yaml`](./mcp-sudo) | what each user may do as root |
 
 ## Example `daemon.yaml`
 
@@ -30,14 +36,6 @@ rate_limits:
 tools:
   disks/usage:
     timeout_seconds: 120
-
-users:
-  - username: "alice"
-    token_salt: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
-    token_hash: "9f8e7d6c5b4a...  # sha256(salt + plaintext token), hex"
-    created_at: "2026-09-23T00:28:15Z"
-  - username: "bob"
-    token: "secret456"   # legacy plaintext form - still supported, but new/rotated users use token_hash instead
 ```
 
 ## Settings breakdown
@@ -48,29 +46,12 @@ users:
 - **`worker.containerized`**: Set to `true` when `mcpd` itself runs inside a container (e.g. Kubernetes, Docker) with its own private root filesystem, as this daemon's own deployment does (see `k8s/deployment.yaml`). When true, every `privileged: true` tool call also joins the real host's mount namespace before running, so tools like `system/packages` or `services/manage` administer the actual host rather than the daemon's own container image. Set `false` when `mcpd` runs directly on the host with no container boundary to cross - `mcpd` also self-checks this at startup and logs a warning if the configured value doesn't match what it detects about its own environment.
 - **`rate_limits`**: Global rate limits applied to every authenticated user to prevent an AI from spamming the server and saturating your I/O.
 - **`tools.<name>.timeout_seconds`**: Tool-specific overrides, keyed by the tool's full `<group>/<command>` name. Heavy tools like `disks/usage` can be granted longer execution windows than lightweight tools.
-- **`users`**: A list of users and their Bearer token credentials. The `username` is critical because it binds to `mcp-sudo.yaml` for privilege grants, **and** must match a real OS account in the container image (`SpawnWorker` does `user.Lookup()` against the OS passwd database to resolve a UID for every tool call - see `Dockerfile`'s `useradd` lines).
+- **`users`**: no longer here - users and tokens live in [`users.yaml`](./users). Configs from before it that still list `users:` in `daemon.yaml` keep working (mcpd logs a warning); `linuxctl` moves the list to `users.yaml` on its next user change. Users in both files is an error.
 
-### Token storage: salted hash vs. legacy plaintext
+## Applying changes
 
-New or rotated users store `token_salt` + `token_hash` (`sha256(salt + token)`, hex-encoded) instead of a plaintext `token`. The daemon supports both forms simultaneously (`authenticateRequest` in `cmd/mcpd/http.go` checks `token_hash` first, falls back to plaintext `token` if present) so migrating existing users doesn't require a hard cutover. **Don't hand-write a `token_hash` entry** - always go through `linuxctl` (see below), since the salt must be freshly random per user and the hash must exactly match `sha256(salt + token)` in hex or authentication will simply always fail for that account.
+mcpd reads its config files at startup. To apply changes to a running daemon without a restart, call the [`daemon/reload-config`](../mcp-api/tools/daemon/reload-config) tool - `linuxctl reload daemon`, or let `linuxctl` do it: every `linuxctl create|update|delete mcpd user` and `linuxctl edit mcpd config` ends with a reload. It re-reads all three files and applies everything except `server.*` and `worker.containerized`, which need a restart (the reload says so when they changed).
 
-## Managing users with `linuxctl` (local-only, no daemon round-trip)
+Files are validated before anything changes: if one is invalid, the daemon keeps running on the config it has. Validation is **strict** - a key mcpd doesn't know (`path:` instead of `paths:`, `alowed:`) is an error, not a silently ignored line. At startup unknown keys are only warned about, so an upgrade never stops the daemon over a key an older version accepted.
 
-`linuxctl`'s `mcpd` group reads and writes `configs/daemon.yaml` + `configs/mcp-sudo.yaml` directly on disk - it never makes a network call to the running daemon, and needs no `-token`/`-server` flag at all. This is deliberate: user/token administration is a privilege-escalation-relevant surface, so it's kept off the network `tools/call` path entirely, reachable only to whoever has local filesystem access to these config files.
-
-```bash
-# Defaults to ./configs - override with --config-path if running from elsewhere
-linuxctl create   mcpd user alice                    # generates a random token, prints it once
-linuxctl create   mcpd user alice --set-token "abc"  # sets a specific token instead (used for migrating existing accounts)
-linuxctl update   mcpd user alice                    # rotates to a new random token, prints it once
-linuxctl delete   mcpd user alice                    # removes from BOTH files atomically
-linuxctl list     mcpd users                         # username, created_at, and hash-vs-plaintext status - never the token itself
-linuxctl describe mcpd user alice                    # that user's full mcp-sudo.yaml grant block
-```
-
-**Why `create`/`delete` touch both files atomically**: doing this by hand (editing `daemon.yaml` and `mcp-sudo.yaml` as two separate manual edits) is exactly how a stale privilege grant survives a user being "deleted" and later recreated under the same name - if only one file gets edited, the other file's old grants silently persist and apply to whoever gets that username next. `linuxctl create mcpd user` always writes a **fresh, empty** `mcp-sudo.yaml` block, overwriting any stale leftover entry rather than merging with it, and `linuxctl delete mcpd user` always removes both files' entries together.
-
-A `create` (or a `token_hash`-migrated legacy user) still needs, before it can actually make any call:
-1. A matching OS account in the `Dockerfile` (`useradd -m -s /bin/bash <username>`) - `linuxctl create` reminds you of this, but doesn't do it for you, since the account only becomes real after an image rebuild.
-2. Tool/resource grants in `mcp-sudo.yaml` (a fresh user starts with none - denies everything by default).
-3. `scripts/deploy.sh` to rebuild and redeploy.
+To edit a file safely, use `linuxctl edit mcpd config daemon|users|sudo` - like `visudo`, it opens a copy in `$VISUAL`/`$EDITOR`, checks it with the same strict parser when you save, and replaces the real file only if it passes (otherwise: edit again, or discard).

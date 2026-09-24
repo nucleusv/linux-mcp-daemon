@@ -126,6 +126,9 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 **auth**
 - [`auth/sudo-rules`](./tools/auth/sudo-rules) - Returns your authorized tools and privileges from mcp-sudo.
 
+**daemon**
+- [`daemon/reload-config`](./tools/daemon/reload-config) - Re-reads mcpd's config files and applies them without a restart (only for users granted it).
+
 ### Resource templates, by group
 
 **files**

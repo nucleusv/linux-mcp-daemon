@@ -1,12 +1,13 @@
 package main
 
-// linuxctl's "mcpd" group is deliberately local-only: every command here
-// reads and writes configs/daemon.yaml + configs/mcp-sudo.yaml directly on
-// disk and never makes a network call to the running daemon. This is a
-// security boundary, not a shortcut - user/token administration is a
-// privilege-escalation-relevant surface, and keeping it off the network
-// tools/call path means no remote agent can ever reach it, regardless of
-// what any bearer token is authorized for.
+// linuxctl's "mcpd" group edits users.yaml + mcp-sudo.yaml directly on
+// disk, locally. This is a security boundary, not a shortcut - user/token
+// administration is a privilege-escalation-relevant surface, and there is
+// deliberately no MCP tool that edits these files, so no remote agent can
+// ever reach it, regardless of what any bearer token is authorized for.
+// The only network call is the one after a change: asking the running
+// daemon to re-read its files (daemon/reload-config), which changes
+// nothing on disk.
 
 import (
 	"crypto/rand"
@@ -79,6 +80,66 @@ func daemonFindUser(seq *yaml.Node, username string) *yaml.Node {
 	return nil
 }
 
+// usersFileFor returns users.yaml in cfgPath, first moving a legacy users:
+// list out of daemon.yaml into it if there is one. Every command that
+// writes users goes through this, so configs migrate on the first change.
+func usersFileFor(cfgPath string) string {
+	usersPath := filepath.Join(cfgPath, "users.yaml")
+	if _, err := os.Stat(usersPath); err == nil {
+		return usersPath
+	}
+	daemonPath := filepath.Join(cfgPath, "daemon.yaml")
+	daemonDoc, err := loadYAMLDoc(daemonPath)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+	legacy := daemonUsersSeq(daemonDoc.Content[0], false)
+
+	usersDoc := &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{yamledit.EmptyMapNode()}}
+	root := usersDoc.Content[0]
+	root.Style &^= yaml.FlowStyle
+	root.HeadComment = "mcpd users: who may connect, and with which token (only a salted hash is\n" +
+		"stored). Managed with `linuxctl create|update|delete mcpd user`. Each user\n" +
+		"must also exist as an OS account: tools run as that account. What a user\n" +
+		"may do as root is set in mcp-sudo.yaml."
+	seq := legacy
+	if seq == nil {
+		seq = &yaml.Node{Kind: yaml.SequenceNode, Style: yaml.FlowStyle}
+	}
+	yamledit.MapSet(root, "users", seq)
+
+	// users.yaml holds token hashes: create it readable by its owner only,
+	// before anything is written to it.
+	if err := os.WriteFile(usersPath, nil, 0600); err != nil {
+		fmt.Printf("Error creating %s: %v\n", usersPath, err)
+		os.Exit(1)
+	}
+	if err := yamledit.SaveDoc(usersPath, usersDoc); err != nil {
+		fmt.Printf("Error writing %s: %v\n", usersPath, err)
+		os.Exit(1)
+	}
+	if legacy != nil {
+		yamledit.MapDelete(daemonDoc.Content[0], "users")
+		if err := yamledit.SaveDoc(daemonPath, daemonDoc); err != nil {
+			fmt.Printf("Error writing %s: %v\n", daemonPath, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Moved the users list from %s to %s.\n", daemonPath, usersPath)
+	}
+	return usersPath
+}
+
+// usersFileForReading returns the file the users are in, without
+// migrating anything: users.yaml, or daemon.yaml in older configs.
+func usersFileForReading(cfgPath string) string {
+	usersPath := filepath.Join(cfgPath, "users.yaml")
+	if _, err := os.Stat(usersPath); err == nil {
+		return usersPath
+	}
+	return filepath.Join(cfgPath, "daemon.yaml")
+}
+
 // --- command handlers ---
 
 func handleMcpdAdmin(args []string) {
@@ -87,13 +148,16 @@ func handleMcpdAdmin(args []string) {
 		os.Exit(1)
 	}
 	verb, target, rest := args[0], args[1], args[2:]
-	if !strings.HasPrefix(target, "user") {
-		fmt.Printf("Error: unknown mcpd target %q (expected \"user\" or \"users\")\n", target)
+	isConfig := verb == "edit" && target == "config"
+	if !strings.HasPrefix(target, "user") && !isConfig {
+		fmt.Printf("Error: unknown mcpd target %q (expected \"user\", \"users\" or, for edit, \"config\")\n", target)
 		os.Exit(1)
 	}
 
 	var username, setToken string
+	var grants []string
 	cfgPath := *configPath
+	reload := true
 	for i := 0; i < len(rest); i++ {
 		switch rest[i] {
 		case "--set-token":
@@ -106,6 +170,17 @@ func handleMcpdAdmin(args []string) {
 				cfgPath = rest[i+1]
 				i++
 			}
+		case "--no-reload":
+			reload = false
+		case "--grant":
+			if i+1 < len(rest) {
+				for _, g := range strings.Split(rest[i+1], ",") {
+					if g = strings.TrimSpace(g); g != "" {
+						grants = append(grants, g)
+					}
+				}
+				i++
+			}
 		default:
 			if !strings.HasPrefix(rest[i], "-") && username == "" {
 				username = rest[i]
@@ -113,45 +188,66 @@ func handleMcpdAdmin(args []string) {
 		}
 	}
 
-	daemonPath := filepath.Join(cfgPath, "daemon.yaml")
 	sudoPath := filepath.Join(cfgPath, "mcp-sudo.yaml")
 
 	switch verb {
+	case "edit":
+		if !isConfig {
+			fmt.Println("Error: expected `linuxctl edit mcpd config sudo|users|daemon`")
+			os.Exit(1)
+		}
+		which := username // the positional argument
+		if which == "" {
+			which = "sudo"
+		}
+		if !mcpdEditConfig(cfgPath, which) {
+			return
+		}
 	case "create":
-		mcpdCreateUser(daemonPath, sudoPath, username, setToken)
+		mcpdCreateUser(usersFileFor(cfgPath), sudoPath, username, setToken, grants)
 	case "delete":
-		mcpdDeleteUser(daemonPath, sudoPath, username)
+		mcpdDeleteUser(usersFileFor(cfgPath), sudoPath, username)
 	case "update":
-		mcpdUpdateUser(daemonPath, username, setToken)
+		mcpdUpdateUser(usersFileFor(cfgPath), username, setToken)
 	case "list":
-		mcpdListUsers(daemonPath)
+		mcpdListUsers(usersFileForReading(cfgPath))
+		return
 	case "describe":
 		mcpdDescribeUser(sudoPath, username)
+		return
 	default:
-		fmt.Printf("Error: unknown mcpd verb %q (expected create, delete, update, list, or describe)\n", verb)
+		fmt.Printf("Error: unknown mcpd verb %q (expected create, delete, update, list, describe or edit)\n", verb)
 		os.Exit(1)
+	}
+	if reload {
+		reloadDaemon()
+	} else {
+		fmt.Println("\nNot applied yet (--no-reload). Apply with: linuxctl reload daemon")
 	}
 }
 
 func printMcpdAdminUsage() {
 	fmt.Println(`Usage:
-  linuxctl create   mcpd user <username> [--set-token VALUE] [--config-path DIR]
-  linuxctl delete   mcpd user <username> [--config-path DIR]
-  linuxctl update   mcpd user <username> [--set-token VALUE] [--config-path DIR]
+  linuxctl create   mcpd user <username> [--set-token VALUE] [--grant TOOL,...] [--config-path DIR] [--no-reload]
+  linuxctl delete   mcpd user <username> [--config-path DIR] [--no-reload]
+  linuxctl update   mcpd user <username> [--set-token VALUE] [--config-path DIR] [--no-reload]
   linuxctl list     mcpd users           [--config-path DIR]
   linuxctl describe mcpd user <username> [--config-path DIR]
+  linuxctl edit     mcpd config [sudo|users|daemon] [--config-path DIR] [--no-reload]
 
-All local-only: reads/writes daemon.yaml + mcp-sudo.yaml directly, no
-network call to mcpd. --config-path defaults to ./configs.`)
+Edits users.yaml + mcp-sudo.yaml locally (--config-path, default ./configs).
+edit opens the file in $VISUAL/$EDITOR (like visudo) and saves it only if
+it passes the same strict check mcpd applies. After a change, asks the running mcpd (MCP_SERVER, MCP_TOKEN)
+to re-read its config with daemon/reload-config; --no-reload skips that.`)
 }
 
-func mcpdCreateUser(daemonPath, sudoPath, username, setToken string) {
+func mcpdCreateUser(usersPath, sudoPath, username, setToken string, grants []string) {
 	if username == "" {
 		fmt.Println("Error: username required")
 		os.Exit(1)
 	}
 
-	doc, err := loadYAMLDoc(daemonPath)
+	doc, err := loadYAMLDoc(usersPath)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -159,7 +255,7 @@ func mcpdCreateUser(daemonPath, sudoPath, username, setToken string) {
 	root := doc.Content[0]
 	seq := daemonUsersSeq(root, true)
 	if daemonFindUser(seq, username) != nil {
-		fmt.Printf("Error: user %q already exists in %s\n", username, daemonPath)
+		fmt.Printf("Error: user %q already exists in %s\n", username, usersPath)
 		os.Exit(1)
 	}
 
@@ -191,8 +287,8 @@ func mcpdCreateUser(daemonPath, sudoPath, username, setToken string) {
 	// actually matters.
 	seq.Content = append(seq.Content, entry)
 
-	if err := yamledit.SaveDoc(daemonPath, doc); err != nil {
-		fmt.Printf("Error writing %s: %v\n", daemonPath, err)
+	if err := yamledit.SaveDoc(usersPath, doc); err != nil {
+		fmt.Printf("Error writing %s: %v\n", usersPath, err)
 		os.Exit(1)
 	}
 
@@ -207,7 +303,7 @@ func mcpdCreateUser(daemonPath, sudoPath, username, setToken string) {
 		usersMap = yamledit.EmptyMapNode()
 		yamledit.MapSet(sudoRoot, "users", usersMap)
 	}
-	usersMap.Style &^= yaml.FlowStyle // "users: {}" -> block, as for daemon.yaml
+	usersMap.Style &^= yaml.FlowStyle // "users: {}" -> block, as for users.yaml
 	if yamledit.MapGet(usersMap, username) != nil {
 		fmt.Printf("Note: %s had a stale entry for %q - replacing it with a fresh, empty grant block (this is the point of create/delete being atomic: a recreated user never inherits old grants)\n", sudoPath, username)
 	}
@@ -215,7 +311,16 @@ func mcpdCreateUser(daemonPath, sudoPath, username, setToken string) {
 	freshBlock.Style &^= yaml.FlowStyle
 	privileged := yamledit.EmptyMapNode()
 	privileged.Style &^= yaml.FlowStyle
-	yamledit.MapSet(privileged, "tools", yamledit.EmptyMapNode())
+	tools := yamledit.EmptyMapNode()
+	if len(grants) > 0 {
+		tools.Style &^= yaml.FlowStyle
+	}
+	for _, g := range grants {
+		grant := yamledit.EmptyMapNode()
+		yamledit.MapSet(grant, "allowed", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "true"})
+		yamledit.MapSet(tools, g, grant)
+	}
+	yamledit.MapSet(privileged, "tools", tools)
 	yamledit.MapSet(privileged, "resources", yamledit.EmptyMapNode())
 	yamledit.MapSet(freshBlock, "privileged", privileged)
 	yamledit.MapSet(usersMap, username, freshBlock)
@@ -226,23 +331,24 @@ func mcpdCreateUser(daemonPath, sudoPath, username, setToken string) {
 	}
 
 	fmt.Printf("Created mcpd user %q.\n", username)
+	if len(grants) > 0 {
+		fmt.Printf("Granted as root: %s\n", strings.Join(grants, ", "))
+	}
 	if generated {
 		fmt.Printf("\nToken (shown once - not stored in plaintext anywhere, save it now):\n  %s\n\n", token)
 	}
 	fmt.Println("Next steps:")
 	fmt.Printf("  1. Make sure an OS account %q exists on the mcpd host - each call runs as that account:\n       useradd --system --shell /usr/sbin/nologin %s\n     (for the container image, add it to the Dockerfile instead)\n", username, username)
 	fmt.Printf("  2. Optionally grant root for specific tools in %s - without grants %q can use\n     every tool, but only as its own OS account, never as root\n", sudoPath, username)
-	fmt.Println("  3. Restart mcpd to load the new user: systemctl restart mcpd")
-	fmt.Println("     (Kubernetes dev setup: scripts/deploy.sh)")
 }
 
-func mcpdDeleteUser(daemonPath, sudoPath, username string) {
+func mcpdDeleteUser(usersPath, sudoPath, username string) {
 	if username == "" {
 		fmt.Println("Error: username required")
 		os.Exit(1)
 	}
 
-	doc, err := loadYAMLDoc(daemonPath)
+	doc, err := loadYAMLDoc(usersPath)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -260,11 +366,11 @@ func mcpdDeleteUser(daemonPath, sudoPath, username string) {
 		}
 	}
 	if !removed {
-		fmt.Printf("Error: user %q not found in %s\n", username, daemonPath)
+		fmt.Printf("Error: user %q not found in %s\n", username, usersPath)
 		os.Exit(1)
 	}
-	if err := yamledit.SaveDoc(daemonPath, doc); err != nil {
-		fmt.Printf("Error writing %s: %v\n", daemonPath, err)
+	if err := yamledit.SaveDoc(usersPath, doc); err != nil {
+		fmt.Printf("Error writing %s: %v\n", usersPath, err)
 		os.Exit(1)
 	}
 
@@ -282,17 +388,17 @@ func mcpdDeleteUser(daemonPath, sudoPath, username string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Deleted mcpd user %q from %s and %s.\n", username, daemonPath, sudoPath)
-	fmt.Println("Run scripts/deploy.sh to apply. Remove the matching useradd line from the Dockerfile too if this account is no longer needed at all.")
+	fmt.Printf("Deleted mcpd user %q from %s and %s.\n", username, usersPath, sudoPath)
+	fmt.Println("Remove the OS account too if it's no longer needed (for the container image: its useradd line in the Dockerfile).")
 }
 
-func mcpdUpdateUser(daemonPath, username, setToken string) {
+func mcpdUpdateUser(usersPath, username, setToken string) {
 	if username == "" {
 		fmt.Println("Error: username required")
 		os.Exit(1)
 	}
 
-	doc, err := loadYAMLDoc(daemonPath)
+	doc, err := loadYAMLDoc(usersPath)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -301,7 +407,7 @@ func mcpdUpdateUser(daemonPath, username, setToken string) {
 	seq := daemonUsersSeq(root, false)
 	entry := daemonFindUser(seq, username)
 	if entry == nil {
-		fmt.Printf("Error: user %q not found in %s (use create instead)\n", username, daemonPath)
+		fmt.Printf("Error: user %q not found in %s (use create instead)\n", username, usersPath)
 		os.Exit(1)
 	}
 
@@ -343,8 +449,8 @@ func mcpdUpdateUser(daemonPath, username, setToken string) {
 	uidWasPinned := yamledit.MapDelete(entry, "pinned_uid")
 	yamledit.MapDelete(entry, "os_uid")
 
-	if err := yamledit.SaveDoc(daemonPath, doc); err != nil {
-		fmt.Printf("Error writing %s: %v\n", daemonPath, err)
+	if err := yamledit.SaveDoc(usersPath, doc); err != nil {
+		fmt.Printf("Error writing %s: %v\n", usersPath, err)
 		os.Exit(1)
 	}
 
@@ -355,11 +461,11 @@ func mcpdUpdateUser(daemonPath, username, setToken string) {
 	if generated {
 		fmt.Printf("\nNew token (shown once - not stored in plaintext anywhere, save it now):\n  %s\n\n", token)
 	}
-	fmt.Println("Run scripts/deploy.sh to apply. The old token stops working the moment this is deployed.")
+	fmt.Println("The old token stops working as soon as mcpd reloads its config.")
 }
 
-func mcpdListUsers(daemonPath string) {
-	doc, err := loadYAMLDoc(daemonPath)
+func mcpdListUsers(usersPath string) {
+	doc, err := loadYAMLDoc(usersPath)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)

@@ -256,12 +256,20 @@ fi
 
 install -d -m 0750 "$CONF_DIR"
 FRESH=0
-for f in daemon.yaml mcp-sudo.yaml; do
+UPGRADE=0
+[ -e "$CONF_DIR/daemon.yaml" ] && UPGRADE=1
+for f in daemon.yaml users.yaml mcp-sudo.yaml; do
     if [ -e "$CONF_DIR/$f" ]; then
         say "Keeping existing $CONF_DIR/$f"
+    elif [ "$f" = users.yaml ] && { [ "$UPGRADE" -eq 1 ] || [ ! -e "$TMP/x/packaging/configs/$f" ]; }; then
+        # Configs from before users.yaml keep their users in daemon.yaml;
+        # an empty users.yaml next to them would make mcpd refuse to start
+        # (users in two places). linuxctl moves them on its next user change.
+        # Releases before users.yaml don't ship the file at all.
+        :
     else
         install -m 0600 "$TMP/x/packaging/configs/$f" "$CONF_DIR/$f"
-        FRESH=1
+        [ "$f" = users.yaml ] || FRESH=1
     fi
 done
 
@@ -273,7 +281,10 @@ if [ "$FRESH" -eq 1 ] && [ -n "$MCP_USER" ]; then
         say "Creating OS account $MCP_USER (no login shell)"
         useradd --system --create-home --shell /usr/sbin/nologin "$MCP_USER"
     fi
-    OUT="$("$BIN_DIR/linuxctl" create mcpd user "$MCP_USER" --config-path "$CONF_DIR")"
+    # The first user may also apply config changes (daemon/reload-config),
+    # so users added later take effect without a restart. mcpd isn't
+    # running yet, so there is nothing to reload now.
+    OUT="$("$BIN_DIR/linuxctl" create mcpd user "$MCP_USER" --grant daemon/reload-config --no-reload --config-path "$CONF_DIR")"
     TOKEN="$(printf '%s\n' "$OUT" | awk '/Token/ {getline; gsub(/ /, ""); print; exit}')"
     [ -n "$TOKEN" ] || die "failed to create MCP user $MCP_USER: $OUT"
     TOKEN_MSG="$TOKEN"

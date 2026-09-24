@@ -10,13 +10,16 @@ is a background daemon designed to securely bridge AI agents directly with the L
 The daemon listens on a configurable port (default 9091) for HTTP Server-Sent Events (SSE) and JSON-RPC messages. It enforces rate limiting and requires Bearer token authentication.
 .SH CONFIGURATION
 .B mcpd
-reads its primary configuration from \fBconfigs/daemon.yaml\fR upon startup. The configuration file defines the server port, rate limits, and allowed users with their authentication tokens.
+reads its configuration from the \fBconfigs/\fR directory under its working directory upon startup: \fBdaemon.yaml\fR (server port, TLS, rate limits, worker timeouts), \fBusers.yaml\fR (users and salted token hashes) and \fBmcp-sudo.yaml\fR (which tools each user may run as root).
 .PP
-Sudo rules and privilege separation policies are defined in \fBconfigs/mcp-sudo.yaml\fR.
+To apply changes without a restart, a user granted \fBdaemon/reload-config\fR calls that tool (\fBlinuxctl reload daemon\fR). The files are validated first - strictly, so an unknown key is an error - and an invalid file leaves the running configuration untouched. Server settings (port, TLS, worker.containerized) still need a restart.
 .SH FILES
 .TP
 .I configs/daemon.yaml
-The primary configuration file defining users, tokens, and rate limits.
+Server, TLS, rate limits and worker settings.
+.TP
+.I configs/users.yaml
+Users and their salted token hashes (mode 0600). Configurations from before this file listed users in daemon.yaml; that still works until linuxctl moves them here.
 .TP
 .I configs/mcp-sudo.yaml
 Rules defining which users are allowed to execute which tools with root privileges.

@@ -23,7 +23,4 @@ worker:
 tools:
   disks/usage:
     timeout_seconds: 300
-# Users are added with `linuxctl create mcpd user <name> --config-path
-# /etc/mcpd/configs`, which stores only a salted hash of the token. Each
-# user must also exist as an OS account: tools run as that account.
-users: []
+# Users and their tokens live in users.yaml; root grants in mcp-sudo.yaml.

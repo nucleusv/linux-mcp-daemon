@@ -9,7 +9,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/yamledit"
 )
 
-// uidPinMu serializes writes to daemon.yaml from checkAndPinUID. Multiple
+// uidPinMu serializes writes to users.yaml from checkAndPinUID. Multiple
 // requests (from the same or different users) can hit this concurrently;
 // without a lock, two concurrent first-use pins could race and corrupt the
 // file via interleaved read-modify-write cycles.
@@ -21,7 +21,7 @@ var uidPinMu sync.Mutex
 // alone cannot: a bearer token authenticates "someone who knows this
 // secret," but SpawnWorker (internal/worker/spawner.go) separately does
 // user.Lookup(username) and runs the actual worker process as whatever UID
-// that resolves to *right now* - and daemon.yaml/mcp-sudo.yaml key
+// that resolves to *right now* - and users.yaml/mcp-sudo.yaml key
 // everything off the username string, with zero awareness of the
 // underlying OS account's identity. If the OS account behind a username is
 // ever deleted and recreated (a role change, an offboarding/onboarding
@@ -54,7 +54,7 @@ var uidPinMu sync.Mutex
 // docs/website/docs/configuration/daemon.md.
 //
 // SECOND KNOWN LIMITATION, specific to this daemon's actual deployment
-// (see k8s/deployment.yaml): configs/daemon.yaml is baked into the
+// (see k8s/deployment.yaml): configs/users.yaml is baked into the
 // container image (Dockerfile's COPY --from=builder .../configs), not
 // mounted from anything durable - there is no volume for it. Every write
 // persistUIDPin makes lands on that specific running container's own
@@ -84,6 +84,8 @@ func checkAndPinUID(username string) bool {
 
 	uidPinMu.Lock()
 	defer uidPinMu.Unlock()
+	cfgMu.Lock()
+	defer cfgMu.Unlock()
 
 	idx := -1
 	for i := range daemonConfig.Users {
@@ -126,28 +128,28 @@ func checkAndPinUID(username string) bool {
 	return false
 }
 
-// persistUIDPin writes pinned_uid/os_uid for username into daemon.yaml,
+// persistUIDPin writes pinned_uid/os_uid for username into usersPath,
 // preserving every other field and comment in the file (see
-// internal/yamledit). Caller must hold uidPinMu.
+// internal/yamledit). Caller must hold uidPinMu and cfgMu.
 func persistUIDPin(username, pinnedUID, osUID string) error {
-	doc, err := yamledit.LoadDoc(daemonConfigPath)
+	doc, err := yamledit.LoadDoc(usersPath)
 	if err != nil {
-		return fmt.Errorf("loading %s: %w", daemonConfigPath, err)
+		return fmt.Errorf("loading %s: %w", usersPath, err)
 	}
 	if len(doc.Content) == 0 {
-		return fmt.Errorf("%s is empty", daemonConfigPath)
+		return fmt.Errorf("%s is empty", usersPath)
 	}
 	root := doc.Content[0]
 	seq := yamledit.MapGet(root, "users")
 	if seq == nil {
-		return fmt.Errorf("%s has no users: list", daemonConfigPath)
+		return fmt.Errorf("%s has no users: list", usersPath)
 	}
 	for _, item := range seq.Content {
 		if u := yamledit.MapGet(item, "username"); u != nil && u.Value == username {
 			yamledit.MapSet(item, "pinned_uid", yamledit.ScalarNode(pinnedUID))
 			yamledit.MapSet(item, "os_uid", yamledit.ScalarNode(osUID))
-			return yamledit.SaveDoc(daemonConfigPath, doc)
+			return yamledit.SaveDoc(usersPath, doc)
 		}
 	}
-	return fmt.Errorf("user %q not found in %s", username, daemonConfigPath)
+	return fmt.Errorf("user %q not found in %s", username, usersPath)
 }
