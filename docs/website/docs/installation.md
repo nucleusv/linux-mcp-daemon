@@ -155,7 +155,7 @@ Every release also ships packages for amd64 and arm64: the same `mcpd` and `linu
 **Debian / Ubuntu:**
 
 ```bash
-V=0.3.1 ARCH=amd64    # or arm64
+V=0.3.2 ARCH=amd64    # or arm64
 curl -fsSLO https://github.com/nucleusv/linux-mcp-daemon/releases/download/v$V/linux-mcp-daemon_${V}_${ARCH}.deb
 sudo apt install ./linux-mcp-daemon_${V}_${ARCH}.deb
 ```
@@ -163,7 +163,7 @@ sudo apt install ./linux-mcp-daemon_${V}_${ARCH}.deb
 **RHEL / Rocky / Alma / Fedora:**
 
 ```bash
-V=0.3.1 ARCH=x86_64   # or aarch64
+V=0.3.2 ARCH=x86_64   # or aarch64
 curl -fsSLO https://github.com/nucleusv/linux-mcp-daemon/releases/download/v$V/linux-mcp-daemon-${V}-1.${ARCH}.rpm
 sudo dnf install ./linux-mcp-daemon-${V}-1.${ARCH}.rpm
 ```
@@ -191,7 +191,7 @@ Run them with `sudo`, save the token, then try it as in the script install: `exp
 On a Linux host with Docker (run as root, or drop `sudo` if your user is in the `docker` group):
 
 ```bash
-IMAGE=ghcr.io/nucleusv/linux-mcp-daemon:latest   # or a fixed version, e.g. :0.3.1
+IMAGE=ghcr.io/nucleusv/linux-mcp-daemon:latest   # or a fixed version, e.g. :0.3.2
 
 # 1. Seed a configs directory on the host from the image's clean defaults
 sudo mkdir -p /etc/mcpd/configs
