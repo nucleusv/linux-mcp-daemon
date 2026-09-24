@@ -3,11 +3,11 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 	sudorules "github.com/nucleusv/linux-mcp-daemon/internal/tools/auth/sudo-rules"
 	systemcontrol "github.com/nucleusv/linux-mcp-daemon/internal/tools/kernel/system-control"
 	"github.com/nucleusv/linux-mcp-daemon/internal/worker"
@@ -700,11 +700,13 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 	var params CallToolParams
 	if err := json.Unmarshal(req.Params, &params); err == nil {
 
-		log.Printf("[TOOL CALL] user=%s tool=%s args=%s", session.User, params.Name, redactArgs(params.Arguments))
+		start := time.Now()
+		loggedArgs := redactArgs(params.Arguments) // before the path/policy rewrites below
 
 		toolRes := ToolResult{}
 		var resultText string
 		var execErr error
+		defer func() { logToolCall(session, params, loggedArgs, start, execErr, resp.Error != nil) }()
 
 		standardWorkers := map[string]bool{
 			"files/list":            true,
@@ -889,5 +891,43 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 
 	} else {
 		resp.Error = map[string]interface{}{"code": -32602, "message": "Invalid params"}
+	}
+}
+
+// mutatingTools change the host (or, for kernel/system-control, do when
+// given a value). Their calls are audit-logged whatever the log level.
+// daemon/reload-config audits itself, with the list of changes.
+var mutatingTools = map[string]bool{
+	"files/create": true, "files/update": true, "files/chmod": true, "files/chown": true,
+	"processes/delete": true, "services/manage": true,
+}
+
+// logToolCall writes one line per tool call: an audit line for calls that
+// change something, otherwise an info line (warn when the call was denied).
+// Arguments are redacted; tool output is never logged.
+func logToolCall(session *Session, params CallToolParams, loggedArgs string, start time.Time, execErr error, rpcErr bool) {
+	var a struct {
+		Privileged bool            `json:"privileged"`
+		Value      json.RawMessage `json:"value"`
+	}
+	_ = json.Unmarshal(params.Arguments, &a)
+	attrs := []any{"user", session.User, "session", session.ID, "tool", params.Name, "privileged", a.Privileged,
+		"duration_ms", time.Since(start).Milliseconds(), "ok", execErr == nil && !rpcErr, "args", loggedArgs}
+	if execErr != nil {
+		msg := execErr.Error()
+		if len(msg) > 200 {
+			msg = msg[:200] + "..."
+		}
+		attrs = append(attrs, "error", msg)
+	}
+	mutating := mutatingTools[params.Name] ||
+		(params.Name == "kernel/system-control" && len(a.Value) > 0 && string(a.Value) != "null")
+	switch {
+	case mutating:
+		logging.Audit("tool call", attrs...)
+	case execErr != nil && strings.Contains(execErr.Error(), "not authorized"):
+		logging.Warn("tool call denied", attrs...)
+	default:
+		logging.Info("tool call", attrs...)
 	}
 }

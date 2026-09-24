@@ -12,6 +12,7 @@ import (
 
 	"github.com/nucleusv/linux-mcp-daemon/internal/auth"
 	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/devices/dmi"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/devices/pci"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/devices/usb"
@@ -186,9 +187,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-	log.Printf("Config directory: %s", configDir)
+	logging.Configure(daemonConfig.Logging)
+	logging.Info("config loaded", "dir", configDir, "log_level", logLevel(daemonConfig))
 	if w := legacyUsersWarning(daemonConfig, usersPath); w != "" {
-		log.Printf("WARNING: %s", w)
+		logging.Warn(w)
 	}
 
 	// As for daemon.yaml: strict problems (unknown keys, paths: on a tool
@@ -199,17 +201,17 @@ func main() {
 		if sudoConfig, err = config.LoadSudoConfig(sudoConfigPath()); err != nil {
 			log.Fatalf("Failed to load mcp-sudo.yaml: %v", err)
 		}
-		log.Printf("WARNING: %v - loaded without it; daemon/reload-config and linuxctl edit will refuse this file until it's fixed", strictErr)
+		logging.Warn("mcp-sudo.yaml loaded leniently; daemon/reload-config and linuxctl edit will refuse it until it's fixed", "err", strictErr)
 	}
 
 	worker.Containerized = daemonConfig.Worker.Containerized
 	if actual, err := worker.IsContainerized(); err != nil {
-		log.Printf("WARNING: could not determine whether this process is actually containerized (comparing /proc/self/ns/mnt vs /proc/1/ns/mnt): %v", err)
+		logging.Warn("could not determine whether this process is actually containerized (comparing /proc/self/ns/mnt vs /proc/1/ns/mnt)", "err", err)
 	} else if actual != daemonConfig.Worker.Containerized {
 		if daemonConfig.Worker.Containerized {
-			log.Printf("WARNING: configs/daemon.yaml sets worker.containerized: true, but this process does not appear to be in a separate mount namespace from its own PID 1 - there may be no real container boundary to cross. This is harmless on its own (JoinHostMountNamespace no-ops when the namespace already matches), but if mcpd actually runs directly on the host, set worker.containerized: false to skip the redundant check on every privileged call.")
+			logging.Warn("daemon.yaml sets worker.containerized: true, but this process does not appear to be in a separate mount namespace from its own PID 1 - there may be no real container boundary to cross. This is harmless on its own (JoinHostMountNamespace no-ops when the namespace already matches), but if mcpd actually runs directly on the host, set worker.containerized: false to skip the redundant check on every privileged call.")
 		} else {
-			log.Printf("WARNING: configs/daemon.yaml sets worker.containerized: false, but this process appears to be running in its own mount namespace, separate from its own PID 1 - privileged tools like system/packages or services/manage will only see this container's own filesystem, not the real host's. If mcpd is deployed containerized (e.g. Kubernetes, Docker) and should administer the real host, set worker.containerized: true.")
+			logging.Warn("daemon.yaml sets worker.containerized: false, but this process appears to be running in its own mount namespace, separate from its own PID 1 - privileged tools like system/packages or services/manage will only see this container's own filesystem, not the real host's. If mcpd is deployed containerized (e.g. Kubernetes, Docker) and should administer the real host, set worker.containerized: true.")
 		}
 	}
 
@@ -242,14 +244,14 @@ func main() {
 		tlsAddr := fmt.Sprintf(":%d", daemonConfig.Server.TLS.Port)
 
 		go func() {
-			log.Printf("Starting Linux MCP Daemon %s (HTTPS SSE Transport) on %s\n", version.Version, tlsAddr)
+			logging.Info("listening", "version", version.Version, "transport", "https", "addr", tlsAddr)
 			if err := http.ListenAndServeTLS(tlsAddr, daemonConfig.Server.TLS.CertFile, daemonConfig.Server.TLS.KeyFile, handler); err != nil {
 				log.Fatalf("Daemon TLS crashed: %v", err)
 			}
 		}()
 	}
 
-	log.Printf("Starting Linux MCP Daemon %s (HTTP SSE Transport) on %s\n", version.Version, addr)
+	logging.Info("listening", "version", version.Version, "transport", "http", "addr", addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatalf("Daemon crashed: %v", err)
 	}

@@ -17,6 +17,8 @@ The daemon listens on a configurable port (default 9091) for HTTP Server-Sent Ev
 reads its configuration upon startup from the directory given by \fB\-\-config\-dir\fR, else \fB$MCPD_CONFIG_DIR\fR (the container image sets \fB/etc/mcpd/configs\fR), else \fBconfigs/\fR under its working directory (the systemd unit's \fB/etc/mcpd\fR): \fBdaemon.yaml\fR (server port, TLS, rate limits, worker timeouts), \fBusers.yaml\fR (users and salted token hashes) and \fBmcp-sudo.yaml\fR (which tools each user may run as root).
 .PP
 To apply changes without a restart, a user granted \fBdaemon/reload-config\fR calls that tool (\fBlinuxctl reload daemon\fR). The files are validated first - strictly, so an unknown key is an error - and an invalid file leaves the running configuration untouched. Server settings (port, TLS, worker.containerized) still need a restart.
+.PP
+Logging goes to standard error through log/slog, configured by the \fBlogging\fR block of daemon.yaml: \fBlevel\fR (error, warn, info, debug), \fBformat\fR (text or json) and \fBaccess_log\fR. Audit lines for calls that change the host, and config reloads, are written at any level.
 .SH ENVIRONMENT
 .TP
 .B MCPD_CONFIG_DIR

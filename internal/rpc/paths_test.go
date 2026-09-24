@@ -1,13 +1,16 @@
 package rpc
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/nucleusv/linux-mcp-daemon/internal/cache"
 	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -64,5 +67,35 @@ func TestPrivilegedPathLimits(t *testing.T) {
 		if text, _ := callTool(t, h, "alice", c.tool, c.args); strings.Contains(text, "on path") {
 			t.Errorf("%s %s: unexpectedly denied: %q", c.tool, c.args, text)
 		}
+	}
+}
+
+// One line per tool call at info; the denied call at warn; mutating calls
+// as audit lines even at error level; secrets in arguments never appear.
+func TestToolCallLogging(t *testing.T) {
+	sudo, _ := config.ParseSudoConfig([]byte("users:\n  alice:\n    privileged:\n      tools: {}\n"), true)
+	var mu sync.RWMutex
+	h := NewRPCHandler(sudo, 5, nil, &singleflight.Group{}, map[string]CacheEntry{}, &mu, cache.NewTTLCache())
+
+	var buf bytes.Buffer
+	logging.SetOutput(&buf, logging.Config{Level: "error"})
+	defer logging.SetOutput(io.Discard, logging.Config{})
+
+	callTool(t, h, "alice", "files/list", `{"path": "/root", "privileged": true}`)                                   // denied, warn: hidden at error
+	callTool(t, h, "alice", "files/create", `{"path": "/tmp/x", "content": "SECRET-FILE-BODY", "privileged": true}`) // mutating: audit
+	out := buf.String()
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) != 1 || !strings.Contains(out, "audit=true") || !strings.Contains(out, "tool=files/create") {
+		t.Errorf("at error level want exactly the audit line, got:\n%s", out)
+	}
+	if strings.Contains(out, "SECRET-FILE-BODY") {
+		t.Errorf("file content leaked into the log:\n%s", out)
+	}
+
+	buf.Reset()
+	logging.Configure(logging.Config{Level: "info"})
+	callTool(t, h, "alice", "files/list", `{"path": "/root", "privileged": true}`)
+	if !strings.Contains(buf.String(), "level=WARN") || !strings.Contains(buf.String(), `msg="tool call denied"`) {
+		t.Errorf("denied call not logged at warn:\n%s", buf.String())
 	}
 }

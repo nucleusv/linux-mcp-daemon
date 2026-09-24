@@ -10,12 +10,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 	"github.com/nucleusv/linux-mcp-daemon/internal/rpc"
 )
 
@@ -29,7 +29,7 @@ func newSessionID() string {
 		// zeroed buffer would make every session ID on this path identical
 		// (and therefore trivially guessable), so fall back to a value that
 		// at least varies per call.
-		log.Printf("crypto/rand.Read failed, falling back to a time-based session id: %v", err)
+		logging.Warn("crypto/rand.Read failed, falling back to a time-based session id", "err", err)
 		binary.BigEndian.PutUint64(b, uint64(time.Now().UnixNano()))
 	}
 	return hex.EncodeToString(b)
@@ -96,8 +96,8 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(rec, r)
 
-		log.Printf("[ACCESS] %s user=%s \"%s %s\" %d %s",
-			clientIP(r), user, r.Method, r.URL.RequestURI(), rec.status, time.Since(start).Round(time.Millisecond))
+		logging.Access("client", clientIP(r), "user", user, "method", r.Method, "uri", r.URL.RequestURI(),
+			"status", rec.status, "duration_ms", time.Since(start).Milliseconds())
 	})
 }
 
@@ -161,7 +161,7 @@ func handleSSE(w http.ResponseWriter, r *http.Request) {
 	sessions[uniqueSessionID] = session
 	sessionsMu.Unlock()
 
-	log.Printf("SSE connection established for user=%s session=%s", sessionUser, uniqueSessionID)
+	logging.Debug("SSE session opened", "user", sessionUser, "session", uniqueSessionID)
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -177,7 +177,7 @@ func handleSSE(w http.ResponseWriter, r *http.Request) {
 		delete(sessions, uniqueSessionID)
 		sessionsMu.Unlock()
 		close(session.Event)
-		log.Printf("SSE connection closed for user=%s session=%s", sessionUser, uniqueSessionID)
+		logging.Debug("SSE session closed", "user", sessionUser, "session", uniqueSessionID)
 	}()
 
 	for {
@@ -188,10 +188,9 @@ func handleSSE(w http.ResponseWriter, r *http.Request) {
 				flusher.Flush()
 			}
 		case <-session.Done:
-			log.Printf("SSE connection closed by the server for user=%s session=%s (config reload)", username, uniqueSessionID)
+			logging.Info("SSE session closed by a config reload", "user", username, "session", uniqueSessionID)
 			return
 		case <-r.Context().Done():
-			log.Printf("SSE connection closed for user=%s session=%s", username, uniqueSessionID)
 			return
 		}
 	}
@@ -230,13 +229,13 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 	// use their own valid token to execute tool calls under the session
 	// owner's privileges instead of their own.
 	if session.User != username {
-		log.Printf("[SECURITY] user=%s attempted to use session=%s owned by user=%s", username, sessionID, session.User)
+		logging.Warn("session used by another user", "security", true, "user", username, "session", sessionID, "owner", session.User)
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
 	if !limiterManager.Load().Allow(username) {
-		log.Printf("[THROTTLED] User %s exceeded rate limits", username)
+		logging.Warn("rate limit exceeded", "user", username)
 		http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 		return
 	}
@@ -249,12 +248,12 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 
 	var req rpc.JSONRPCRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		log.Printf("Failed to unmarshal JSON-RPC: %v", err)
+		logging.Warn("invalid JSON-RPC request", "user", username, "err", err)
 		http.Error(w, "Invalid JSON-RPC", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Received JSON-RPC method=%s for user=%s session=%s", req.Method, username, sessionID)
+	logging.Debug("JSON-RPC request", "method", req.Method, "id", req.ID, "user", username, "session", sessionID)
 
 	go rpcHandler.ProcessJSONRPC(session, req)
 

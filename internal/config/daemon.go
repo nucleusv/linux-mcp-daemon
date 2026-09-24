@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 	"gopkg.in/yaml.v3"
 )
 
@@ -44,6 +45,8 @@ type DaemonConfig struct {
 		Containerized bool `yaml:"containerized"`
 	} `yaml:"worker"`
 	Tools ToolsConfig `yaml:"tools"`
+	// Logging sets the log level and format; see internal/logging.
+	Logging logging.Config `yaml:"logging"`
 	// Users is the legacy location of the user list; it now lives in
 	// users.yaml (see LoadConfigDir), which is read instead when present.
 	Users []DaemonUser `yaml:"users"`
@@ -154,6 +157,9 @@ func ParseDaemonConfig(data []byte, strict bool) (DaemonConfig, error) {
 	}
 	if c.Worker.TimeoutSeconds == 0 {
 		c.Worker.TimeoutSeconds = 30
+	}
+	if err := c.Logging.Validate(); err != nil {
+		return c, err
 	}
 	return c, validateUsers(c.Users)
 }

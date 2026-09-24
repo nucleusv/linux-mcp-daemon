@@ -70,7 +70,7 @@ Every item here is grounded in a specific scenario actually tested live against 
 
 ## Daemon infrastructure
 
-### 20. Leveled, configurable daemon logging
+### 20. ~~Leveled, configurable daemon logging~~ — done (log/slog, `logging:` in daemon.yaml, audit + access lines at any level, runtime change via daemon/reload-config)
 **Now**: 27 plain `log.Printf` calls across 5 files - no levels, no configuration, ad-hoc prefixes (`[ACCESS]`, `[SECURITY]`, `[THROTTLED]`, `[TOOL CALL]`, `WARNING:`). Every request writes several lines (connect, `Received JSON-RPC`, access line, response size, disconnect), which is noise on a busy host - the VPS journal was dominated by it - yet there's no way to turn detail *up* when debugging either.
 **Build**: stdlib `log/slog` (keeps the zero-dependency rule), configured in `daemon.yaml`:
 ```yaml

@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -12,6 +12,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon/internal/auth"
 	"github.com/nucleusv/linux-mcp-daemon/internal/cache"
 	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 	"github.com/nucleusv/linux-mcp-daemon/internal/rpc"
 )
 
@@ -61,7 +62,7 @@ func loadConfig() (Config, string, error) {
 	if lerr != nil {
 		return c, "", lerr
 	}
-	log.Printf("WARNING: %v - ignoring the unknown key(s); daemon/reload-config and linuxctl edit will refuse this file until it's fixed", err)
+	logging.Warn("config loaded leniently: ignoring unknown key(s); daemon/reload-config and linuxctl edit will refuse this file until it's fixed", "err", err)
 	return lenient, lusers, nil
 }
 
@@ -71,4 +72,12 @@ func legacyUsersWarning(c Config, users string) string {
 		return ""
 	}
 	return fmt.Sprintf("users are still listed in %s - they now belong in %s (linuxctl moves them on its next user change)", filepath.Join(configDir, config.DaemonFile), filepath.Join(configDir, config.UsersFile))
+}
+
+// logLevel names the configured log level, for the startup line.
+func logLevel(c Config) string {
+	if c.Logging.Level == "" {
+		return "info"
+	}
+	return strings.ToLower(c.Logging.Level)
 }

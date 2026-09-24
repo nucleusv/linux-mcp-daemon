@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/nucleusv/linux-mcp-daemon/internal/auth"
 	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 )
 
 // reloadMu serializes reloads, so two concurrent daemon/reload-config
@@ -27,12 +27,12 @@ func reloadConfig(byUser string) (string, error) {
 
 	next, nextUsersPath, err := config.LoadConfigDir(configDir, true)
 	if err != nil {
-		log.Printf("[CONFIG] reload by user=%s rejected, keeping the current config: %v", byUser, err)
+		logging.Warn("config reload rejected, keeping the current config", "user", byUser, "err", err)
 		return "", fmt.Errorf("config not reloaded, the current one stays in effect: %w", err)
 	}
 	nextSudo, err := config.LoadSudoConfigStrict(sudoConfigPath())
 	if err != nil {
-		log.Printf("[CONFIG] reload by user=%s rejected, keeping the current config: %v", byUser, err)
+		logging.Warn("config reload rejected, keeping the current config", "user", byUser, "err", err)
 		return "", fmt.Errorf("config not reloaded, the current one stays in effect: %w", err)
 	}
 
@@ -52,6 +52,7 @@ func reloadConfig(byUser string) (string, error) {
 	// Users and grants switch together, never one without the other.
 	limiterManager.Store(auth.NewLimiterManager(next.RateLimits.DefaultRPS, next.RateLimits.DefaultBurst))
 	rpcHandler.Reconfigure(nextSudo, next.Worker.TimeoutSeconds, next.Tools)
+	logging.Configure(next.Logging)
 	cfgMu.Unlock()
 
 	closed := closeSessions(closeUsers)
@@ -84,7 +85,7 @@ func reloadConfig(byUser string) (string, error) {
 		fmt.Fprintf(&b, "Note: %s\n", w)
 	}
 
-	log.Printf("[CONFIG] reloaded by user=%s: %d change(s)%s", byUser, len(changes), logList(changes))
+	logging.Audit("config reloaded", "user", byUser, "changes", len(changes), "detail", strings.Join(changes, "; "))
 	return b.String(), nil
 }
 
@@ -155,6 +156,10 @@ func configChanges(prev, next Config, prevSudo, nextSudo *config.SudoConfig) (ch
 
 	if prev.RateLimits != next.RateLimits {
 		changes = append(changes, fmt.Sprintf("rate limits: %g rps, burst %d", next.RateLimits.DefaultRPS, next.RateLimits.DefaultBurst))
+	}
+	if !reflect.DeepEqual(prev.Logging, next.Logging) {
+		changes = append(changes, fmt.Sprintf("logging: level %s, format %s, access log %t",
+			orDefault(next.Logging.Level, "info"), orDefault(next.Logging.Format, "text"), next.Logging.AccessLog == nil || *next.Logging.AccessLog))
 	}
 	if prev.Worker.TimeoutSeconds != next.Worker.TimeoutSeconds || !reflect.DeepEqual(prev.Tools, next.Tools) {
 		changes = append(changes, fmt.Sprintf("tool timeouts: default %ds", next.Worker.TimeoutSeconds))
@@ -233,9 +238,9 @@ func sortedKeys[V any](maps ...map[string]V) []string {
 	return keys
 }
 
-func logList(items []string) string {
-	if len(items) == 0 {
-		return ""
+func orDefault(s, def string) string {
+	if s == "" {
+		return def
 	}
-	return ": " + strings.Join(items, "; ")
+	return s
 }

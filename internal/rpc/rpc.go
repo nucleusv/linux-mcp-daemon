@@ -1,10 +1,11 @@
 package rpc
 
 import (
+	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
+
 	"github.com/nucleusv/linux-mcp-daemon/internal/version"
 
 	"encoding/json"
-	"log"
 )
 
 func (h *RPCHandler) ProcessJSONRPC(session *Session, req JSONRPCRequest) {
@@ -37,7 +38,7 @@ func (h *RPCHandler) ProcessJSONRPC(session *Session, req JSONRPCRequest) {
 	// Size only: response bodies are tool output - file contents read as
 	// root, process environments, journal lines - and the daemon's own log
 	// is readable by anyone in the adm/systemd-journal groups.
-	log.Printf("Sending response for %s (id=%v): %d bytes, error=%t", req.Method, req.ID, len(respBytes), resp.Error != nil)
+	logging.Debug("JSON-RPC response", "method", req.Method, "id", req.ID, "bytes", len(respBytes), "error", resp.Error != nil)
 	session.Event <- string(respBytes)
 }
 

@@ -20,6 +20,13 @@ worker:
   # install). Set true only when mcpd runs inside a container and should
   # administer the real host.
   containerized: false
+logging:
+  # error | warn | info | debug. info: one line per tool call; debug adds
+  # every JSON-RPC request and SSE session. Calls that change the host are
+  # audit-logged at any level.
+  level: info
+  format: text       # text | json (for journald/Loki/ELK field extraction)
+  access_log: true   # one line per HTTP request, at any level
 tools:
   disks/usage:
     timeout_seconds: 300

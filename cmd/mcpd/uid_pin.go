@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os/user"
 	"sync"
 
+	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 	"github.com/nucleusv/linux-mcp-daemon/internal/yamledit"
 )
 
@@ -105,9 +105,9 @@ func checkAndPinUID(username string) bool {
 		daemonConfig.Users[idx].PinnedUID = currentUID
 		daemonConfig.Users[idx].OSUID = currentUID
 		if err := persistUIDPin(username, currentUID, currentUID); err != nil {
-			log.Printf("[SECURITY] failed to persist UID pin for %q (uid %s): %v - continuing without a persisted pin this time", username, currentUID, err)
+			logging.Warn("could not save UID pin - continuing without a persisted pin this time", "security", true, "user", username, "uid", currentUID, "err", err)
 		} else {
-			log.Printf("[SECURITY] pinned OS UID %s for mcpd user %q (first successful authentication)", currentUID, username)
+			logging.Info("pinned OS UID on first successful authentication", "security", true, "user", username, "uid", currentUID)
 		}
 		return true
 	}
@@ -122,9 +122,9 @@ func checkAndPinUID(username string) bool {
 	// after this log line scrolls away.
 	daemonConfig.Users[idx].OSUID = currentUID
 	if err := persistUIDPin(username, pinned, currentUID); err != nil {
-		log.Printf("[SECURITY] failed to persist UID mismatch observation for %q: %v", username, err)
+		logging.Warn("could not save UID mismatch observation", "security", true, "user", username, "err", err)
 	}
-	log.Printf("[SECURITY] REFUSING auth for %q: pinned UID %s does not match currently-resolved UID %s - the OS account behind this username may have been deleted and recreated. Run `linuxctl update mcpd user %s` to re-pin if this is an intentional change.", username, pinned, currentUID, username)
+	logging.Warn("refusing authentication: the OS account behind this username changed - run `linuxctl update mcpd user` to re-pin if intended", "security", true, "user", username, "pinned_uid", pinned, "uid", currentUID)
 	return false
 }
 
