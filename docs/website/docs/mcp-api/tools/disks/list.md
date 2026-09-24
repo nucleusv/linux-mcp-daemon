@@ -4,6 +4,15 @@
 
 Lists block devices as a tree (equivalent to `lsblk`): disks, their partitions, and LVM/dm-crypt/RAID volumes nested under the devices they're built on, with MAJ:MIN, RM, SIZE, RO, TYPE and MOUNTPOINTS. `json`/`yaml` output is the same tree under `blockdevices` (the shape of `lsblk -J`), with nested `children`. To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool.
 
+| Parameter | Description |
+|---|---|
+| `human_readable` | SIZE like `lsblk` (`60G`); default is bytes, like `lsblk -b` |
+| `all` | Include empty devices and RAM disks (`lsblk -a`) |
+| `output_format` | `json`/`yaml`: the `blockdevices` tree; each device has `size` (as printed) and `size_bytes` |
+| `privileged` | Run as root - in containerized deployments, reads the host's mount table for MOUNTPOINTS |
+
+SIZE is in **bytes** by default; `human_readable: true` prints it like `lsblk`.
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.
@@ -13,6 +22,26 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 
 ```bash
 linuxctl get disks
+```
+
+Output (Ubuntu 24.04 VPS, 2 GB RAM):
+```text
+NAME            MAJ:MIN RM        SIZE RO TYPE MOUNTPOINTS
+sda               8:0    0 64424509440  0 disk
+├─sda1            8:1    0  2146435072  0 part /boot
+└─sda2            8:2    0 62277025792  0 part
+  ├─vg4114-swap 252:0    0  3955228672  0 lvm  [SWAP]
+  └─vg4114-root 252:1    0 58317602816  0 lvm  /
+sr0              11:0    1        2048  1 rom
+```
+
+</details>
+
+<details>
+<summary><b>linuxctl (human_readable)</b></summary>
+
+```bash
+linuxctl get disks --human_readable true
 ```
 
 Output:
@@ -35,14 +64,14 @@ sr0              11:0    1    2K  1 rom
 linuxctl get disks -o yaml
 ```
 
-Output (truncated):
+Output:
 ```yaml
 blockdevices:
     - name: sda
       kname: sda
       maj:min: "8:0"
       rm: false
-      size: 60G
+      size: "64424509440"
       size_bytes: 64424509440
       ro: false
       type: disk
@@ -51,19 +80,52 @@ blockdevices:
         - name: sda1
           kname: sda1
           maj:min: "8:1"
-          ...
+          rm: false
+          size: "2146435072"
+          size_bytes: 2146435072
+          ro: false
+          type: part
           mountpoints:
             - /boot
         - name: sda2
-          ...
+          kname: sda2
+          maj:min: "8:2"
+          rm: false
+          size: "62277025792"
+          size_bytes: 62277025792
+          ro: false
+          type: part
+          mountpoints: []
           children:
             - name: vg4114-swap
               kname: dm-0
               maj:min: "252:0"
-              ...
+              rm: false
+              size: "3955228672"
+              size_bytes: 3955228672
+              ro: false
               type: lvm
               mountpoints:
                 - '[SWAP]'
+            - name: vg4114-root
+              kname: dm-1
+              maj:min: "252:1"
+              rm: false
+              size: "58317602816"
+              size_bytes: 58317602816
+              ro: false
+              type: lvm
+              mountpoints:
+                - /
+    - name: sr0
+      kname: sr0
+      maj:min: "11:0"
+      rm: true
+      size: "2048"
+      size_bytes: 2048
+      ro: true
+      type: rom
+      mountpoints: []
 ```
 
 </details>
@@ -89,12 +151,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "7",
+  "id": "1",
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "NAME            MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS\nsda               8:0    0   60G  0 disk\n├─sda1            8:1    0    2G  0 part /boot\n└─sda2            8:2    0   58G  0 part\n  ├─vg4114-swap 252:0    0  3.7G  0 lvm  [SWAP]\n  └─vg4114-root 252:1    0 54.3G  0 lvm  /\nsr0              11:0    1    2K  1 rom\n"
+        "text": "NAME            MAJ:MIN RM        SIZE RO TYPE MOUNTPOINTS\nsda               8:0    0 64424509440  0 disk\n├─sda1            8:1    0  2146435072  0 part /boot\n└─sda2            8:2    0 62277025792  0 part\n  ├─vg4114-swap 252:0    0  3955228672  0 lvm  [SWAP]\n  └─vg4114-root 252:1    0 58317602816  0 lvm  /\nsr0              11:0    1        2048  1 rom\n"
       }
     ]
   }
@@ -102,4 +164,3 @@ Response:
 ```
 
 </details>
-

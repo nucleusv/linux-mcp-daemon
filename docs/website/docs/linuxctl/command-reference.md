@@ -95,25 +95,28 @@ $ linuxctl describe disks vda
 
 ```bash
 $ linuxctl get processes --sort_by mem --limit 3 --output table
-USER   COMM             STATE   PPID   RSS_KB   CMDLINE                PID
-root   kube-apiserver   S       467    336564   kube-apiserver ...     754
+PID    USER   COMM         STATE   PPID   RSS_BYTES   CMDLINE
+1005   root   dockerd      S       1      172650496   /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+917    root   containerd   S       1      62570496    /usr/bin/containerd
+386    root   multipathd   S       1      27918336    /sbin/multipathd -d -s
 
 $ linuxctl get processes 1
-[{"cmdline": "/sbin/init", "comm": "systemd", "pid": 1, "ppid": 0, "rss_kb": 18928, "state": "S", "user": "root"}]
-# same tool as the bare form above, filtered to one PID - not a separate endpoint
+PID  PPID  USER  STAT  RSS       COMMAND
+1    0     root  S     13676544  /sbin/init splash
+# same tool as the bare form above, filtered to one PID - not a separate endpoint; sizes in bytes (--human_readable true for 13Mi)
 
 $ linuxctl get processes top --limit 3
-top - 00:05:53 up  5:23,  1 user,  load average: 0.02, 0.19, 0.43
-Tasks: 141 total,   2 running, 139 sleeping,   0 stopped,   0 zombie
-%Cpu(s):  0.9 us,  1.8 sy,  0.0 ni, 87.7 id,  0.0 wa,  0.0 hi,  0.0 si,  9.6 st
-MiB Mem :   1892.6 total,    475.7 free,    393.3 used,   1023.6 buff/cache
-MiB Swap:   3772.0 total,   3739.3 free,     32.7 used.   1304.0 avail Mem
+top - 21:17:27 up 23 min,  1 user,  load average: 0.55, 0.91, 0.76
+Tasks: 144 total,   3 running, 141 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.4 us,  1.3 sy,  0.0 ni, 89.7 id,  0.0 wa,  0.0 hi,  0.4 si,  8.0 st
+B Mem : 1984503808 total, 380633088 free, 331763712 used, 1272107008 buff/cache
+B Swap: 3955224576 total, 3955224576 free, 0 used. 1447153664 avail Mem
 
-    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
-  89528 privile+  20   0 1268100  11864   6552 R  10.0   0.6   0:00.14 mcpd
-  54706 root      20   0  331300   9264   7700 R   1.0   0.5   1:25.59 NetworkManager
-      1 root      20   0   22596  12560   9148 S   0.0   0.6   2:13.24 systemd
-# the processes/top tool: top's header and all its columns, %CPU sampled over 1s
+    PID USER      PR  NI         VIRT         RES         SHR S  %CPU  %MEM     TIME+ COMMAND
+   6939 privile+  20   0   1366347776    12296192     7057408 R   6.0   0.6   0:00.08 mcpd
+   4661 root      20   0            0           0           0 R   1.0   0.0   0:00.04 kworker/u64:4-events_power_efficient
+      1 root      20   0     23105536    14053376     9785344 S   0.0   0.7   0:05.31 systemd
+# the processes/top tool: top's header and all its columns, %CPU sampled over 1s; memory in bytes (--human_readable true for top's MiB/KiB)
 
 $ linuxctl describe processes 1
 === status ===
