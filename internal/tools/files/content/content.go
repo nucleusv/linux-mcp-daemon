@@ -7,11 +7,17 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/nucleusv/linux-mcp-daemon/internal/fsafe"
 )
 
 // ContentArgs defines the parameters for the files/content resource template.
 type ContentArgs struct {
 	Path string `json:"path"` // Path is the absolute path to the file to read. Required.
+	// NoFollow is set by the daemon (never the caller) for a root read
+	// under a narrower-than-"/" grant: no symlink is followed in any
+	// component of Path.
+	NoFollow bool `json:"_no_follow,omitempty"`
 }
 
 const maxReadBytes = 10240 // 10KB
@@ -26,7 +32,13 @@ func Content(args []byte) (string, error) {
 		return "", fmt.Errorf("path argument is required")
 	}
 
-	file, err := os.Open(parsedArgs.Path)
+	var file *os.File
+	var err error
+	if parsedArgs.NoFollow {
+		file, err = fsafe.OpenFile(parsedArgs.Path, os.O_RDONLY)
+	} else {
+		file, err = os.Open(parsedArgs.Path)
+	}
 	if err != nil {
 		return "", fmt.Errorf("failed to open file %s: %v", parsedArgs.Path, err)
 	}

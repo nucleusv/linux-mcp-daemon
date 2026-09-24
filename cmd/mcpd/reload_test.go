@@ -51,7 +51,7 @@ func TestConfigChanges(t *testing.T) {
     privileged:
       tools:
         files/read: {allowed: true, paths: [/home/alice]}
-        disks/usage: {allowed: true}
+        disks/usage: {allowed: true, paths: ["/"]}
 `)
 	nextSudo := mustSudo(t, `users:
   alice:

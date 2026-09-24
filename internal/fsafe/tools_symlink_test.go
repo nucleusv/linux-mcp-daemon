@@ -13,11 +13,13 @@ import (
 	"testing"
 
 	disk_usage "github.com/nucleusv/linux-mcp-daemon/internal/tools/disks/usage"
+	content "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/content"
 	createfile "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/create"
 	"github.com/nucleusv/linux-mcp-daemon/internal/tools/files/filetype"
 	findfile "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/find"
 	listfiles "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/list"
 	readfile "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/read"
+	filestat "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/stat"
 	updatefile "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/update"
 )
 
@@ -70,6 +72,9 @@ func TestNoFollowRefusesEscapes(t *testing.T) {
 		{"find via dir-link", findfile.Find, map[string]any{"path": allowed + "/dir-link"}},
 		{"usage via dir-link", disk_usage.Usage, map[string]any{"path": allowed + "/dir-link"}},
 		{"filetype via dir-link", filetype.Type, map[string]any{"path": allowed + "/dir-link/secret.txt"}},
+		{"content (file:// resource) file-link", content.Content, map[string]any{"path": allowed + "/file-link"}},
+		{"content (file:// resource) via dir-link", content.Content, map[string]any{"path": allowed + "/dir-link/secret.txt"}},
+		{"stat (file:// resource) via dir-link", filestat.Stat, map[string]any{"path": allowed + "/dir-link/secret.txt"}},
 	}
 	wd, _ := os.Getwd()
 	for _, a := range attacks {
@@ -121,6 +126,12 @@ func TestNoFollowNormalUse(t *testing.T) {
 	os.Chdir(wd)
 	if err != nil || !strings.Contains(out, allowed+"/notes.txt") || !strings.Contains(out, allowed+"/new/dir/f.txt") || strings.Contains(out, "secret") {
 		t.Errorf("find: %q %v", out, err)
+	}
+	if out, err := call(content.Content, map[string]any{"path": p}); err != nil || !strings.Contains(out, "one") {
+		t.Errorf("content: %q %v", out, err)
+	}
+	if out, err := call(filestat.Stat, map[string]any{"path": p}); err != nil || !strings.Contains(out, `"name": "notes.txt"`) {
+		t.Errorf("stat: %q %v", out, err)
 	}
 	if out, err := call(filetype.Type, map[string]any{"path": p}); err != nil || out != "text/plain\n" {
 		t.Errorf("filetype: %q %v", out, err)

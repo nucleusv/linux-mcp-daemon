@@ -144,7 +144,10 @@ func ParseSudoConfig(data []byte, strict bool) (*SudoConfig, error) {
 					return nil, fmt.Errorf("user '%s', tool '%s': %v", username, toolName, err)
 				}
 			}
-			if _, takesPath := PathTools[toolName]; len(privs.Paths) > 0 && !takesPath && strict {
+			if PathTools[toolName] && privs.Allowed && len(privs.Paths) == 0 && strict {
+				return nil, fmt.Errorf("user '%s', tool '%s': allowed without paths - as root it could only be refused; list the directories it may reach, or paths: [\"/\"] for the whole filesystem", username, toolName)
+			}
+			if len(privs.Paths) > 0 && !PathTools[toolName] && strict {
 				return nil, fmt.Errorf("user '%s', tool '%s': paths has no effect - %s takes no path argument (paths can limit: %s)", username, toolName, toolName, strings.Join(sortedPathTools(), ", "))
 			}
 		}
@@ -175,22 +178,14 @@ func (c *SudoConfig) NetworkPolicy(username, toolName string) *netpolicy.Policy 
 }
 
 // GetAllowedPaths fetches the restricted paths for a tool.
-// PathTools are the tools that take a filesystem `path` argument, so a
-// grant for them can carry `paths:`. The value says whether running them as
-// root requires `paths:` (files/*: no paths, no root) or merely honors it
-// when present (absent = any path). `paths:` on any other tool would be a
-// restriction that restricts nothing, so the config loader rejects it.
+// PathTools are the tools that take a filesystem `path` argument. Running
+// one as root requires `paths:` in its grant - there is no "allowed
+// everywhere" default; `paths: ["/"]` says so explicitly. `paths:` on any
+// other tool would restrict nothing, so the config loader rejects it.
 var PathTools = map[string]bool{
-	"files/list":     true,
-	"files/read":     true,
-	"files/create":   true,
-	"files/update":   true,
-	"files/find":     true,
-	"files/filetype": true,
-	"files/chmod":    true,
-	"files/chown":    true,
-	"disks/free":     false,
-	"disks/usage":    false,
+	"files/list": true, "files/read": true, "files/create": true, "files/update": true,
+	"files/find": true, "files/filetype": true, "files/chmod": true, "files/chown": true,
+	"disks/free": true, "disks/usage": true,
 }
 
 func (c *SudoConfig) GetAllowedPaths(username, toolName string) []string {
@@ -236,6 +231,22 @@ func PathAllowed(path string, allowed []string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// ResourceGrantCoversRoot reports whether username's grant for scheme
+// covers every path - "" (the whole scheme) or "/" - so following a
+// symlink can't reach anything the grant doesn't already allow.
+func (c *SudoConfig) ResourceGrantCoversRoot(username, scheme string) bool {
+	userSudo, ok := c.Users[username]
+	if !ok {
+		return false
+	}
+	for _, p := range userSudo.Privileged.Resources[scheme] {
+		if p == "" || (strings.HasPrefix(p, "/") && filepath.Clean(p) == "/") {
+			return true
+		}
+	}
+	return false
 }
 
 // CanReadResourceAsRoot checks if a specific user is authorized to read a resource path as root.

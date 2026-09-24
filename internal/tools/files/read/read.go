@@ -104,6 +104,10 @@ func Read(argsJSON []byte) (string, error) {
 		if err := scanner.Err(); err != nil {
 			return "", fmt.Errorf("error reading lines: %v", err)
 		}
+		// An empty answer would look like empty lines; say what happened.
+		if total := lineNum - 1; result == "" && start > total {
+			return "", fmt.Errorf("start_line %d is past the end of the file (%d lines)", start, total)
+		}
 		return result, nil
 	}
 

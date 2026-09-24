@@ -17,7 +17,7 @@ linuxctl resource devices://dmi
 
 Output:
 ```text
-Error: worker execution failed: exit status 1. Stderr: DMI data not available on this system
+Error: DMI data not available on this system
  (Code: -32603)
 ```
 
@@ -43,7 +43,7 @@ Response:
   "id": "d1",
   "error": {
     "code": -32603,
-    "message": "worker execution failed: exit status 1. Stderr: DMI data not available on this system\n"
+    "message": "DMI data not available on this system\n"
   }
 }
 ```

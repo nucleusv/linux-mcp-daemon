@@ -23,7 +23,7 @@ func List(argsJSON []byte) (string, error) {
 		return "", fmt.Errorf("invalid arguments: %v", err)
 	}
 
-	conn, err := dbus.NewSystemdConnectionContext(context.Background())
+	conn, err := dbus.NewWithContext(context.Background()) // private socket as root, the system bus otherwise (readable by any user)
 	if err != nil {
 		return "", fmt.Errorf("failed to connect to systemd dbus: %v", err)
 	}

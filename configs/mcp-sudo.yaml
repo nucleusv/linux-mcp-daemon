@@ -46,8 +46,12 @@ users:
           allowed: true
         disks/free:
           allowed: true
+          paths:
+            - /
         disks/usage:
           allowed: true
+          paths:
+            - /
         processes/delete:
           allowed: true
         network/connections:
@@ -128,6 +132,8 @@ users:
           allowed: true
         disks/free:
           allowed: true
+          paths:
+            - /
         disks/health:
           allowed: true
         disks/list:
@@ -140,6 +146,8 @@ users:
           allowed: true
         disks/usage:
           allowed: true
+          paths:
+            - /
         files/create:
           allowed: true
           paths:

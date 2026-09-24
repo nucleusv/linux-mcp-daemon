@@ -34,9 +34,13 @@ func Handle(uri string, sessionUser string, sudoConfig *config.SudoConfig) (stri
 	// Determine if we need to run as root based on mcp-sudo.yaml paths list
 	isPrivileged := sudoConfig.CanReadResourceAsRoot(sessionUser, "file://", path)
 
-	argsJSON, _ := json.Marshal(map[string]interface{}{
-		"path": path,
-	})
+	args := map[string]interface{}{"path": path}
+	// As for the file tools: a root read allowed by a grant narrower than
+	// the whole filesystem must not follow a symlink out of it.
+	if isPrivileged && !sudoConfig.ResourceGrantCoversRoot(sessionUser, "file://") {
+		args["_no_follow"] = true
+	}
+	argsJSON, _ := json.Marshal(args)
 
 	content, readErr := worker.SpawnWorker(sessionUser, tool, argsJSON, isPrivileged, sudoConfig, 30)
 

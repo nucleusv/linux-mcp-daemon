@@ -60,7 +60,7 @@ linuxctl chmod files /tmp/demo/passwd-link 0600
 
 Output:
 ```text
-worker execution failed: exit status 1. Stderr: /tmp/demo/passwd-link: refusing to follow a symbolic link
+/tmp/demo/passwd-link: refusing to follow a symbolic link
 ```
 
 </details>

@@ -34,8 +34,8 @@ func TestPrivilegedPathLimits(t *testing.T) {
     privileged:
       tools:
         disks/usage: {allowed: true, paths: [/var]}
-        disks/free: {allowed: true}
-        files/list: {allowed: true}
+        disks/free: {allowed: true, paths: ["/"]}
+        files/list: {allowed: true, paths: [/srv]}
 `), true)
 	if err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func TestPrivilegedPathLimits(t *testing.T) {
 		{"disks/usage", `{"path": "/root", "privileged": true}`},
 		{"disks/usage", `{"path": "/var/../root", "privileged": true}`},
 		{"disks/usage", `{"path": "/varnish", "privileged": true}`},
-		{"files/list", `{"path": "/tmp", "privileged": true}`}, // files/*: no paths = no root
+		{"files/list", `{"path": "/tmp", "privileged": true}`}, // outside its paths
 	}
 	for _, c := range denied {
 		text, isErr := callTool(t, h, "alice", c.tool, c.args)
@@ -56,7 +56,7 @@ func TestPrivilegedPathLimits(t *testing.T) {
 		}
 	}
 
-	// Inside the grant's paths, or a tool granted without paths: the path
+	// Inside the grant's paths (paths: ["/"] covers everything): the path
 	// check passes (the call then fails later, at the worker, in a test).
 	allowed := []struct{ tool, args string }{
 		{"disks/usage", `{"path": "/var/log", "privileged": true}`},
@@ -114,5 +114,17 @@ func TestNoFollowHelpers(t *testing.T) {
 	got := string(withoutKey(json.RawMessage(`{"path":"/tmp","_no_follow":false}`), "_no_follow"))
 	if strings.Contains(got, "_no_follow") || !strings.Contains(got, `"path":"/tmp"`) {
 		t.Errorf("withoutKey: %s", got)
+	}
+}
+
+func TestRelativePathRejected(t *testing.T) {
+	sudo, _ := config.ParseSudoConfig([]byte("users:\n  alice:\n    privileged:\n      tools:\n        files/list: {allowed: true, paths: [\"/\"]}\n"), true)
+	var mu sync.RWMutex
+	h := NewRPCHandler(sudo, 5, nil, &singleflight.Group{}, map[string]CacheEntry{}, &mu, cache.NewTTLCache())
+	for _, args := range []string{`{"path": "tmp/x"}`, `{"path": "tmp/x", "privileged": true}`} {
+		text, isErr := callTool(t, h, "alice", "files/list", args)
+		if !isErr || !strings.Contains(text, `path must be absolute, got "tmp/x"`) {
+			t.Errorf("%s: got %q", args, text)
+		}
 	}
 }

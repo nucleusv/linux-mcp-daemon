@@ -2,6 +2,7 @@ package nslookup
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -39,19 +40,37 @@ func Nslookup(argsJSON []byte) (string, error) {
 	if rtype == "" {
 		rtype = "ANY"
 	}
+	switch rtype {
+	case "A", "AAAA", "CNAME", "TXT", "MX", "NS", "ANY":
+	default:
+		return "", fmt.Errorf("unsupported record type %q (A, AAAA, CNAME, TXT, MX, NS or ANY)", args.RecordType)
+	}
 
-	var results []Record
+	results := []Record{}
+	// A domain that doesn't exist fails every lookup with "no such host";
+	// that's an error, not an empty answer.
+	var notFound error
+	note := func(err error) {
+		var dnsErr *net.DNSError
+		if errors.As(err, &dnsErr) && dnsErr.IsNotFound && notFound == nil {
+			notFound = err
+		}
+	}
 
 	// CNAME
 	if rtype == "CNAME" || rtype == "ANY" {
-		if cname, err := net.LookupCNAME(args.Host); err == nil && cname != "" {
+		cname, err := net.LookupCNAME(args.Host)
+		note(err)
+		if err == nil && cname != "" {
 			results = append(results, Record{Type: "CNAME", Value: cname})
 		}
 	}
 
 	// A / AAAA (IPs)
 	if rtype == "A" || rtype == "AAAA" || rtype == "ANY" {
-		if ips, err := net.LookupIP(args.Host); err == nil {
+		ips, err := net.LookupIP(args.Host)
+		note(err)
+		if err == nil {
 			for _, ip := range ips {
 				recordType := "A"
 				if ip.To4() == nil {
@@ -66,7 +85,9 @@ func Nslookup(argsJSON []byte) (string, error) {
 
 	// TXT
 	if rtype == "TXT" || rtype == "ANY" {
-		if txts, err := net.LookupTXT(args.Host); err == nil {
+		txts, err := net.LookupTXT(args.Host)
+		note(err)
+		if err == nil {
 			for _, txt := range txts {
 				results = append(results, Record{Type: "TXT", Value: txt})
 			}
@@ -75,7 +96,9 @@ func Nslookup(argsJSON []byte) (string, error) {
 
 	// MX
 	if rtype == "MX" || rtype == "ANY" {
-		if mxs, err := net.LookupMX(args.Host); err == nil {
+		mxs, err := net.LookupMX(args.Host)
+		note(err)
+		if err == nil {
 			for _, mx := range mxs {
 				results = append(results, Record{Type: "MX", Value: fmt.Sprintf("%d %s", mx.Pref, mx.Host)})
 			}
@@ -84,10 +107,21 @@ func Nslookup(argsJSON []byte) (string, error) {
 
 	// NS
 	if rtype == "NS" || rtype == "ANY" {
-		if nss, err := net.LookupNS(args.Host); err == nil {
+		nss, err := net.LookupNS(args.Host)
+		note(err)
+		if err == nil {
 			for _, ns := range nss {
 				results = append(results, Record{Type: "NS", Value: ns.Host})
 			}
+		}
+	}
+
+	// Go reports a name that exists but has no records of the asked type
+	// the same way as a name that doesn't exist; tell them apart by
+	// whether the name itself resolves.
+	if len(results) == 0 && notFound != nil {
+		if _, err := net.LookupHost(args.Host); err != nil {
+			return "", fmt.Errorf("%s: no such host", args.Host)
 		}
 	}
 

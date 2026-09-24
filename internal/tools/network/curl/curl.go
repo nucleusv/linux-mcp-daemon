@@ -23,6 +23,7 @@ type CurlArgs struct {
 	Insecure     bool              `json:"insecure,omitempty"`      // Insecure skips TLS certificate validation.
 	OutputFormat string            `json:"output_format,omitempty"` // OutputFormat specifies the desired output format. Defaults to text.
 	Timeout      int               `json:"timeout,omitempty"`       // Timeout is the request timeout in seconds. Defaults to 10.
+	MaxBody      int               `json:"max_body,omitempty"`      // MaxBody caps the returned body in bytes (default 1 MiB, at most 10 MiB).
 	// NetworkPolicy is injected by the daemon from mcp-sudo.yaml (never
 	// taken from the caller); nil means unrestricted.
 	NetworkPolicy *netpolicy.Policy `json:"_network_policy,omitempty"`
@@ -33,7 +34,7 @@ type CurlResponse struct {
 	Status     string            `json:"status"`
 	Headers    map[string]string `json:"headers"`
 	Body       string            `json:"body"`
-	Truncated  bool              `json:"truncated,omitempty"` // Body was cut at the 10 MB cap.
+	Truncated  bool              `json:"truncated,omitempty"` // Body was cut at max_body.
 }
 
 func Curl(argsJSON []byte) (string, error) {
@@ -105,8 +106,13 @@ func Curl(argsJSON []byte) (string, error) {
 
 	// Cap the body: an unbounded ReadAll of a huge or endless response
 	// would exhaust the worker's memory.
-	const maxBody = 10 << 20
-	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, maxBody+1))
+	// The body goes back into the caller's context (an AI agent's, often):
+	// 1 MiB by default, max_body to change it, 10 MiB at most.
+	maxBody := 1 << 20
+	if args.MaxBody > 0 {
+		maxBody = min(args.MaxBody, 10<<20)
+	}
+	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, int64(maxBody)+1))
 	truncated := len(bodyBytes) > maxBody
 	if truncated {
 		bodyBytes = bodyBytes[:maxBody]

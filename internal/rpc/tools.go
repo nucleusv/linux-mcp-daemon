@@ -316,6 +316,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"headers":  map[string]interface{}{"type": "object", "description": "Request headers, e.g. {\"Content-Type\": \"application/json\"}", "additionalProperties": map[string]interface{}{"type": "string"}},
 						"insecure": map[string]interface{}{"type": "boolean", "description": "Skip TLS certificate verification"},
 						"timeout":  map[string]interface{}{"type": "number"},
+						"max_body": map[string]interface{}{"type": "integer", "description": "Return at most this many bytes of the response body (default 1048576 = 1 MiB, max 10 MiB); a cut body has truncated: true"},
 					},
 					"required": []string{"url"},
 				},
@@ -770,14 +771,19 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			}
 			_ = json.Unmarshal(params.Arguments, &baseArgs)
 
+			// Paths are absolute: a relative one would be resolved against
+			// the worker's working directory, which no one intends.
+			if (config.PathTools[params.Name] || params.Name == "files/stat") && baseArgs.Path != "" && !strings.HasPrefix(baseArgs.Path, "/") {
+				execErr = fmt.Errorf("path must be absolute, got %q", baseArgs.Path)
+			}
+
 			// _no_follow is the daemon's to set, never the caller's.
 			params.Arguments = withoutKey(params.Arguments, "_no_follow")
 
 			// Tools with a path argument, run as root, are limited to their
-			// grant's paths: always for files/* (no paths = no root), and
-			// for the others whenever the grant lists paths.
+			// grant's paths - no paths, no root (see config.PathTools).
 			allowedPaths := sudoCfg.GetAllowedPaths(session.User, params.Name)
-			if pathsRequired, takesPath := config.PathTools[params.Name]; takesPath && baseArgs.Privileged && (pathsRequired || len(allowedPaths) > 0) {
+			if execErr == nil && config.PathTools[params.Name] && baseArgs.Privileged {
 				checkPath := baseArgs.Path
 				if checkPath == "" && params.Name == "files/find" {
 					checkPath = "/" // files/find's own default

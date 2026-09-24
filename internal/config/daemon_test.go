@@ -105,3 +105,35 @@ func TestPathsOnlyOnPathTools(t *testing.T) {
 		t.Errorf("paths on disks/usage rejected: %v", err)
 	}
 }
+
+func TestResourceGrantCoversRoot(t *testing.T) {
+	c, err := ParseSudoConfig([]byte(`users:
+  all: {privileged: {tools: {}, resources: {"file://": [""]}}}
+  slash: {privileged: {tools: {}, resources: {"file://": ["/"]}}}
+  narrow: {privileged: {tools: {}, resources: {"file://": ["/var/log"]}}}
+`), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for user, want := range map[string]bool{"all": true, "slash": true, "narrow": false, "nobody": false} {
+		if got := c.ResourceGrantCoversRoot(user, "file://"); got != want {
+			t.Errorf("%s: got %t", user, got)
+		}
+	}
+}
+
+func TestPathsRequired(t *testing.T) {
+	for _, tool := range []string{"files/read", "disks/usage", "disks/free"} {
+		doc := "users:\n  a:\n    privileged:\n      tools:\n        " + tool + ": {allowed: true}\n"
+		if _, err := ParseSudoConfig([]byte(doc), true); err == nil || !strings.Contains(err.Error(), "allowed without paths") {
+			t.Errorf("%s allowed without paths: err = %v", tool, err)
+		}
+		if _, err := ParseSudoConfig([]byte(doc), false); err != nil {
+			t.Errorf("%s: lenient (startup) must still load: %v", tool, err)
+		}
+	}
+	ok := "users:\n  a:\n    privileged:\n      tools:\n        disks/usage: {allowed: true, paths: [\"/\"]}\n        files/read: {allowed: false}\n"
+	if _, err := ParseSudoConfig([]byte(ok), true); err != nil {
+		t.Errorf("explicit paths / not-allowed rejected: %v", err)
+	}
+}

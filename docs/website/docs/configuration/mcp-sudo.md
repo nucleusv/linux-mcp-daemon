@@ -23,6 +23,7 @@ users:
       tools:
         disks/free:
           allowed: true
+          paths: ["/"]
         files/list:
           allowed: true
           paths:
@@ -40,6 +41,7 @@ users:
             - "/var/www"
         disks/usage:
           allowed: true
+          paths: ["/"]
 ```
 
 In this example, if the AI is authenticated as `alice`, it can list protected root directories, but it cannot run expensive `disks/usage` tree traversals as root!
@@ -50,8 +52,9 @@ In this example, if the AI is authenticated as `alice`, it can list protected ro
 
 | Tools | Without `paths:` | With `paths:` |
 |---|---|---|
-| `files/list`, `files/read`, `files/create`, `files/update`, `files/find`, `files/filetype`, `files/chmod`, `files/chown` | no root at all | root only inside the listed paths |
-| `disks/usage`, `disks/free` | root on any path | root only inside the listed paths |
+| `files/list`, `files/read`, `files/create`, `files/update`, `files/find`, `files/filetype`, `files/chmod`, `files/chown`, `disks/usage`, `disks/free` | no root at all - and a config error on reload / `linuxctl edit` (a startup warning) | root only inside the listed paths |
+
+There is no implicit "anywhere": to allow the whole filesystem, say so - `paths: ["/"]` - so it's visible to whoever reads the config.
 
 **Symlinks.** The path check is on the path as written, and a symlink under an allowed directory could lead anywhere (`/var/www/x -> /etc/shadow`). So when a root call is limited by `paths:` - any list that doesn't include `/` - the tool doesn't follow symlinks in **any** component of the path: `files/read`, `files/create`, `files/update`, `files/list`, `files/filetype`, `files/find` and `disks/usage` open the path one component at a time with `O_NOFOLLOW` and refuse (`refusing to follow a symbolic link`) instead of escaping. A symlink as the last component is still *reported* by `files/list` and `files/filetype` (`inode/symlink`), just never followed. `files/chmod` and `files/chown` never follow symlinks at all. With `paths: ["/"]` everything is allowed anyway, so symlinks are followed as usual (`/etc/resolv.conf` is one).
 

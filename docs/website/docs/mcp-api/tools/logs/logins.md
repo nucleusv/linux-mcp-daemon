@@ -19,7 +19,7 @@ linuxctl get logs logins --privileged true
 
 Output:
 ```text
-worker execution failed: exit status 1. Stderr: last failed: exec: "last": executable file not found in $PATH
+last failed: exec: "last": executable file not found in $PATH
 ```
 
 </details>
@@ -50,7 +50,7 @@ Response:
     "content": [
       {
         "type": "text",
-        "text": "worker execution failed: exit status 1. Stderr: last failed: exec: \"last\": executable file not found in $PATH"
+        "text": "last failed: exec: \"last\": executable file not found in $PATH"
       }
     ],
     "isError": true

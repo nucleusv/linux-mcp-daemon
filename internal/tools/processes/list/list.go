@@ -2,6 +2,7 @@ package listprocesses
 
 import (
 	"encoding/json"
+	"text/tabwriter"
 	"time"
 
 	"github.com/nucleusv/linux-mcp-daemon/internal/procstat"
@@ -166,12 +167,43 @@ func Processes(argsJSON []byte) (string, error) {
 		procs = procs[:args.Limit]
 	}
 
-	j, err := json.Marshal(procs)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal JSON: %v", err)
+	switch args.OutputFormat {
+	case "json", "yaml", "table", "wide":
+		if procs == nil {
+			procs = []Process{}
+		}
+		j, err := json.Marshal(procs)
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal JSON: %v", err)
+		}
+		return string(j), nil
 	}
+	return formatText(procs, args.SortBy == "cpu"), nil
+}
 
-	return string(j), nil
+// formatText prints processes like `ps -eo pid,ppid,user,stat,rss,args`
+// (plus %CPU when it was measured).
+func formatText(procs []Process, withCPU bool) string {
+	var b strings.Builder
+	w := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)
+	if withCPU {
+		fmt.Fprintln(w, "PID\tPPID\tUSER\tSTAT\tRSS(KiB)\t%CPU\tCOMMAND")
+	} else {
+		fmt.Fprintln(w, "PID\tPPID\tUSER\tSTAT\tRSS(KiB)\tCOMMAND")
+	}
+	for _, p := range procs {
+		cmd := p.Cmdline
+		if cmd == "" {
+			cmd = "[" + p.Comm + "]" // kernel threads have no command line
+		}
+		if withCPU {
+			fmt.Fprintf(w, "%d\t%d\t%s\t%s\t%d\t%.1f\t%s\n", p.PID, p.PPID, p.User, p.State, p.RSS, cpuOf(p), cmd)
+		} else {
+			fmt.Fprintf(w, "%d\t%d\t%s\t%s\t%d\t%s\n", p.PID, p.PPID, p.User, p.State, p.RSS, cmd)
+		}
+	}
+	w.Flush()
+	return b.String()
 }
 
 func cpuOf(p Process) float64 {

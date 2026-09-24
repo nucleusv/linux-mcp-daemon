@@ -108,6 +108,9 @@ func Performance(args []byte) (string, error) {
 	if err := scanner.Err(); err != nil {
 		return "", fmt.Errorf("error reading /proc/diskstats: %v", err)
 	}
+	if params.Device != "" && len(stats) == 0 {
+		return "", fmt.Errorf("no such block device %q (see disks/list for device names)", params.Device)
+	}
 
 	if params.OutputFormat == "yaml" {
 		out, err := yaml.Marshal(stats)

@@ -53,23 +53,47 @@ func Usage(argsJSON []byte) (string, error) {
 	buffCache := buffers + cached + sReclaimable
 	used := total - free - buffCache
 
+	swapTotal, swapFree := mem["SwapTotal"], mem["SwapFree"]
+	swapUsed := swapTotal - swapFree
+
 	if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
 		data := map[string]interface{}{
-			"total":     total,
-			"used":      used,
-			"free":      free,
-			"shared":    mem["Shmem"],
-			"buffCache": buffCache,
-			"available": available,
+			"total":      total,
+			"used":       used,
+			"free":       free,
+			"shared":     mem["Shmem"],
+			"buffCache":  buffCache,
+			"available":  available,
+			"swap_total": swapTotal,
+			"swap_used":  swapUsed,
+			"swap_free":  swapFree,
 		}
 		b, _ := json.Marshal(data)
 		return string(b), nil
 	}
 
-	// Format text output similar to `free`
+	// Text like `free -h`: sizes in Ki/Mi/Gi, a Swap row.
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%-12s %-12s %-12s %-12s %-12s %-12s %-12s\n", "TYPE", "TOTAL", "USED", "FREE", "SHARED", "BUFF/CACHE", "AVAILABLE"))
-	sb.WriteString(fmt.Sprintf("%-12s %-12d %-12d %-12d %-12d %-12d %-12d\n", "Mem:", total, used, free, mem["Shmem"], buffCache, available))
-
+	sb.WriteString(fmt.Sprintf("%-6s %10s %10s %10s %10s %10s %10s\n", "", "total", "used", "free", "shared", "buff/cache", "available"))
+	sb.WriteString(fmt.Sprintf("%-6s %10s %10s %10s %10s %10s %10s\n", "Mem:", human(total), human(used), human(free), human(mem["Shmem"]), human(buffCache), human(available)))
+	sb.WriteString(fmt.Sprintf("%-6s %10s %10s %10s\n", "Swap:", human(swapTotal), human(swapUsed), human(swapFree)))
 	return sb.String(), nil
+}
+
+// human formats bytes the way `free -h` does: 1.8Gi, 512Mi, 0B.
+func human(b uint64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%dB", b)
+	}
+	v, exp := float64(b)/unit, 0
+	for v >= unit && exp < 4 {
+		v /= unit
+		exp++
+	}
+	suffix := []string{"Ki", "Mi", "Gi", "Ti", "Pi"}[exp]
+	if v < 10 {
+		return fmt.Sprintf("%.1f%s", v, suffix)
+	}
+	return fmt.Sprintf("%.0f%s", v, suffix)
 }

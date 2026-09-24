@@ -3,6 +3,7 @@ package worker
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -88,23 +89,37 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 
 	err = cmd.Run()
 	if ctx.Err() == context.DeadlineExceeded {
-		return "", fmt.Errorf("worker execution failed: timeout exceeded (%d seconds). Process was forcefully terminated.", timeoutSeconds)
+		return "", fmt.Errorf("timed out after %d seconds - the call was stopped", timeoutSeconds)
 	}
 	if err != nil {
-		// Include stderr in the error response if it fails
-		if errBuf.Len() > 0 {
-			return "", fmt.Errorf("worker execution failed: %v. Stderr: %s", err, errBuf.String())
-		}
-
-		// If it's a standard exit error, provide a helpful hint if they weren't using privileges
-		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() != 0 && !privileged {
-			if sudoCfg != nil && sudoCfg.CanRunAsRoot(username, toolName) {
-				return "", fmt.Errorf("worker failed: %v. Hint: You are authorized to run this tool as root. Try again with 'privileged: true'. Output: %s", err, outBuf.String())
+		stderr := strings.TrimSpace(errBuf.String())
+		var exitErr *exec.ExitError
+		// Exit status 1 with a message is a tool's own, ordinary failure
+		// ("no such file", "invalid mode"): pass the message on as it is.
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 && stderr != "" {
+			if !privileged && looksLikePermissionError(stderr) && sudoCfg != nil && sudoCfg.CanRunAsRoot(username, toolName) {
+				stderr += " (you may run this tool as root: retry with privileged: true)"
 			}
+			return "", errors.New(stderr)
 		}
-
-		return "", fmt.Errorf("worker execution failed: %v. Output: %s", err, outBuf.String())
+		// Anything else - killed by a signal, a crash - is the worker failing.
+		if stderr != "" {
+			return "", fmt.Errorf("worker failed: %v: %s", err, stderr)
+		}
+		return "", fmt.Errorf("worker failed: %v", err)
 	}
 
 	return outBuf.String(), nil
+}
+
+// looksLikePermissionError reports whether a tool's error message is the
+// kind running as root would fix.
+func looksLikePermissionError(msg string) bool {
+	m := strings.ToLower(msg)
+	for _, s := range []string{"permission denied", "operation not permitted", "insufficient permissions", "not permitted to"} {
+		if strings.Contains(m, s) {
+			return true
+		}
+	}
+	return false
 }

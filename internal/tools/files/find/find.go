@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -110,6 +111,10 @@ func Find(argsJSON []byte) (string, error) {
 			}
 		}
 	}
+
+	// find lists in directory order, which is arbitrary; sorted results
+	// are stable between calls and easier to read.
+	sort.Slice(matches, func(i, j int) bool { return matches[i].Path < matches[j].Path })
 
 	if args.OutputFormat == "json" || args.OutputFormat == "yaml" || args.OutputFormat == "table" || args.OutputFormat == "wide" {
 		b, err := json.Marshal(matches)
