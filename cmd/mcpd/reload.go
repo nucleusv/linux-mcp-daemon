@@ -195,8 +195,11 @@ func restartOnlyChanges(running, onDisk Config) []string {
 	if onDisk.Server.Port != running.Server.Port {
 		out = append(out, fmt.Sprintf("server.port: %d -> %d", running.Server.Port, onDisk.Server.Port))
 	}
-	if onDisk.Server.TLS != running.Server.TLS {
+	if !reflect.DeepEqual(onDisk.Server.TLS, running.Server.TLS) {
 		out = append(out, "server.tls")
+	}
+	if !reflect.DeepEqual(onDisk.Server.HTTP, running.Server.HTTP) {
+		out = append(out, "server.http")
 	}
 	if onDisk.Worker.Containerized != running.Worker.Containerized {
 		out = append(out, fmt.Sprintf("worker.containerized: %t -> %t", running.Worker.Containerized, onDisk.Worker.Containerized))

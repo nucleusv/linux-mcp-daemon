@@ -32,7 +32,7 @@ linuxctl completion <bash|zsh>
 ## Options
 
 - `-server URL`
-  The URL of the `mcpd` server to connect to. Defaults to the `MCP_SERVER` environment variable, or `http://localhost:9091` if that's unset.
+  The URL of the `mcpd` server to connect to. Defaults to the `MCP_SERVER` environment variable, or `https://localhost:9091` if that's unset.
 
 - `-token TOKEN`
   Bearer token for authentication. If not provided via this flag, the client looks for the `MCP_TOKEN` environment variable. Not needed for the local-only `mcpd` admin group.
@@ -48,10 +48,20 @@ linuxctl completion <bash|zsh>
 - `MCP_SERVER`
   Default for `-server`. Prefer this over a shell alias like `alias linuxctl="linuxctl -server ..."` - shell completion can't see through aliases.
 
+- `MCP_TLS_FINGERPRINT` (or `-tls-fingerprint`)
+  Trust the server whose certificate has this SHA-256 fingerprint - the simplest way to trust mcpd's self-signed certificate from another machine. mcpd logs it at startup; `linuxctl describe mcpd tls` shows it on the daemon's host.
+
+- `MCP_CA_CERT` (or `-ca-cert`)
+  Trust this certificate file (PEM) - e.g. a copy of the host's `/etc/mcpd/configs/tls/mcpd.crt`. Without either, `linuxctl` trusts the system's CAs plus, on the daemon's own host, its certificate when readable.
+
+- `MCP_INSECURE=1` (or `-insecure`)
+  Skip certificate verification. For testing only.
+
 ## Quick example
 
 ```bash
-export MCP_SERVER="http://my-host:9091"
+export MCP_SERVER="https://my-host:9091"
+export MCP_TLS_FINGERPRINT="sha256:..."   # linuxctl describe mcpd tls, on my-host
 export MCP_TOKEN="your_token_here"
 linuxctl ping
 linuxctl get files /etc/hosts

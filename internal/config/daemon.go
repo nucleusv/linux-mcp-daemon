@@ -21,13 +21,28 @@ type ToolsConfig map[string]struct {
 // DaemonConfig is daemon.yaml.
 type DaemonConfig struct {
 	Server struct {
-		Port int `yaml:"port"`
+		// Port is the legacy plain-HTTP port, used by configs that have no
+		// http: block (see Listeners). New configs use tls.port/http.port.
+		Port int `yaml:"port,omitempty"`
 		TLS  struct {
 			Enabled  bool   `yaml:"enabled"`
 			Port     int    `yaml:"port"`
-			CertFile string `yaml:"cert_file"`
+			CertFile string `yaml:"cert_file"` // relative paths are in the config directory
 			KeyFile  string `yaml:"key_file"`
+			// Generate creates a self-signed certificate at cert_file and
+			// key_file on startup when neither exists.
+			Generate bool `yaml:"generate"`
+			// Hosts are extra names/addresses for a generated certificate
+			// (it always covers the host name, localhost and the machine's
+			// addresses).
+			Hosts []string `yaml:"hosts,omitempty"`
 		} `yaml:"tls"`
+		// HTTP is plain HTTP - bearer tokens in clear text. Off unless
+		// enabled; for a trusted network or behind a TLS-terminating proxy.
+		HTTP *struct {
+			Enabled bool `yaml:"enabled"`
+			Port    int  `yaml:"port"`
+		} `yaml:"http,omitempty"`
 	} `yaml:"server"`
 	RateLimits struct {
 		DefaultRPS   float64 `yaml:"default_rps"`
@@ -118,6 +133,40 @@ func LoadConfigDir(dir string, strict bool) (c DaemonConfig, usersPath string, e
 	return c, usersPath, nil
 }
 
+// Listener is one port mcpd serves on.
+type Listener struct {
+	Port int
+	TLS  bool
+}
+
+// Listeners lists what to serve, TLS first. A config without a server.http
+// block is the legacy layout: plain HTTP on server.port, plus TLS on
+// tls.port when enabled.
+func (c DaemonConfig) Listeners() []Listener {
+	var ls []Listener
+	if c.Server.TLS.Enabled {
+		ls = append(ls, Listener{Port: c.Server.TLS.Port, TLS: true})
+	}
+	if c.Server.HTTP == nil {
+		ls = append(ls, Listener{Port: c.Server.Port})
+	} else if c.Server.HTTP.Enabled {
+		ls = append(ls, Listener{Port: c.Server.HTTP.Port})
+	}
+	return ls
+}
+
+// TLSFiles returns the certificate and key paths, resolving relative ones
+// against the config directory.
+func (c DaemonConfig) TLSFiles(configDir string) (cert, key string) {
+	abs := func(p string) string {
+		if filepath.IsAbs(p) {
+			return p
+		}
+		return filepath.Join(configDir, p)
+	}
+	return abs(c.Server.TLS.CertFile), abs(c.Server.TLS.KeyFile)
+}
+
 // ParseUsersConfig parses and validates users.yaml; strict rejects
 // unknown keys.
 func ParseUsersConfig(data []byte, strict bool) (UsersConfig, error) {
@@ -149,14 +198,51 @@ func ParseDaemonConfig(data []byte, strict bool) (DaemonConfig, error) {
 	if err := decodeYAML(data, &c, strict); err != nil {
 		return c, err
 	}
-	if c.Server.Port == 0 {
-		c.Server.Port = 9091
+	if c.Server.HTTP == nil {
+		// Legacy layout: plain HTTP on server.port, TLS (if enabled) as an
+		// extra listener on tls.port.
+		if c.Server.Port == 0 {
+			c.Server.Port = 9091
+		}
+		if c.Server.TLS.Enabled && c.Server.TLS.Port == 0 {
+			c.Server.TLS.Port = 9443
+		}
+	} else {
+		if c.Server.Port != 0 {
+			return c, fmt.Errorf("server.port is the old plain-HTTP setting - with a server.http block, use http.port (and tls.port)")
+		}
+		if c.Server.TLS.Port == 0 {
+			c.Server.TLS.Port = 9091
+		}
+		if c.Server.HTTP.Port == 0 {
+			c.Server.HTTP.Port = 9090
+		}
 	}
-	if c.Server.TLS.Enabled && c.Server.TLS.Port == 0 {
-		c.Server.TLS.Port = 9443
+	if c.Server.TLS.Enabled {
+		if c.Server.TLS.CertFile == "" {
+			c.Server.TLS.CertFile = "tls/mcpd.crt"
+		}
+		if c.Server.TLS.KeyFile == "" {
+			c.Server.TLS.KeyFile = "tls/mcpd.key"
+		}
+	}
+	ls := c.Listeners()
+	if len(ls) == 0 {
+		return c, fmt.Errorf("no listener enabled: enable server.tls (or server.http)")
+	}
+	if len(ls) == 2 && ls[0].Port == ls[1].Port {
+		return c, fmt.Errorf("TLS and plain HTTP are both set to port %d", ls[0].Port)
 	}
 	if c.Worker.TimeoutSeconds == 0 {
 		c.Worker.TimeoutSeconds = 30
+	}
+	// Without these, a config lacking rate_limits: would allow 0 requests
+	// per second - every call refused with 429.
+	if c.RateLimits.DefaultRPS <= 0 {
+		c.RateLimits.DefaultRPS = 50
+	}
+	if c.RateLimits.DefaultBurst <= 0 {
+		c.RateLimits.DefaultBurst = 100
 	}
 	if err := c.Logging.Validate(); err != nil {
 		return c, err

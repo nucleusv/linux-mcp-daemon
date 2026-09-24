@@ -41,10 +41,10 @@ Sep 23 11:41:13 desktop-control-plane kubelet[471811]: I0923 11:41:13.979360  47
 <summary><b>curl (raw MCP JSON-RPC)</b></summary>
 
 ```bash
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+curl -N -s --cacert mcpd.crt -H "Authorization: Bearer $MCP_TOKEN" https://localhost:9091/sse &
 # server sends: event: endpoint / data: /message?session_id=...
 
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+curl -s --cacert mcpd.crt -X POST "https://localhost:9091/message?session_id=<from step 1>" \
   -H "Authorization: Bearer $MCP_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "logs/journal-control", "arguments": {"unit": "kubelet.service", "lines": 3, "privileged": true}}}'

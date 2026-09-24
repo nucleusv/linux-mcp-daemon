@@ -24,19 +24,20 @@ The script:
 5. installs the `mcpd` systemd service, enables and starts it.
 
 ```text
-==> Installed. mcpd listens on port 9091 on all interfaces.
+==> Installed. mcpd listens on https port 9091 on all interfaces.
 
   MCP user:  mcp
   Token:     4c1f...e9a2
              (shown once - only a salted hash is stored; save it now)
 
   Try it:
-    export MCP_SERVER=http://127.0.0.1:9091
+    export MCP_SERVER=https://127.0.0.1:9091
+    export MCP_TLS_FINGERPRINT=sha256:4527...0175   # trusts mcpd's self-signed certificate
     export MCP_TOKEN=4c1f...e9a2
     linuxctl get system os-release
 ```
 
-Run those three commands (with your token) as any user on the host - `linuxctl` talks to mcpd over HTTP, so no `sudo` is needed. `linuxctl get processes top` is another quick check.
+Run those commands (with your token and fingerprint) as any user on the host - `linuxctl` talks to mcpd over HTTPS, so no `sudo` is needed. mcpd serves **TLS by default**, with a self-signed certificate it created on first start in `/etc/mcpd/configs/tls/`; `MCP_TLS_FINGERPRINT` pins it (`linuxctl describe mcpd tls` shows it again; as root on the host, `linuxctl` trusts the file directly). Plain HTTP is off (`server.http` in `daemon.yaml`) - see [Daemon configuration](./configuration/daemon). `linuxctl get processes top` is another quick check.
 
 **Without systemd** (e.g. inside a plain container) the script installs everything except the service, warns `systemd not detected`, and prints how to start mcpd by hand: `cd /etc/mcpd && sudo /usr/local/bin/mcpd`. It runs in the foreground - use a second terminal for "Try it", or start it with `&` in the background. Nothing restarts or stops it for you: after an upgrade restart it yourself, and `--uninstall` only warns that it is still running.
 
@@ -111,7 +112,7 @@ Run the same command again. Binaries are replaced (the service is restarted only
 Each MCP user needs an OS account of the same name - every tool call runs as that account. For a user `alice`:
 
 ```bash
-export MCP_SERVER=http://127.0.0.1:9091 MCP_TOKEN=<the mcp user's token>
+export MCP_SERVER=https://127.0.0.1:9091 MCP_TLS_FINGERPRINT=<fingerprint> MCP_TOKEN=<the mcp user's token>
 sudo useradd --system --shell /usr/sbin/nologin alice
 sudo -E /usr/local/bin/linuxctl create mcpd user alice --config-path /etc/mcpd/configs   # prints alice's token once
 ```
@@ -119,7 +120,7 @@ sudo -E /usr/local/bin/linuxctl create mcpd user alice --config-path /etc/mcpd/c
 The output ends with the reload:
 
 ```text
-Asking mcpd at http://127.0.0.1:9091 to reload its config...
+Asking mcpd at https://127.0.0.1:9091 to reload its config...
 Reloaded configs/daemon.yaml, configs/users.yaml and configs/mcp-sudo.yaml.
 Changes:
   user alice: added
@@ -179,7 +180,7 @@ mcpd is installed and enabled, but not started - it has no users yet:
   systemctl start mcpd
 ```
 
-Run them with `sudo`, save the token, then try it as in the script install: `export MCP_SERVER=http://127.0.0.1:9091 MCP_TOKEN=<token>` and `linuxctl get system os-release`. More users and grants work the same way too - see [Adding more users](#adding-more-users) (with `/usr/bin/linuxctl`, which `sudo` finds on every distribution).
+Run them with `sudo`, save the token, then try it as in the script install: `export MCP_SERVER=https://127.0.0.1:9091 MCP_TLS_FINGERPRINT=<fingerprint> MCP_TOKEN=<token>` (the fingerprint: `sudo linuxctl describe mcpd tls --config-path /etc/mcpd/configs`, once mcpd has started and created its certificate) and `linuxctl get system os-release`. More users and grants work the same way too - see [Adding more users](#adding-more-users) (with `/usr/bin/linuxctl`, which `sudo` finds on every distribution).
 
 - **Upgrade:** install the newer package the same way. Configs in `/etc/mcpd/configs` are never touched (they aren't package-managed conffiles - `linuxctl` rewrites them, so there are no upgrade prompts), and a running mcpd is restarted on the new binary.
 - **Remove:** `sudo apt remove linux-mcp-daemon` / `sudo dnf remove linux-mcp-daemon` stops mcpd and keeps `/etc/mcpd`; reinstalling picks the users up again. `sudo apt purge linux-mcp-daemon` also deletes `/etc/mcpd` (with rpm, delete it by hand). MCP users' OS accounts stay either way.
@@ -221,7 +222,7 @@ Try it - the image contains `linuxctl`, so you don't need it on the host:
 sudo docker exec -e MCP_TOKEN=<token from step 2> mcpd linuxctl get system os-release
 ```
 
-or from any machine with `linuxctl` installed: `export MCP_SERVER=http://<host>:9091 MCP_TOKEN=<token>`, then `linuxctl get system os-release`.
+or from any machine with `linuxctl` installed: `export MCP_SERVER=https://<host>:9091 MCP_TLS_FINGERPRINT=<fingerprint> MCP_TOKEN=<token>`, then `linuxctl get system os-release`. mcpd creates its self-signed certificate in `/etc/mcpd/configs/tls/` on first start (the configs mount must be writable) and logs the fingerprint - `sudo docker logs mcpd`, or `sudo docker exec mcpd linuxctl describe mcpd tls`.
 
 - **MCP users must be OS accounts that exist inside the image** - `testuser`, `unpriviliged` (spelled that way) and `privileged` are built in; the name decides which UID each call runs as. For other names, build your own image `FROM` this one with `RUN useradd -m NAME`.
 - **Unprivileged calls see the container, not the host.** A call reaches the real host only when it is made with `privileged: true` (`--privileged true` in `linuxctl`) *and* the user is granted that tool in `mcp-sudo.yaml` - the image's config sets `worker.containerized: true`, so such calls join the host's mount namespace. `--network host --pid host --privileged` plus the read-only host root mount make that possible; without them, mcpd only administers its own container. The user created in step 2 is granted only `daemon/reload-config` - nothing as root (its name, `privileged`, is just the OS account). To grant it, e.g., `system/os-release`, replace the contents of `/etc/mcpd/configs/mcp-sudo.yaml` with (e.g. `sudo nano /etc/mcpd/configs/mcp-sudo.yaml`):
@@ -248,7 +249,7 @@ or from any machine with `linuxctl` installed: `export MCP_SERVER=http://<host>:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | bash -s -- --bin-dir ~/.local/bin
 export PATH="$HOME/.local/bin:$PATH"     # ~/.local/bin isn't on macOS's default PATH
-export MCP_SERVER=http://your-server:9091 MCP_TOKEN=<token>
+export MCP_SERVER=https://your-server:9091 MCP_TLS_FINGERPRINT=<fingerprint> MCP_TOKEN=<token>   # fingerprint: linuxctl describe mcpd tls, on the server
 linuxctl get system os-release
 ```
 
@@ -258,7 +259,7 @@ Shell completion: see [Autocompletion](./linuxctl/autocompletion).
 
 ## Before exposing mcpd
 
-- mcpd listens on **all interfaces**, and speaks **plain HTTP** unless TLS is enabled in `daemon.yaml` (`server.tls`). Bearer tokens travel in every request - firewall the port to trusted addresses, or enable TLS, before reaching it over a network.
+- mcpd listens on **all interfaces**, over **TLS** by default (a self-signed certificate - clients pin its fingerprint or trust the file; or install a CA-issued one, see [Daemon configuration](./configuration/daemon)). Don't turn on plain HTTP (`server.http`) for anything but a trusted network or a TLS-terminating proxy: bearer tokens travel in every request. Firewalling the port to the addresses that need it is still a good idea.
 - Tokens only authenticate; what a user may do **as root** is granted per tool in `mcp-sudo.yaml` - see [mcp-sudo.yaml](./configuration/mcp-sudo). Without grants, a user can call every tool, but only as its own OS account.
 - To add more users, see [Adding more users](#adding-more-users) above.
 

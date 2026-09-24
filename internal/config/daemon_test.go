@@ -27,6 +27,9 @@ func TestParseDaemonConfig(t *testing.T) {
 	if c.Server.Port != 9091 || c.Worker.TimeoutSeconds != 30 {
 		t.Errorf("defaults not applied: port %d, timeout %d", c.Server.Port, c.Worker.TimeoutSeconds)
 	}
+	if c.RateLimits.DefaultRPS != 50 || c.RateLimits.DefaultBurst != 100 {
+		t.Errorf("rate limit defaults not applied: %+v", c.RateLimits)
+	}
 
 	bad := map[string]string{
 		"unknown key":    "server:\n  prot: 9091\n",
@@ -135,5 +138,52 @@ func TestPathsRequired(t *testing.T) {
 	ok := "users:\n  a:\n    privileged:\n      tools:\n        disks/usage: {allowed: true, paths: [\"/\"]}\n        files/read: {allowed: false}\n"
 	if _, err := ParseSudoConfig([]byte(ok), true); err != nil {
 		t.Errorf("explicit paths / not-allowed rejected: %v", err)
+	}
+}
+
+func TestListeners(t *testing.T) {
+	cases := []struct {
+		doc  string
+		want []Listener
+		err  string
+	}{
+		// legacy: plain HTTP on server.port, TLS extra on tls.port
+		{"server: {port: 9091}\n", []Listener{{9091, false}}, ""},
+		{"users: []\n", []Listener{{9091, false}}, ""},
+		{"server: {port: 9091, tls: {enabled: true}}\n", []Listener{{9443, true}, {9091, false}}, ""},
+		// new layout: TLS on, plain HTTP off by default
+		{"server: {tls: {enabled: true}, http: {enabled: false}}\n", []Listener{{9091, true}}, ""},
+		{"server: {tls: {enabled: true}, http: {enabled: true}}\n", []Listener{{9091, true}, {9090, false}}, ""},
+		{"server: {tls: {enabled: false}, http: {enabled: true, port: 8080}}\n", []Listener{{8080, false}}, ""},
+		{"server: {tls: {enabled: false}, http: {enabled: false}}\n", nil, "no listener enabled"},
+		{"server: {tls: {enabled: true, port: 9091}, http: {enabled: true, port: 9091}}\n", nil, "both set to port 9091"},
+		{"server: {port: 9091, tls: {enabled: true}, http: {enabled: false}}\n", nil, "old plain-HTTP setting"},
+	}
+	for _, c := range cases {
+		cfg, err := ParseDaemonConfig([]byte(c.doc), true)
+		if c.err != "" {
+			if err == nil || !strings.Contains(err.Error(), c.err) {
+				t.Errorf("%q: want error %q, got %v", c.doc, c.err, err)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("%q: %v", c.doc, err)
+			continue
+		}
+		got := cfg.Listeners()
+		if len(got) != len(c.want) {
+			t.Errorf("%q: listeners %v, want %v", c.doc, got, c.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Errorf("%q: listeners %v, want %v", c.doc, got, c.want)
+			}
+		}
+	}
+	cfg, _ := ParseDaemonConfig([]byte("server: {tls: {enabled: true}, http: {enabled: false}}\n"), true)
+	if cert, key := cfg.TLSFiles("/etc/mcpd/configs"); cert != "/etc/mcpd/configs/tls/mcpd.crt" || key != "/etc/mcpd/configs/tls/mcpd.key" {
+		t.Errorf("default TLS files: %s %s", cert, key)
 	}
 }

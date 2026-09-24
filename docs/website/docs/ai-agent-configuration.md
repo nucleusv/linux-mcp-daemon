@@ -4,61 +4,62 @@ sidebar_position: 3
 
 # AI Agent Configuration
 
-The primary purpose of the Linux MCP Daemon is to securely expose the Linux operating system to AI agents. It does this via the open standard **Model Context Protocol (MCP)** using Server-Sent Events (SSE).
+The Linux MCP Daemon exposes a Linux host to AI agents over the **Model Context Protocol (MCP)**, with Server-Sent Events (SSE) as the transport. Any MCP client that speaks SSE can connect - Claude Code, Claude Desktop, Cursor, and others.
 
-You can connect almost any modern AI agent or IDE (such as Antigravity IDE, Cursor, or Claude Desktop) directly to this daemon.
+An agent needs two things:
 
-## Connecting via SSE (Server-Sent Events)
+- the SSE endpoint: `https://<host>:9091/sse` (TLS is on by default);
+- a bearer token, sent as the `Authorization: Bearer <token>` header - one per MCP user, created with `linuxctl create mcpd user` (see [Installation](./installation)).
 
-To connect an AI agent to the daemon, you must use an MCP SSE client that connects to the `http://localhost:9091/sse` endpoint and provides the necessary Bearer token.
+## Trusting mcpd's certificate
 
-### Example: Antigravity IDE / Generic Config
-If your agent supports standard `mcp_config.json` structures, you can use the official `@modelcontextprotocol/client-sse` package via `npx`:
+By default mcpd serves a **self-signed** certificate it generated on first start (`/etc/mcpd/configs/tls/mcpd.crt`). A client has to trust it, or the TLS handshake fails:
+
+- **Copy the certificate** to the machine the agent runs on and point the client at it. Clients built on Node.js (Claude Code, Claude Desktop, most `npx`-launched MCP bridges) read extra trusted certificates from `NODE_EXTRA_CA_CERTS`:
+  ```bash
+  scp root@my-host:/etc/mcpd/configs/tls/mcpd.crt ~/.config/mcpd/my-host.crt
+  export NODE_EXTRA_CA_CERTS=~/.config/mcpd/my-host.crt
+  ```
+  The certificate covers the host's name, `localhost` and every address of the machine; for another name (a DNS alias), add it to `server.tls.hosts` in `daemon.yaml`, delete both files in `configs/tls/` and restart mcpd.
+- **Or use a certificate from a real CA** (e.g. Let's Encrypt) that clients already trust: put its files at `server.tls.cert_file`/`key_file` in `daemon.yaml` (or point those at them) and restart mcpd. It then serves that one; nothing needs configuring on the clients.
+
+Compare the certificate's fingerprint with the one mcpd logged at startup (`linuxctl describe mcpd tls` on the host) before trusting a copy.
+
+## Claude Code
+
+```bash
+export NODE_EXTRA_CA_CERTS=~/.config/mcpd/my-host.crt    # when launching claude
+claude mcp add --transport sse linux-my-host https://my-host:9091/sse \
+  --header "Authorization: Bearer <token>"
+```
+
+## Claude Desktop and other `mcp_config.json`-style clients
 
 ```json
 {
   "mcpServers": {
-    "linux-mcp-daemon": {
+    "linux-my-host": {
       "command": "npx",
       "args": [
         "-y",
         "@modelcontextprotocol/client-sse",
         "--url",
-        "http://localhost:9091/sse",
+        "https://my-host:9091/sse",
         "--header",
-        "Authorization: Bearer my-test-token-123"
-      ]
+        "Authorization: Bearer <token>"
+      ],
+      "env": {
+        "NODE_EXTRA_CA_CERTS": "/Users/me/.config/mcpd/my-host.crt"
+      }
     }
   }
 }
 ```
 
-### Example: Claude Desktop Configuration
+## Plain HTTP
 
-For Claude Desktop, update your `claude_desktop_config.json`:
+Only on a trusted network, or behind a reverse proxy that terminates TLS: enable `server.http` in `daemon.yaml` (off by default) and use `http://<host>:9090/sse`. The bearer token then crosses the network in clear text with every request.
 
-```json
-{
-  "mcpServers": {
-    "linux-mcp-daemon": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/client-sse",
-        "--url",
-        "http://localhost:9091/sse",
-        "--header",
-        "Authorization: Bearer my-test-token-123"
-      ]
-    }
-  }
-}
-```
+## What the agent may do
 
-## Security & Authorization
-
-By default, connecting to the daemon grants the AI agent limited, read-only introspection capabilities. 
-
-If you want your agent to execute privileged operations (e.g. `disks/free` or `system/manage`), you must explicitly whitelist those commands for the specific token/user in the `configs/mcp-sudo.yaml` file.
-
-See the [Configuration/MCP Sudo](./configuration/mcp-sudo.md) documentation for details on privilege escalation.
+A token authenticates an MCP user, and every tool call runs as that user's own OS account - with no entry in `mcp-sudo.yaml` the agent can call every tool, but only with that account's permissions (it can't read `/root`, signal other users' processes, write system files). Running a tool **as root** (`privileged: true`) needs an explicit grant per tool, limited by paths, network destinations or sysctl keys - see [mcp-sudo.yaml](./configuration/mcp-sudo). Grant only what the agent's job needs.

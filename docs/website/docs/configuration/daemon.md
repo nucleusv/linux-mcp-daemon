@@ -18,12 +18,16 @@ This file controls the global web server configuration, connection timeouts and 
 
 ```yaml
 server:
-  port: 9091
   tls:
     enabled: true
-    port: 9443
-    cert_file: "/etc/ssl/certs/mcpd.crt"
-    key_file: "/etc/ssl/private/mcpd.key"
+    port: 9091
+    cert_file: tls/mcpd.crt      # relative to the config directory
+    key_file: tls/mcpd.key
+    generate: true               # self-signed pair on first start if missing
+    # hosts: [mcp.example.com]   # extra names for a generated certificate
+  http:
+    enabled: false               # plain HTTP - tokens in clear text
+    port: 9090
 
 worker:
   timeout_seconds: 30
@@ -40,8 +44,9 @@ tools:
 
 ## Settings breakdown
 
-- **`server.port`**: The HTTP port that the daemon listens on for `/sse`, `/message`, and `/docs/` traffic.
-- **`server.tls`**: If `enabled` is true, the daemon natively hosts a concurrent HTTPS server on `tls.port` (default `9443`) using the provided `cert_file` and `key_file`. The plain HTTP server will continue to run simultaneously on `server.port`!
+- **`server.tls`** (on by default): HTTPS on `tls.port` (9091) with `cert_file`/`key_file` (relative paths are in the config directory). With `generate: true`, mcpd creates a self-signed ECDSA certificate there on its first start if neither file exists - covering the host name, `localhost`, every address of the machine and `tls.hosts` - valid 5 years, and logs its SHA-256 fingerprint (also `linuxctl describe mcpd tls`). Clients pin that fingerprint (`MCP_TLS_FINGERPRINT`) or trust the file (`MCP_CA_CERT`, `NODE_EXTRA_CA_CERTS`) - see [AI Agent Configuration](../ai-agent-configuration). To use a CA-issued certificate, put its files at those paths. To replace a generated one, delete both files and restart.
+- **`server.http`** (off by default): plain HTTP on `http.port` (9090). Bearer tokens then cross the network in clear text - only for a trusted network, or behind a proxy that terminates TLS. mcpd logs a warning whenever it serves plain HTTP.
+- **`server.port`**: the setting of configs from before v0.3.3, which have no `server.http` block - they keep serving plain HTTP on `server.port` (and HTTPS on `tls.port`, default 9443, if `tls.enabled`), with the warning. Move to the `tls`/`http` blocks above; the two layouts can't be mixed.
 - **`worker.timeout_seconds`**: The global maximum time an Ephemeral Worker is allowed to run before the Master daemon sends a `SIGKILL`. This prevents runaway processes.
 - **`worker.containerized`**: Set to `true` when `mcpd` itself runs inside a container (e.g. Kubernetes, Docker) with its own private root filesystem, as this daemon's own deployment does (see `k8s/deployment.yaml`). When true, every `privileged: true` tool call also joins the real host's mount namespace before running, so tools like `system/packages` or `services/manage` administer the actual host rather than the daemon's own container image. Set `false` when `mcpd` runs directly on the host with no container boundary to cross - `mcpd` also self-checks this at startup and logs a warning if the configured value doesn't match what it detects about its own environment.
 - **`rate_limits`**: Global rate limits applied to every authenticated user to prevent an AI from spamming the server and saturating your I/O.

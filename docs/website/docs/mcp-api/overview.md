@@ -20,16 +20,18 @@ This section documents every **tool**, **resource**, and **resource template** `
 
 ```bash
 # 1. Open the SSE stream in the background and capture the endpoint
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+curl -N -s --cacert mcpd.crt -H "Authorization: Bearer $MCP_TOKEN" https://localhost:9091/sse &
 
 # 2. POST a request to the endpoint printed by step 1
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+curl -s --cacert mcpd.crt -X POST "https://localhost:9091/message?session_id=<from step 1>" \
   -H "Authorization: Bearer $MCP_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/list"}'
 
 # 3. Watch the SSE stream from step 1 for the matching "id": "1" response
 ```
+
+`mcpd.crt` is mcpd's certificate - by default the self-signed one it generated, `/etc/mcpd/configs/tls/mcpd.crt` on its host (copy it to where you run `curl`). The examples on every tool and resource page use the same form.
 
 This is exactly what `linuxctl` does under the hood for every single command - it's a thin, schema-driven client over this same protocol, not a separate API. Each tool/resource/template page in this section shows both forms side by side.
 

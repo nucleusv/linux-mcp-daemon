@@ -157,7 +157,7 @@ install_cli_macos() {
     cat <<EOF
 
   Point it at a Linux host running mcpd:
-    export MCP_SERVER=http://your-server:9091
+    export MCP_SERVER=https://your-server:9091 MCP_TLS_FINGERPRINT=sha256:...   # from linuxctl describe mcpd tls on the server
     export MCP_TOKEN=<token>
     linuxctl get system os-release
 
@@ -344,17 +344,30 @@ for bin in smartctl traceroute journalctl; do
 done
 [ -n "$missing" ] && warn "optional tools not found:$missing - the tools that wrap them won't work (Debian/Ubuntu: apt install smartmontools traceroute)"
 
-PORT="$(awk '/^server:/ {s=1} s && /^  port:/ {print $2; exit}' "$CONF_DIR/daemon.yaml")"
-PORT="${PORT:-9091}"
+# Where mcpd listens: TLS (server.tls) by default; configs from before
+# v0.3.3 have only server.port, plain HTTP.
+yaml_in() { # yaml_in <block> <key>: a "    key:" value inside "  block:" under server:
+    awk -v b="  $1:" -v k="    $2:" '/^server:/ {s=1; next} /^[^ #]/ {s=0} s && $0 == b {t=1; next} t && /^  [^ ]/ {t=0} s && t && index($0, k) == 1 {print $2; exit}' "$CONF_DIR/daemon.yaml"
+}
+SCHEME=http FP=""
+if [ "$(yaml_in tls enabled)" = "true" ]; then
+    SCHEME=https PORT="$(yaml_in tls port)" PORT="${PORT:-9091}"
+    [ "$RUNNING" -eq 1 ] && sleep 1   # mcpd writes a generated certificate at startup
+    FP="$("$BIN_DIR/linuxctl" describe mcpd tls --config-path "$CONF_DIR" 2>/dev/null | awk '/^Fingerprint:/ {print $2}')"
+else
+    PORT="$(awk '/^server:/ {s=1} s && /^  port:/ {print $2; exit}' "$CONF_DIR/daemon.yaml")"
+    PORT="${PORT:-$(yaml_in http port)}"
+    PORT="${PORT:-9091}"
+fi
 echo
 if [ "$UPGRADE" -eq 1 ]; then
     say "Upgrade complete. Configs in $CONF_DIR were left untouched."
 elif [ "$RUNNING" -eq 1 ]; then
-    say "Installed. mcpd listens on port $PORT on all interfaces."
+    say "Installed. mcpd listens on $SCHEME port $PORT on all interfaces."
 elif [ "$HAVE_SYSTEMD" -eq 1 ]; then
-    say "Installed, not started. Start it with: systemctl start mcpd (it will listen on port $PORT on all interfaces)"
+    say "Installed, not started. Start it with: systemctl start mcpd (it will listen on $SCHEME port $PORT on all interfaces)"
 else
-    say "Installed, not started (no systemd). Start it with: cd $CONF_ROOT && $BIN_DIR/mcpd (it will listen on port $PORT on all interfaces)"
+    say "Installed, not started (no systemd). Start it with: cd $CONF_ROOT && $BIN_DIR/mcpd (it will listen on $SCHEME port $PORT on all interfaces)"
 fi
 if [ "$UPGRADE" -eq 0 ] && [ "$KEPT" -eq 1 ]; then
     echo "  Existing configs in $CONF_DIR were kept - their users and tokens still work."
@@ -390,6 +403,11 @@ if [ "$FRESH" -eq 1 ] && [ -z "$MCP_USER" ]; then
     systemctl restart mcpd   # once: users added after this one apply without a restart
 EOF
 fi
+FP_LINE=""
+if [ -n "$FP" ]; then
+    FP_LINE="
+    export MCP_TLS_FINGERPRINT=$FP   # trusts mcpd's self-signed certificate"
+fi
 if [ -n "$TOKEN_MSG" ]; then
     cat <<EOF
 
@@ -398,15 +416,16 @@ if [ -n "$TOKEN_MSG" ]; then
              (shown once - only a salted hash is stored; save it now)
 
   Try it:
-    export MCP_SERVER=http://127.0.0.1:$PORT
+    export MCP_SERVER=$SCHEME://127.0.0.1:$PORT$FP_LINE
     export MCP_TOKEN=$TOKEN_MSG
     linuxctl get system os-release
 
 EOF
 fi
 cat <<EOF
-  Security: mcpd speaks plain HTTP unless TLS is enabled in $CONF_DIR/daemon.yaml.
-  Firewall port $PORT to trusted addresses, or enable TLS, before exposing it.
+  Security: TLS is on by default (a self-signed certificate in $CONF_DIR/tls/;
+  its fingerprint: linuxctl describe mcpd tls). Plain HTTP (server.http in
+  daemon.yaml) is off - tokens would cross the network in clear text.
   Root access for tools is granted per user in $CONF_DIR/mcp-sudo.yaml.
   Docs: https://nucleusv.github.io/linux-mcp-daemon/
 EOF

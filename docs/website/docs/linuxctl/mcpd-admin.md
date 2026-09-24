@@ -16,6 +16,7 @@ linuxctl delete   mcpd user alice [--config-path DIR] [--no-reload]
 linuxctl list     mcpd users      [--config-path DIR]
 linuxctl describe mcpd user alice [--config-path DIR]
 linuxctl edit     mcpd config [sudo|users|daemon] [--config-path DIR] [--no-reload]
+linuxctl describe mcpd tls                 [--config-path DIR]   # certificate, fingerprint, names
 ```
 
 - `--config-path` defaults to `./configs` (installed daemon: `/etc/mcpd/configs`).
@@ -39,7 +40,7 @@ Next steps:
   2. Optionally grant root for specific tools in /etc/mcpd/configs/mcp-sudo.yaml - without grants "alice" can use
      every tool, but only as its own OS account, never as root
 
-Asking mcpd at http://127.0.0.1:9091 to reload its config...
+Asking mcpd at https://127.0.0.1:9091 to reload its config...
 Reloaded configs/daemon.yaml, configs/users.yaml and configs/mcp-sudo.yaml.
 Changes:
   user alice: added
@@ -62,7 +63,7 @@ Like `visudo`: the file is copied, the copy opened in `$VISUAL` or `$EDITOR` (de
 $ sudo -E /usr/local/bin/linuxctl edit mcpd config sudo --config-path /etc/mcpd/configs
 Saved /etc/mcpd/configs/mcp-sudo.yaml.
 
-Asking mcpd at http://127.0.0.1:9091 to reload its config...
+Asking mcpd at https://127.0.0.1:9091 to reload its config...
 Reloaded configs/daemon.yaml, configs/users.yaml and configs/mcp-sudo.yaml.
 Changes:
   grants alice: + files/list (root; paths [/var/log])

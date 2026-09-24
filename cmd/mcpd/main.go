@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"github.com/nucleusv/linux-mcp-daemon/internal/version"
+	"path/filepath"
 
 	"fmt"
 	"io"
@@ -20,6 +22,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/network/interfaces"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/network/routes"
 	"github.com/nucleusv/linux-mcp-daemon/internal/rpc"
+	"github.com/nucleusv/linux-mcp-daemon/internal/tlsutil"
 	cpulist "github.com/nucleusv/linux-mcp-daemon/internal/tools/cpu/list"
 	loadaverage "github.com/nucleusv/linux-mcp-daemon/internal/tools/cpu/load-average"
 	"github.com/nucleusv/linux-mcp-daemon/internal/tools/disks/free"
@@ -217,8 +220,6 @@ func main() {
 
 	limiterManager.Store(auth.NewLimiterManager(daemonConfig.RateLimits.DefaultRPS, daemonConfig.RateLimits.DefaultBurst))
 
-	addr := fmt.Sprintf(":%d", daemonConfig.Server.Port)
-
 	rpcHandler = rpc.NewRPCHandler(
 		sudoConfig,
 		daemonConfig.Worker.TimeoutSeconds,
@@ -240,19 +241,47 @@ func main() {
 
 	handler := loggingMiddleware(mux)
 
-	if daemonConfig.Server.TLS.Enabled {
-		tlsAddr := fmt.Sprintf(":%d", daemonConfig.Server.TLS.Port)
+	serve(handler)
+}
 
-		go func() {
-			logging.Info("listening", "version", version.Version, "transport", "https", "addr", tlsAddr)
-			if err := http.ListenAndServeTLS(tlsAddr, daemonConfig.Server.TLS.CertFile, daemonConfig.Server.TLS.KeyFile, handler); err != nil {
-				logging.Fatal("cannot serve HTTPS", "addr", tlsAddr, "err", err)
+// serve starts every configured listener - TLS (with a generated
+// self-signed certificate when configured and missing) and/or plain HTTP -
+// and blocks; any listener failing stops mcpd.
+func serve(handler http.Handler) {
+	errs := make(chan error, 2)
+	for _, l := range daemonConfig.Listeners() {
+		addr := fmt.Sprintf(":%d", l.Port)
+		if !l.TLS {
+			logging.Warn("serving plain HTTP: bearer tokens travel in clear text - use TLS, or keep this port to a trusted network", "addr", addr)
+			logging.Info("listening", "version", version.Version, "transport", "http", "addr", addr)
+			go func() { errs <- fmt.Errorf("HTTP on %s: %w", addr, http.ListenAndServe(addr, handler)) }()
+			continue
+		}
+		certFile, keyFile := daemonConfig.TLSFiles(configDir)
+		if abs, err := filepath.Abs(certFile); err == nil {
+			certFile = abs
+		}
+		if abs, err := filepath.Abs(keyFile); err == nil {
+			keyFile = abs
+		}
+		if daemonConfig.Server.TLS.Generate {
+			created, err := tlsutil.EnsureSelfSigned(certFile, keyFile, daemonConfig.Server.TLS.Hosts)
+			if err != nil {
+				logging.Fatal("cannot create the TLS certificate", "cert", certFile, "err", err)
 			}
-		}()
+			if created {
+				logging.Info("created a self-signed TLS certificate", "cert", certFile, "key", keyFile)
+			}
+		}
+		fp, cert, err := tlsutil.FileFingerprint(certFile)
+		if err != nil {
+			logging.Fatal("cannot read the TLS certificate", "cert", certFile, "err", err)
+		}
+		logging.Info("listening", "version", version.Version, "transport", "https", "addr", addr,
+			"cert", certFile, "fingerprint", fp, "expires", cert.NotAfter.Format("2006-01-02"))
+		srv := &http.Server{Addr: addr, Handler: handler, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
+		go func() { errs <- fmt.Errorf("HTTPS on %s: %w", addr, srv.ListenAndServeTLS(certFile, keyFile)) }()
 	}
-
-	logging.Info("listening", "version", version.Version, "transport", "http", "addr", addr)
-	if err := http.ListenAndServe(addr, handler); err != nil {
-		logging.Fatal("cannot serve HTTP", "addr", addr, "err", err)
-	}
+	err := <-errs
+	logging.Fatal("cannot serve", "err", err)
 }

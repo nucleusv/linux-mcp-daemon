@@ -19,6 +19,8 @@ reads its configuration upon startup from the directory given by \fB\-\-config\-
 To apply changes without a restart, a user granted \fBdaemon/reload-config\fR calls that tool (\fBlinuxctl reload daemon\fR). The files are validated first - strictly, so an unknown key is an error - and an invalid file leaves the running configuration untouched. Server settings (port, TLS, worker.containerized) still need a restart.
 .PP
 Logging goes to standard error through log/slog, configured by the \fBlogging\fR block of daemon.yaml: \fBlevel\fR (error, warn, info, debug), \fBformat\fR (text or json) and \fBaccess_log\fR. Audit lines for calls that change the host, and config reloads, are written at any level.
+.PP
+TLS is on by default: HTTPS on port 9091 with the certificate and key in \fBserver.tls\fR; with \fBgenerate: true\fR a missing pair is created (self-signed) on startup and its SHA-256 fingerprint logged, for clients to pin (\fBlinuxctl describe mcpd tls\fR shows it). Plain HTTP (\fBserver.http\fR) is off by default.
 .SH ENVIRONMENT
 .TP
 .B MCPD_CONFIG_DIR

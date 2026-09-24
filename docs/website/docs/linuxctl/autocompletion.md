@@ -28,7 +28,7 @@ Completion runs `linuxctl` itself on every `Tab`, so:
 
 ```bash
 export PATH="$HOME/path/to/linux-mcp-daemon/executables:$PATH"
-export MCP_SERVER="http://my-host:9091"
+export MCP_SERVER="https://my-host:9091"
 export MCP_TOKEN="your_token_here"
 ```
 
@@ -71,7 +71,7 @@ The script calls `compinit` itself if it hasn't been loaded yet.
 ```zsh
 # linuxctl (linux-mcp-daemon CLI)
 export PATH="$HOME/path/to/linux-mcp-daemon/executables:$PATH"
-export MCP_SERVER='http://my-host:9091'
+export MCP_SERVER='https://my-host:9091'
 [[ -r ~/.config/linuxctl/token ]] && export MCP_TOKEN="$(<~/.config/linuxctl/token)"
 unalias linuxctl 2>/dev/null
 command -v linuxctl >/dev/null && source <(linuxctl completion zsh)

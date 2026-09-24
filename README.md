@@ -43,7 +43,8 @@ curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scri
 Needs `sudo` and `curl` on an amd64/arm64 host (in a bare `ubuntu`/`debian` container: `apt update && apt install -y curl ca-certificates`, then pipe to `bash` as root). This downloads the latest release for your architecture (amd64/arm64), **verifies its sha256 checksum**, installs `mcpd` and `linuxctl` to `/usr/local/bin`, writes clean configs to `/etc/mcpd/configs` (no default users or tokens), creates a first user `mcp` and **prints its token once**, and starts the `mcpd` systemd service. Then:
 
 ```bash
-export MCP_SERVER=http://127.0.0.1:9091
+export MCP_SERVER=https://127.0.0.1:9091
+export MCP_TLS_FINGERPRINT=<printed by the installer>
 export MCP_TOKEN=<token printed by the installer>
 linuxctl get system os-release
 linuxctl get processes top
@@ -57,7 +58,7 @@ linuxctl get processes top
 - **Container image:** `ghcr.io/nucleusv/linux-mcp-daemon` (amd64/arm64) - setup steps in the [installation docs](https://nucleusv.github.io/linux-mcp-daemon/installation/).
 - **macOS (CLI only):** the same script installs just `linuxctl` - `curl -fsSL .../install.sh | bash -s -- --bin-dir ~/.local/bin`, then `export PATH="$HOME/.local/bin:$PATH"` (not on macOS's default PATH) - to drive a remote mcpd.
 
-> mcpd listens on all interfaces over plain HTTP unless TLS is enabled in `daemon.yaml`. Firewall port 9091 to trusted addresses, or enable TLS, before exposing it. Root access for tools is granted per user and per tool in `mcp-sudo.yaml`.
+> mcpd listens on all interfaces over **TLS** (a self-signed certificate it creates on first start; clients pin its fingerprint). Plain HTTP is off by default - bearer tokens would travel in clear text. Root access for tools is granted per user and per tool in `mcp-sudo.yaml`.
 
 Full guide: [Installation](https://nucleusv.github.io/linux-mcp-daemon/installation/) · [Connect an AI agent](https://nucleusv.github.io/linux-mcp-daemon/ai-agent-configuration/) · [mcp-sudo.yaml](https://nucleusv.github.io/linux-mcp-daemon/configuration/mcp-sudo/)
 
@@ -103,11 +104,11 @@ export MCP_TOKEN="your_token_here"
 
 ```bash
 # 1. Open the SSE stream in the background and capture the endpoint it prints
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+curl -N -s --cacert mcpd.crt -H "Authorization: Bearer $MCP_TOKEN" https://localhost:9091/sse &
 # server sends: event: endpoint / data: /message?session_id=...
 
 # 2. POST a request to that endpoint
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+curl -s --cacert mcpd.crt -X POST "https://localhost:9091/message?session_id=<from step 1>" \
   -H "Authorization: Bearer $MCP_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/list"}'

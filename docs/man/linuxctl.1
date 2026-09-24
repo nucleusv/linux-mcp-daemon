@@ -30,7 +30,7 @@ Instead of one flat command per tool, \fBlinuxctl\fR speaks a small, uniform ver
 .SH OPTIONS
 .TP
 .BR \-server \ \fIURL\fR
-The URL of the mcpd server to connect to. Defaults to http://localhost:9091.
+The URL of the mcpd server to connect to. Defaults to MCP_SERVER, else https://localhost:9091.
 .TP
 .BR \-token \ \fITOKEN\fR
 Bearer token for authentication. If not provided via this flag, the client will look for the \fBMCP_TOKEN\fR environment variable. Not needed for the local-only \fBmcpd\fR admin group.
@@ -87,6 +87,18 @@ Makes the running mcpd re-read daemon.yaml, users.yaml and mcp-sudo.yaml without
 .TP
 .B MCP_TOKEN
 The bearer token used for authenticating with the daemon. Can be used instead of the \fB\-token\fR flag.
+.TP
+.B MCP_SERVER
+The mcpd URL, instead of \fB\-server\fR (default https://localhost:9091).
+.TP
+.B MCP_TLS_FINGERPRINT
+Trust the server whose certificate has this SHA-256 fingerprint (\fBsha256:\fIhex\fR), e.g. mcpd's self-signed one; \fBlinuxctl describe mcpd tls\fR shows it on the daemon's host.
+.TP
+.B MCP_CA_CERT
+Trust this PEM certificate file for the server.
+.TP
+.B MCP_INSECURE
+Set to 1 to skip certificate verification (testing only).
 .SH EXAMPLES
 .PP
 Ping the daemon using the default server and a specific token:

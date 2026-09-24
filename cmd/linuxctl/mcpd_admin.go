@@ -16,9 +16,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/tlsutil"
 	"github.com/nucleusv/linux-mcp-daemon/internal/yamledit"
 	"gopkg.in/yaml.v3"
 )
@@ -156,7 +159,8 @@ func handleMcpdAdmin(args []string) {
 	}
 	verb, target, rest := args[0], args[1], args[2:]
 	isConfig := verb == "edit" && target == "config"
-	if !strings.HasPrefix(target, "user") && !isConfig {
+	isTLS := verb == "describe" && target == "tls"
+	if !strings.HasPrefix(target, "user") && !isConfig && !isTLS {
 		fmt.Printf("Error: unknown mcpd target %q (expected \"user\", \"users\" or, for edit, \"config\")\n", target)
 		os.Exit(1)
 	}
@@ -229,6 +233,10 @@ func handleMcpdAdmin(args []string) {
 		mcpdListUsers(usersFileForReading(cfgPath))
 		return
 	case "describe":
+		if isTLS {
+			mcpdDescribeTLS(cfgPath)
+			return
+		}
 		mcpdDescribeUser(sudoPath, username)
 		return
 	default:
@@ -250,6 +258,7 @@ func printMcpdAdminUsage() {
   linuxctl list     mcpd users           [--config-path DIR]
   linuxctl describe mcpd user <username> [--config-path DIR]
   linuxctl edit     mcpd config [sudo|users|daemon] [--config-path DIR] [--no-reload]
+  linuxctl describe mcpd tls                 [--config-path DIR]
 
 Edits users.yaml + mcp-sudo.yaml locally (--config-path; default
 $MCPD_CONFIG_DIR, else ./configs).
@@ -546,4 +555,39 @@ func mcpdDescribeUser(sudoPath, username string) {
 		os.Exit(1)
 	}
 	fmt.Printf("Grants for %q (from %s):\n%s", username, sudoPath, string(out))
+}
+
+// mcpdDescribeTLS shows mcpd's TLS certificate: what clients pin
+// (MCP_TLS_FINGERPRINT) or trust (MCP_CA_CERT).
+func mcpdDescribeTLS(cfgPath string) {
+	cfg, err := config.LoadDaemonConfig(filepath.Join(cfgPath, config.DaemonFile), false)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+	if !cfg.Server.TLS.Enabled {
+		fmt.Println("TLS is not enabled in daemon.yaml (server.tls.enabled).")
+		os.Exit(1)
+	}
+	certFile, _ := cfg.TLSFiles(cfgPath)
+	fp, cert, err := tlsutil.FileFingerprint(certFile)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		if cfg.Server.TLS.Generate {
+			fmt.Println("(mcpd creates it on its first start with TLS enabled)")
+		}
+		os.Exit(1)
+	}
+	var names []string
+	names = append(names, cert.DNSNames...)
+	for _, ip := range cert.IPAddresses {
+		names = append(names, ip.String())
+	}
+	sort.Strings(names)
+	fmt.Printf("Certificate:  %s\n", certFile)
+	fmt.Printf("Fingerprint:  %s\n", fp)
+	fmt.Printf("Subject:      %s\n", cert.Subject.CommonName)
+	fmt.Printf("Valid until:  %s\n", cert.NotAfter.Format("2006-01-02"))
+	fmt.Printf("Names:        %s\n", strings.Join(names, ", "))
+	fmt.Printf("\nOn a client:  export MCP_SERVER=https://<one of the names>:%d MCP_TLS_FINGERPRINT=%s\n", cfg.Server.TLS.Port, fp)
 }

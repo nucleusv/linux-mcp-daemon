@@ -43,11 +43,11 @@ Linux desktop-control-plane 7.0.12-linuxkit #1 SMP PREEMPT Thu Aug 27 14:02:21 U
 
 ```bash
 # 1. Open the SSE stream (in the background) and capture the one-time POST endpoint
-curl -N -s -H "Authorization: Bearer $MCP_TOKEN" http://localhost:9091/sse &
+curl -N -s --cacert mcpd.crt -H "Authorization: Bearer $MCP_TOKEN" https://localhost:9091/sse &
 # server sends: event: endpoint / data: /message?session_id=...
 
 # 2. POST the tools/call request to that endpoint
-curl -s -X POST "http://localhost:9091/message?session_id=<from step 1>" \
+curl -s --cacert mcpd.crt -X POST "https://localhost:9091/message?session_id=<from step 1>" \
   -H "Authorization: Bearer $MCP_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "system/os-release", "arguments": {}}}'

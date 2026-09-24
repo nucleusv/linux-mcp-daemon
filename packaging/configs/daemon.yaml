@@ -2,15 +2,28 @@
 # /etc/mcpd/configs/daemon.yaml. Existing files are never overwritten on
 # upgrade.
 server:
-  # mcpd listens on all interfaces. It speaks plain HTTP unless TLS is
-  # enabled below, and bearer tokens travel in every request - so either
-  # enable TLS, or firewall this port to trusted addresses only.
-  port: 9091
+  # HTTPS on 9091, on all interfaces. Bearer tokens travel in every request,
+  # so they must not cross a network in clear text.
   tls:
+    enabled: true
+    port: 9091
+    # Relative paths are in this directory. With generate: true, mcpd creates
+    # a self-signed certificate here on its first start if neither file
+    # exists (to replace it, delete both and restart), and logs its SHA-256
+    # fingerprint - clients pin it (MCP_TLS_FINGERPRINT) or trust the file
+    # (MCP_CA_CERT). Put a CA-issued certificate's files here instead to use
+    # that one.
+    cert_file: tls/mcpd.crt
+    key_file: tls/mcpd.key
+    generate: true
+    # Extra names/addresses for a generated certificate (it already covers
+    # the host name, localhost and every address of this machine):
+    # hosts: [mcp.example.com]
+  # Plain HTTP - tokens in clear text. Only for a trusted network, or behind
+  # a proxy that terminates TLS.
+  http:
     enabled: false
-    port: 9443
-    cert_file: "/etc/ssl/certs/mcpd.crt"
-    key_file: "/etc/ssl/private/mcpd.key"
+    port: 9090
 rate_limits:
   default_rps: 50.0
   default_burst: 100

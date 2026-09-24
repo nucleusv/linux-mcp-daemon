@@ -74,7 +74,7 @@ func defaultServerURL() string {
 	if v := os.Getenv("MCP_SERVER"); v != "" {
 		return v
 	}
-	return "http://localhost:9091"
+	return "https://localhost:9091" // mcpd's default: TLS on 9091
 }
 
 func main() {
@@ -145,7 +145,11 @@ func main() {
 			}
 			postReq.Header.Set("Authorization", "Bearer "+authToken)
 			postReq.Header.Set("Content-Type", "application/json")
-			postResp, err := http.DefaultClient.Do(postReq)
+			hc, err := httpClient()
+			if err != nil {
+				continue
+			}
+			postResp, err := hc.Do(postReq)
 			if err == nil {
 				postResp.Body.Close()
 			}
@@ -753,10 +757,13 @@ func connect(authToken, firstWord string) error {
 	req.Header.Set("Authorization", "Bearer "+authToken)
 	req.Header.Set("Accept", "text/event-stream")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	hc, err := httpClient()
 	if err != nil {
-		return fmt.Errorf("Failed to connect to daemon: %v", err)
+		return err
+	}
+	resp, err := hc.Do(req)
+	if err != nil {
+		return fmt.Errorf("Failed to connect to daemon: %v%s", err, tlsHint(err))
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -852,10 +859,13 @@ func tryCallMethod(authToken string, id string, method string, params interface{
 	responseChans[id] = ch
 	chanMutex.Unlock()
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	hc, err := httpClient()
 	if err != nil {
-		return JSONRPCResponse{}, fmt.Errorf("Failed to POST JSON-RPC: %v", err)
+		return JSONRPCResponse{}, err
+	}
+	resp, err := hc.Do(req)
+	if err != nil {
+		return JSONRPCResponse{}, fmt.Errorf("Failed to POST JSON-RPC: %v%s", err, tlsHint(err))
 	}
 	defer resp.Body.Close()
 
