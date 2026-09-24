@@ -257,16 +257,17 @@ There's no curl equivalent for this group - see [Daemon User Administration](doc
 - `cmd/linuxctl/`: The CLI client application.
 - `configs/`: Configuration files (Daemon config, Sudo rules).
 - `internal/`: Encapsulated business logic:
-  - `auth/`: Authentication, authorization, rate limiting.
-  - `fs/`: Safe, atomic file system operations.
-  - `kernel/`: Raw parsing of `/proc` and `/sys`.
-  - `mcpcore/`: Core routing and caching logic.
+  - `auth/`: Per-user rate limiting.
+  - `config/`: `daemon.yaml`, `users.yaml` and `mcp-sudo.yaml` parsing and validation (shared by mcpd and `linuxctl`).
+  - `rpc/`: MCP JSON-RPC handlers - tool/resource registry, authorization, config reload.
+  - `worker/`: Spawns each call as a short-lived worker under the caller's OS account (or root).
+  - `tools/`, `resources/`: One package per tool and resource.
+  - `fsafe/`: Opening paths without following symlinks (openat with O_NOFOLLOW).
+  - `kernel/`, `procstat/`: Parsing `/proc` (sockets, processes).
+  - `logging/`: Leveled, structured logging.
+  - `netpolicy/`: Network destination policy for `network/curl` and `network/ping`.
 - `k8s/`: Kubernetes deployment manifests.
 - `scripts/`: Build and deployment automation.
-
-## License
-
-This project is licensed under the MIT License.
 
 ## Releases
 
