@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/netpolicy"
@@ -143,10 +144,8 @@ func ParseSudoConfig(data []byte, strict bool) (*SudoConfig, error) {
 					return nil, fmt.Errorf("user '%s', tool '%s': %v", username, toolName, err)
 				}
 			}
-			if toolName == "list_files" && privs.Allowed {
-				if len(privs.Paths) == 0 {
-					return nil, fmt.Errorf("user '%s' has list_files allowed but no paths specified. 'paths' array must not be empty", username)
-				}
+			if _, takesPath := PathTools[toolName]; len(privs.Paths) > 0 && !takesPath && strict {
+				return nil, fmt.Errorf("user '%s', tool '%s': paths has no effect - %s takes no path argument (paths can limit: %s)", username, toolName, toolName, strings.Join(sortedPathTools(), ", "))
 			}
 		}
 	}
@@ -176,6 +175,24 @@ func (c *SudoConfig) NetworkPolicy(username, toolName string) *netpolicy.Policy 
 }
 
 // GetAllowedPaths fetches the restricted paths for a tool.
+// PathTools are the tools that take a filesystem `path` argument, so a
+// grant for them can carry `paths:`. The value says whether running them as
+// root requires `paths:` (files/*: no paths, no root) or merely honors it
+// when present (absent = any path). `paths:` on any other tool would be a
+// restriction that restricts nothing, so the config loader rejects it.
+var PathTools = map[string]bool{
+	"files/list":     true,
+	"files/read":     true,
+	"files/create":   true,
+	"files/update":   true,
+	"files/find":     true,
+	"files/filetype": true,
+	"files/chmod":    true,
+	"files/chown":    true,
+	"disks/free":     false,
+	"disks/usage":    false,
+}
+
 func (c *SudoConfig) GetAllowedPaths(username, toolName string) []string {
 	if userSudo, ok := c.Users[username]; ok {
 		if privs, ok := userSudo.Privileged.Tools[toolName]; ok {
@@ -243,4 +260,13 @@ func (c *SudoConfig) CanReadResourceAsRoot(username, scheme, resourcePath string
 		}
 	}
 	return false
+}
+
+func sortedPathTools() []string {
+	names := make([]string, 0, len(PathTools))
+	for n := range PathTools {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
 }

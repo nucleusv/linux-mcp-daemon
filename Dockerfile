@@ -78,8 +78,16 @@ COPY --from=builder /app/mcpd /app/linuxctl /usr/local/bin/
 # setup, with its test users). Release images pass
 # CONFIG_DIR=packaging/configs-container: no users, so a public image never
 # ships the test tokens that are published in this repo's docs.
+# They live at /etc/mcpd/configs - the same path as a systemd install - and
+# MCPD_CONFIG_DIR points mcpd and linuxctl there. /root/configs, where they
+# used to be, stays as a symlink: Docker resolves it when mounting, so an
+# older `-v host-dir:/root/configs` keeps working instead of silently
+# leaving mcpd on the image's own (user-less) configs.
 ARG CONFIG_DIR=configs
-COPY --from=builder /app/${CONFIG_DIR} ./configs
+ENV MCPD_CONFIG_DIR=/etc/mcpd/configs
+COPY --from=builder /app/${CONFIG_DIR} /etc/mcpd/configs
+# users.yaml holds token hashes (git doesn't keep its 0600).
+RUN ln -s /etc/mcpd/configs /root/configs && chmod 600 /etc/mcpd/configs/*.yaml
 # Copy compiled documentation website
 COPY --from=docs-builder /app/docs/website/build ./docs/website/build
 # Copy man pages

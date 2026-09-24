@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 
@@ -17,12 +18,13 @@ import (
 // Config is daemon.yaml (see internal/config).
 type Config = config.DaemonConfig
 
-// configDir holds daemon.yaml, users.yaml and mcp-sudo.yaml, relative to
-// mcpd's working directory.
-const (
-	configDir      = "configs"
-	sudoConfigPath = configDir + "/" + config.SudoFile
-)
+// configDir holds daemon.yaml, users.yaml and mcp-sudo.yaml: --config-dir,
+// else $MCPD_CONFIG_DIR (the container image sets /etc/mcpd/configs), else
+// ./configs relative to the working directory (the systemd unit's
+// /etc/mcpd). Set once in main before anything is loaded.
+var configDir = "configs"
+
+func sudoConfigPath() string { return filepath.Join(configDir, config.SudoFile) }
 
 var (
 	// daemonConfig is replaced by reloadConfig (daemon/reload-config) and
@@ -65,8 +67,8 @@ func loadConfig() (Config, string, error) {
 
 // legacyUsersWarning is set when users still live in daemon.yaml.
 func legacyUsersWarning(c Config, users string) string {
-	if users != configDir+"/"+config.DaemonFile || len(c.Users) == 0 {
+	if users != filepath.Join(configDir, config.DaemonFile) || len(c.Users) == 0 {
 		return ""
 	}
-	return fmt.Sprintf("users are still listed in %s/%s - they now belong in %s/%s (linuxctl moves them on its next user change)", configDir, config.DaemonFile, configDir, config.UsersFile)
+	return fmt.Sprintf("users are still listed in %s - they now belong in %s (linuxctl moves them on its next user change)", filepath.Join(configDir, config.DaemonFile), filepath.Join(configDir, config.UsersFile))
 }

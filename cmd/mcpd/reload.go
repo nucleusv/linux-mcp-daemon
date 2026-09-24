@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -29,7 +30,7 @@ func reloadConfig(byUser string) (string, error) {
 		log.Printf("[CONFIG] reload by user=%s rejected, keeping the current config: %v", byUser, err)
 		return "", fmt.Errorf("config not reloaded, the current one stays in effect: %w", err)
 	}
-	nextSudo, err := config.LoadSudoConfigStrict(sudoConfigPath)
+	nextSudo, err := config.LoadSudoConfigStrict(sudoConfigPath())
 	if err != nil {
 		log.Printf("[CONFIG] reload by user=%s rejected, keeping the current config: %v", byUser, err)
 		return "", fmt.Errorf("config not reloaded, the current one stays in effect: %w", err)
@@ -56,7 +57,7 @@ func reloadConfig(byUser string) (string, error) {
 	closed := closeSessions(closeUsers)
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "Reloaded %s, %s and %s.\n", configDir+"/"+config.DaemonFile, nextUsersPath, sudoConfigPath)
+	fmt.Fprintf(&b, "Reloaded %s, %s and %s.\n", filepath.Join(configDir, config.DaemonFile), nextUsersPath, sudoConfigPath())
 	if len(changes) == 0 {
 		b.WriteString("No changes.\n")
 	} else {

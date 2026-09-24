@@ -1,6 +1,6 @@
 # mcpd daemon configuration - baked into the release container image at
-# /root/configs/daemon.yaml. Mount your own configs directory over it:
-#   -v /etc/mcpd/configs:/root/configs
+# /etc/mcpd/configs/daemon.yaml. Mount your own configs directory over it:
+#   -v /etc/mcpd/configs:/etc/mcpd/configs
 server:
   # mcpd listens on all interfaces. It speaks plain HTTP unless TLS is
   # enabled below, and bearer tokens travel in every request - so either

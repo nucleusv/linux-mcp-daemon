@@ -83,7 +83,7 @@ func mcpdEditConfig(cfgPath, which string) bool {
 				continue
 			}
 			fmt.Printf("Discarded the edit - %s left unchanged.\n", path)
-			return false
+			os.Exit(1) // the edit asked for didn't happen
 		}
 		for _, w := range warnings {
 			fmt.Printf("Warning: %s\n", w)

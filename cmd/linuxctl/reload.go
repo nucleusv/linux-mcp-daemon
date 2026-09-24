@@ -13,7 +13,7 @@ import (
 // the files are already written, so on any problem it says how to apply
 // them by hand instead.
 func reloadDaemon() {
-	manual := "Apply by hand: linuxctl reload daemon (or restart mcpd; Kubernetes dev setup: scripts/deploy.sh)"
+	manual := "Apply by hand: linuxctl reload daemon (as a user granted daemon/reload-config), or restart mcpd"
 
 	authToken := *token
 	if authToken == "" {

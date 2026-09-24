@@ -85,7 +85,14 @@ func daemonFindUser(seq *yaml.Node, username string) *yaml.Node {
 // writes users goes through this, so configs migrate on the first change.
 func usersFileFor(cfgPath string) string {
 	usersPath := filepath.Join(cfgPath, "users.yaml")
-	if _, err := os.Stat(usersPath); err == nil {
+	if info, err := os.Stat(usersPath); err == nil {
+		// It holds token hashes: keep it readable by its owner only (a
+		// copy made with plain cp or from a git checkout is often 0644).
+		if info.Mode().Perm()&0077 != 0 {
+			if err := os.Chmod(usersPath, 0600); err == nil {
+				fmt.Printf("Note: %s was readable by others (%04o) - set it to 0600.\n", usersPath, info.Mode().Perm())
+			}
+		}
 		return usersPath
 	}
 	daemonPath := filepath.Join(cfgPath, "daemon.yaml")
@@ -160,30 +167,39 @@ func handleMcpdAdmin(args []string) {
 	reload := true
 	for i := 0; i < len(rest); i++ {
 		switch rest[i] {
-		case "--set-token":
-			if i+1 < len(rest) {
-				setToken = rest[i+1]
-				i++
+		case "--set-token", "--config-path", "--grant":
+			if i+1 >= len(rest) {
+				fmt.Printf("Error: %s needs a value\n", rest[i])
+				os.Exit(1)
 			}
-		case "--config-path":
-			if i+1 < len(rest) {
-				cfgPath = rest[i+1]
-				i++
-			}
-		case "--no-reload":
-			reload = false
-		case "--grant":
-			if i+1 < len(rest) {
-				for _, g := range strings.Split(rest[i+1], ",") {
+			value := rest[i+1]
+			switch rest[i] {
+			case "--set-token":
+				setToken = value
+			case "--config-path":
+				cfgPath = value
+			case "--grant":
+				for _, g := range strings.Split(value, ",") {
 					if g = strings.TrimSpace(g); g != "" {
 						grants = append(grants, g)
 					}
 				}
-				i++
 			}
+			i++
+		case "--no-reload":
+			reload = false
 		default:
-			if !strings.HasPrefix(rest[i], "-") && username == "" {
+			switch {
+			case strings.HasPrefix(rest[i], "-"):
+				fmt.Printf("Error: unknown option %q\n\n", rest[i])
+				printMcpdAdminUsage()
+				os.Exit(1)
+			case username == "":
 				username = rest[i]
+			default:
+				fmt.Printf("Error: unexpected argument %q\n\n", rest[i])
+				printMcpdAdminUsage()
+				os.Exit(1)
 			}
 		}
 	}
@@ -235,7 +251,8 @@ func printMcpdAdminUsage() {
   linuxctl describe mcpd user <username> [--config-path DIR]
   linuxctl edit     mcpd config [sudo|users|daemon] [--config-path DIR] [--no-reload]
 
-Edits users.yaml + mcp-sudo.yaml locally (--config-path, default ./configs).
+Edits users.yaml + mcp-sudo.yaml locally (--config-path; default
+$MCPD_CONFIG_DIR, else ./configs).
 edit opens the file in $VISUAL/$EDITOR (like visudo) and saves it only if
 it passes the same strict check mcpd applies. After a change, asks the running mcpd (MCP_SERVER, MCP_TOKEN)
 to re-read its config with daemon/reload-config; --no-reload skips that.`)

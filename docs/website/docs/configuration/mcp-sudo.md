@@ -44,6 +44,17 @@ users:
 
 In this example, if the AI is authenticated as `alice`, it can list protected root directories, but it cannot run expensive `disks/usage` tree traversals as root!
 
+## Limiting paths (`paths:`)
+
+`paths:` limits where a tool that takes a `path` argument may reach **as root**. The requested path is cleaned first (`/var/../root` is judged as `/root`), and an entry covers itself and everything below it (`/var` covers `/var/log`, not `/varnish`). A call outside the list is refused before any worker runs.
+
+| Tools | Without `paths:` | With `paths:` |
+|---|---|---|
+| `files/list`, `files/read`, `files/create`, `files/update`, `files/find`, `files/filetype`, `files/chmod`, `files/chown` | no root at all | root only inside the listed paths |
+| `disks/usage`, `disks/free` | root on any path | root only inside the listed paths |
+
+Calls without `privileged: true` aren't limited by `paths:` - they run as the user's own OS account, which the kernel limits. `paths:` on any other tool is an error when the file is checked (`linuxctl edit`, `daemon/reload-config`): it would look like a restriction while restricting nothing. (At startup it's only a warning, so an upgrade can't stop the daemon.)
+
 ## File permission tools (`files/chmod`, `files/chown`)
 
 Both run as the calling user's OS account by default - so a user can chmod its own files, and `chown` (which the kernel only allows root to do for other owners) needs `privileged: true`. Grant them like the other file tools, with `paths:` limiting where a root chmod/chown may reach:

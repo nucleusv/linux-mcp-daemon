@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/auth"
 	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
@@ -165,18 +166,40 @@ func main() {
 	// ==========================================
 	// MASTER DAEMON MODE
 	// ==========================================
+	if dir := os.Getenv("MCPD_CONFIG_DIR"); dir != "" {
+		configDir = dir
+	}
+	for i := 1; i < len(os.Args); i++ {
+		switch {
+		case os.Args[i] == "--config-dir" && i+1 < len(os.Args):
+			configDir = os.Args[i+1]
+			i++
+		case strings.HasPrefix(os.Args[i], "--config-dir="):
+			configDir = strings.TrimPrefix(os.Args[i], "--config-dir=")
+		default:
+			log.Fatalf("unknown argument %q (usage: mcpd [--config-dir DIR] | mcpd --version)", os.Args[i])
+		}
+	}
+
 	var err error
 	daemonConfig, usersPath, err = loadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+	log.Printf("Config directory: %s", configDir)
 	if w := legacyUsersWarning(daemonConfig, usersPath); w != "" {
 		log.Printf("WARNING: %s", w)
 	}
 
-	sudoConfig, err := config.LoadSudoConfig(sudoConfigPath)
+	// As for daemon.yaml: strict problems (unknown keys, paths: on a tool
+	// that takes no path) are warnings at startup, errors on reload.
+	sudoConfig, err := config.LoadSudoConfigStrict(sudoConfigPath())
 	if err != nil {
-		log.Fatalf("Failed to load mcp-sudo.yaml: %v", err)
+		strictErr := err
+		if sudoConfig, err = config.LoadSudoConfig(sudoConfigPath()); err != nil {
+			log.Fatalf("Failed to load mcp-sudo.yaml: %v", err)
+		}
+		log.Printf("WARNING: %v - loaded without it; daemon/reload-config and linuxctl edit will refuse this file until it's fixed", strictErr)
 	}
 
 	worker.Containerized = daemonConfig.Worker.Containerized

@@ -153,25 +153,27 @@ On RHEL/Fedora: `sudo dnf install smartmontools traceroute file iproute`.
 On a Linux host with Docker (run as root, or drop `sudo` if your user is in the `docker` group):
 
 ```bash
-IMAGE=ghcr.io/nucleusv/linux-mcp-daemon:latest   # or a fixed version, e.g. :0.1.0
+IMAGE=ghcr.io/nucleusv/linux-mcp-daemon:latest   # or a fixed version, e.g. :0.2.0
 
 # 1. Seed a configs directory on the host from the image's clean defaults
 sudo mkdir -p /etc/mcpd/configs
-sudo docker run --rm -v /etc/mcpd/configs:/out --entrypoint cp $IMAGE -r /root/configs/. /out/
+sudo docker run --rm -v /etc/mcpd/configs:/out --entrypoint cp $IMAGE -r /etc/mcpd/configs/. /out/
 sudo chmod 600 /etc/mcpd/configs/*.yaml    # they will hold token hashes
 
 # 2. Create a user and print its token (once) - save it. It may also apply
 #    config changes later (daemon/reload-config); mcpd isn't running yet.
-sudo docker run --rm -v /etc/mcpd/configs:/root/configs $IMAGE \
-  linuxctl create mcpd user privileged --grant daemon/reload-config --no-reload --config-path /root/configs
+sudo docker run --rm -v /etc/mcpd/configs:/etc/mcpd/configs $IMAGE \
+  linuxctl create mcpd user privileged --grant daemon/reload-config --no-reload
 
 # 3. Run, administering the real host
 sudo docker run -d --name mcpd --restart unless-stopped \
   --network host --pid host --privileged \
   --mount type=bind,source=/,target=/host,readonly,bind-propagation=rslave \
-  -v /etc/mcpd/configs:/root/configs \
+  -v /etc/mcpd/configs:/etc/mcpd/configs \
   $IMAGE
 ```
+
+The configs sit at the same path inside the container as on the host, `/etc/mcpd/configs` (the image sets `MCPD_CONFIG_DIR` to it, so `linuxctl` inside needs no `--config-path`). Images up to 0.1.0 kept them in `/root/configs`; a `-v ...:/root/configs` mount still works with newer images.
 
 Step 2's "Next steps" text is written for the systemd install - in the container ignore its `useradd` line (the account already exists in the image, and step 3 starts mcpd with the new user).
 
@@ -199,7 +201,7 @@ or from any machine with `linuxctl` installed: `export MCP_SERVER=http://<host>:
   ```
 
   then apply it with `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl reload daemon` and call `linuxctl get system os-release --privileged true` - it now reports the host's OS. If the file has a mistake, the reload says so and mcpd keeps the config it has. All options: [mcp-sudo.yaml](./configuration/mcp-sudo).
-- The image ships **no users and no tokens** - step 2 is required. With mcpd running, add more users inside the container, which also applies the change: `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl create mcpd user testuser --config-path /root/configs`. After changing files any other way (a `docker run --rm ... linuxctl ...` as in step 2, or an editor), apply them with `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl reload daemon` - or `sudo docker restart mcpd`.
+- The image ships **no users and no tokens** - step 2 is required. With mcpd running, add more users inside the container, which also applies the change: `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl create mcpd user testuser`. After changing files any other way (a `docker run --rm ... linuxctl ...` as in step 2, or an editor), apply them with `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl reload daemon` - or `sudo docker restart mcpd`.
 
 ## macOS: the CLI
 

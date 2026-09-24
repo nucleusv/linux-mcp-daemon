@@ -49,7 +49,7 @@ Changes:
 
 ```
 Not applied yet: no MCP_TOKEN to call mcpd with.
-Apply by hand: linuxctl reload daemon (or restart mcpd; Kubernetes dev setup: scripts/deploy.sh)
+Apply by hand: linuxctl reload daemon (as a user granted daemon/reload-config), or restart mcpd
 ```
 
 A rotated or deleted token stops working the moment the reload runs, and that user's open sessions are closed.

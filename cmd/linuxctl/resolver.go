@@ -327,6 +327,15 @@ func Resolve(reg Registry, verb, group string, rest []string) (Action, error) {
 		}
 	}
 
+	if !groupExists(reg, group) {
+		// tools/list only shows a user the tools they may call, so an
+		// unknown group is often one this user just isn't granted.
+		hint := ""
+		if group == "daemon" {
+			hint = " - `reload daemon` needs daemon/reload-config granted to your user in mcp-sudo.yaml"
+		}
+		return Action{}, fmt.Errorf("no group %q is available to your user%s (see: linuxctl get mcp-api tools)", group, hint)
+	}
 	return Action{}, fmt.Errorf("no verb %q in group %q - try: linuxctl explain %s", verb, group, group)
 }
 
@@ -410,4 +419,25 @@ func mapPositionalArgs(schema map[string]interface{}, args map[string]interface{
 		positional = positional[1:]
 	}
 	return positional
+}
+
+// groupExists reports whether any tool, resource or template in reg - what
+// this user's tools/list and resources lists returned - is in group.
+func groupExists(reg Registry, group string) bool {
+	for _, t := range reg.Tools {
+		if t.ToolsGroup == group {
+			return true
+		}
+	}
+	for _, r := range reg.Resources {
+		if r.Group == group {
+			return true
+		}
+	}
+	for _, t := range reg.Templates {
+		if t.Group == group {
+			return true
+		}
+	}
+	return false
 }

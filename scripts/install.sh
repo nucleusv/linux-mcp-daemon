@@ -359,9 +359,13 @@ fi
 if [ "$UPGRADE" -eq 0 ] && [ "$KEPT" -eq 1 ]; then
     echo "  Existing configs in $CONF_DIR were kept - their users and tokens still work."
 fi
-# Configs from before daemon/reload-config (v0.1.0) grant it to nobody, so
-# `linuxctl create mcpd user` can't apply a new user without a restart.
-if [ "$KEPT" -eq 1 ] && ! grep -q 'daemon/reload-config' "$CONF_DIR/mcp-sudo.yaml" 2>/dev/null; then
+# When this mcpd has daemon/reload-config but no user is granted it -
+# configs from before it (v0.1.0), or a first user created by an older
+# linuxctl that silently ignored --grant - `linuxctl create mcpd user`
+# can't apply a new user without a restart. (--user "" gets its own note.)
+if grep -qa 'daemon/reload-config' "$BIN_DIR/mcpd" \
+    && ! grep -q 'daemon/reload-config' "$CONF_DIR/mcp-sudo.yaml" 2>/dev/null \
+    && ! { [ "$FRESH" -eq 1 ] && [ -z "$MCP_USER" ]; }; then
     RESTART="sudo systemctl restart mcpd"
     [ "$HAVE_SYSTEMD" -eq 1 ] || RESTART="stop mcpd and start it again"
     cat <<EOF
@@ -382,8 +386,8 @@ if [ "$FRESH" -eq 1 ] && [ -z "$MCP_USER" ]; then
 
   No MCP user was created (--user ""). Add one - each needs a matching OS account:
     useradd --system --shell /usr/sbin/nologin NAME
-    $BIN_DIR/linuxctl create mcpd user NAME --config-path $CONF_DIR
-    systemctl restart mcpd
+    $BIN_DIR/linuxctl create mcpd user NAME --grant daemon/reload-config --config-path $CONF_DIR
+    systemctl restart mcpd   # once: users added after this one apply without a restart
 EOF
 fi
 if [ -n "$TOKEN_MSG" ]; then

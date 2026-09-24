@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Master Daemon Configuration
 
-The core settings for the Linux MCP Daemon are defined in `configs/daemon.yaml`.
+The core settings for the Linux MCP Daemon are defined in `daemon.yaml`, in the config directory: `/etc/mcpd/configs` for both the systemd install and the container image. mcpd takes it from `--config-dir DIR`, else `$MCPD_CONFIG_DIR` (set in the image), else `configs/` under its working directory (the systemd unit runs in `/etc/mcpd`). `linuxctl`'s `mcpd` commands default their `--config-path` to `$MCPD_CONFIG_DIR` as well.
 
 This file controls the global web server configuration, connection timeouts and rate limiting. The config directory holds three files:
 

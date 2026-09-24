@@ -2,6 +2,7 @@ package main
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -28,5 +29,16 @@ func TestCompleteMcpdAndReload(t *testing.T) {
 	}
 	if !contains(completeWords(granted, []string{""}), "reload") {
 		t.Error("reload not offered with the tool granted")
+	}
+}
+
+func TestResolveUngrantedGroup(t *testing.T) {
+	_, err := Resolve(Registry{}, "reload", "daemon", nil)
+	if err == nil || !strings.Contains(err.Error(), "daemon/reload-config granted") {
+		t.Errorf("reload daemon without the tool: err = %v", err)
+	}
+	reg := Registry{Tools: []ToolDef{{Name: "files/list", ToolsGroup: "files", LinuxctlVerb: "list"}}}
+	if _, err := Resolve(reg, "frobnicate", "files", nil); err == nil || !strings.Contains(err.Error(), `no verb "frobnicate" in group "files"`) {
+		t.Errorf("unknown verb in a known group: err = %v", err)
 	}
 }

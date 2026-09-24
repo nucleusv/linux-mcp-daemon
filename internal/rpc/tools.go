@@ -768,12 +768,16 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			}
 			_ = json.Unmarshal(params.Arguments, &baseArgs)
 
-			if (params.Name == "files/list" || params.Name == "files/read" || params.Name == "files/create" || params.Name == "files/update" || params.Name == "files/find" || params.Name == "files/filetype" || params.Name == "files/chmod" || params.Name == "files/chown") && baseArgs.Privileged {
+			// Tools with a path argument, run as root, are limited to their
+			// grant's paths: always for files/* (no paths = no root), and
+			// for the others whenever the grant lists paths.
+			allowedPaths := sudoCfg.GetAllowedPaths(session.User, params.Name)
+			if pathsRequired, takesPath := config.PathTools[params.Name]; takesPath && baseArgs.Privileged && (pathsRequired || len(allowedPaths) > 0) {
 				checkPath := baseArgs.Path
 				if checkPath == "" && params.Name == "files/find" {
 					checkPath = "/" // files/find's own default
 				}
-				cleanPath, allowed := config.PathAllowed(checkPath, sudoCfg.GetAllowedPaths(session.User, params.Name))
+				cleanPath, allowed := config.PathAllowed(checkPath, allowedPaths)
 				if !allowed {
 					execErr = fmt.Errorf("user %s is not authorized to run %s on path %s as root", session.User, params.Name, baseArgs.Path)
 				} else {

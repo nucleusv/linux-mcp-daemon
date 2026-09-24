@@ -26,7 +26,7 @@ var (
 	serverURL   = flag.String("server", defaultServerURL(), "The URL of the mcpd server (default from MCP_SERVER env var)")
 	token       = flag.String("token", "", "Bearer token for authentication")
 	showVersion = flag.Bool("version", false, "Print the linuxctl version and exit")
-	configPath  = flag.String("config-path", "./configs", "Local path to the daemon's configs/ directory (used only by the local-only 'mcpd' admin group)")
+	configPath  = flag.String("config-path", defaultConfigPath(), "Local path to the daemon's configs/ directory (used only by the local-only 'mcpd' admin group; default from MCPD_CONFIG_DIR, else ./configs)")
 )
 
 type JSONRPCRequest struct {
@@ -58,6 +58,16 @@ var (
 func nextID() string {
 	idCounter++
 	return strconv.Itoa(idCounter)
+}
+
+// defaultConfigPath is where the "mcpd" admin group finds the daemon's
+// configs: $MCPD_CONFIG_DIR (set in the container image, so linuxctl inside
+// it needs no --config-path), else ./configs.
+func defaultConfigPath() string {
+	if v := os.Getenv("MCPD_CONFIG_DIR"); v != "" {
+		return v
+	}
+	return "./configs"
 }
 
 func defaultServerURL() string {
@@ -578,7 +588,15 @@ func renderResponse(respRPC JSONRPCResponse, outputFormat, contentKey string) {
 		if !ok {
 			continue
 		}
+		if result["isError"] == true {
+			// An error message isn't data: print it as is, never try to
+			// render it as a table/json/yaml.
+			outputFormat = ""
+		}
 		printFormatted(text, outputFormat)
+	}
+	if result["isError"] == true {
+		os.Exit(1) // so scripts can tell a failed call from a successful one
 	}
 }
 

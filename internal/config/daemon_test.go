@@ -91,3 +91,17 @@ func TestLoadConfigDir(t *testing.T) {
 		t.Errorf("users in both files: err = %v", err)
 	}
 }
+
+func TestPathsOnlyOnPathTools(t *testing.T) {
+	doc := "users:\n  a:\n    privileged:\n      tools:\n        disks/health: {allowed: true, paths: [/dev/sda]}\n"
+	if _, err := ParseSudoConfig([]byte(doc), true); err == nil || !strings.Contains(err.Error(), "paths has no effect") {
+		t.Errorf("strict: paths on disks/health accepted, err = %v", err)
+	}
+	if _, err := ParseSudoConfig([]byte(doc), false); err != nil {
+		t.Errorf("lenient (startup) must still load: %v", err)
+	}
+	ok := "users:\n  a:\n    privileged:\n      tools:\n        disks/usage: {allowed: true, paths: [/var]}\n"
+	if _, err := ParseSudoConfig([]byte(ok), true); err != nil {
+		t.Errorf("paths on disks/usage rejected: %v", err)
+	}
+}

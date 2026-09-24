@@ -125,7 +125,7 @@ func setupConfigDir(t *testing.T, users, sudo string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sudoCfg, err := config.LoadSudoConfig(sudoConfigPath)
+	sudoCfg, err := config.LoadSudoConfig(sudoConfigPath())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestReloadConfig(t *testing.T) {
 
 	// Add a second token for root's replacement user and grant a tool.
 	os.WriteFile(filepath.Join(configDir, config.UsersFile), []byte("users:\n"+userEntry("root", "tok-new")), 0600)
-	os.WriteFile(sudoConfigPath, []byte("users:\n  root:\n    privileged:\n      tools:\n        daemon/reload-config: {allowed: true}\n"), 0600)
+	os.WriteFile(sudoConfigPath(), []byte("users:\n  root:\n    privileged:\n      tools:\n        daemon/reload-config: {allowed: true}\n"), 0600)
 
 	// An open session of root must be closed: its token changed.
 	s := &rpc.Session{ID: "s1", User: "root", Event: make(chan string), Done: make(chan struct{})}
@@ -204,7 +204,7 @@ func TestReloadConfig(t *testing.T) {
 	}
 
 	// An invalid file (misspelled key) is rejected and changes nothing.
-	os.WriteFile(sudoConfigPath, []byte("users:\n  root:\n    privileged:\n      tools:\n        files/read: {allowed: true, path: [/]}\n"), 0600)
+	os.WriteFile(sudoConfigPath(), []byte("users:\n  root:\n    privileged:\n      tools:\n        files/read: {allowed: true, path: [/]}\n"), 0600)
 	if _, err := reloadConfig("tester"); err == nil || !strings.Contains(err.Error(), "stays in effect") {
 		t.Errorf("invalid config: err = %v", err)
 	}
