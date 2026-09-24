@@ -53,6 +53,7 @@ linuxctl get processes top
 - **Pin a version / name the user:** `... | sudo bash -s -- --version v0.1.0 --user alice`
 - **More users:** each needs an OS account of the same name - see [Adding more users](https://nucleusv.github.io/linux-mcp-daemon/installation/#adding-more-users).
 - **Uninstall:** `... | sudo bash -s -- --uninstall` (add `--purge` to delete `/etc/mcpd`; the `mcp` OS account stays - `sudo userdel -r mcp`)
+- **Packages:** `.deb` and `.rpm` for amd64/arm64 on every [release](https://github.com/nucleusv/linux-mcp-daemon/releases) - `sudo apt install ./linux-mcp-daemon_<version>_amd64.deb` or `sudo dnf install ./linux-mcp-daemon-<version>-1.x86_64.rpm`, then the [next steps](https://nucleusv.github.io/linux-mcp-daemon/installation/#packages-deb-rpm) it prints.
 - **Container image:** `ghcr.io/nucleusv/linux-mcp-daemon` (amd64/arm64) - setup steps in the [installation docs](https://nucleusv.github.io/linux-mcp-daemon/installation/).
 - **macOS (CLI only):** the same script installs just `linuxctl` - `curl -fsSL .../install.sh | bash -s -- --bin-dir ~/.local/bin`, then `export PATH="$HOME/.local/bin:$PATH"` (not on macOS's default PATH) - to drive a remote mcpd.
 

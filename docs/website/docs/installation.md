@@ -148,6 +148,44 @@ sudo apt install smartmontools traceroute
 
 On RHEL/Fedora: `sudo dnf install smartmontools traceroute`.
 
+## Packages (.deb, .rpm)
+
+Every release also ships packages for amd64 and arm64: the same `mcpd` and `linuxctl`, installed to `/usr/bin` with a systemd unit and man pages. Use them instead of the script if you'd rather have the package manager own the install.
+
+**Debian / Ubuntu:**
+
+```bash
+V=0.3.0 ARCH=amd64    # or arm64
+curl -fsSLO https://github.com/nucleusv/linux-mcp-daemon/releases/download/v$V/linux-mcp-daemon_${V}_${ARCH}.deb
+sudo apt install ./linux-mcp-daemon_${V}_${ARCH}.deb
+```
+
+**RHEL / Rocky / Alma / Fedora:**
+
+```bash
+V=0.3.0 ARCH=x86_64   # or aarch64
+curl -fsSLO https://github.com/nucleusv/linux-mcp-daemon/releases/download/v$V/linux-mcp-daemon-${V}-1.${ARCH}.rpm
+sudo dnf install ./linux-mcp-daemon-${V}-1.${ARCH}.rpm
+```
+
+To verify the download first, fetch the release's `checksums.txt` next to it and run `sha256sum --ignore-missing -c checksums.txt`.
+
+The package pulls in `smartmontools` and `traceroute` as recommended packages, creates `/etc/mcpd/configs` (mode `0750`, files `0600`) from clean templates - **no users, no tokens** - and enables the `mcpd` service **without starting it**. It prints the next steps:
+
+```text
+mcpd is installed and enabled, but not started - it has no users yet:
+  useradd --system --create-home --shell /usr/sbin/nologin mcp
+  linuxctl create mcpd user mcp --grant daemon/reload-config --config-path /etc/mcpd/configs   # prints its token once
+  systemctl start mcpd
+```
+
+Run them with `sudo`, save the token, then try it as in the script install: `export MCP_SERVER=http://127.0.0.1:9091 MCP_TOKEN=<token>` and `linuxctl get system os-release`. More users and grants work the same way too - see [Adding more users](#adding-more-users) (with `/usr/bin/linuxctl`, which `sudo` finds on every distribution).
+
+- **Upgrade:** install the newer package the same way. Configs in `/etc/mcpd/configs` are never touched (they aren't package-managed conffiles - `linuxctl` rewrites them, so there are no upgrade prompts), and a running mcpd is restarted on the new binary.
+- **Remove:** `sudo apt remove linux-mcp-daemon` / `sudo dnf remove linux-mcp-daemon` stops mcpd and keeps `/etc/mcpd`; reinstalling picks the users up again. `sudo apt purge linux-mcp-daemon` also deletes `/etc/mcpd` (with rpm, delete it by hand). MCP users' OS accounts stay either way.
+- **Switching from the script:** run the script's `--uninstall` first (it keeps `/etc/mcpd/configs`, which the package then uses as they are - existing users and tokens keep working). Otherwise the script's `/etc/systemd/system/mcpd.service` overrides the package's unit and keeps running `/usr/local/bin/mcpd`.
+- **Without systemd** (e.g. in a container) the package installs the same and prints how to start mcpd by hand: `cd /etc/mcpd && mcpd --config-dir /etc/mcpd/configs`.
+
 ## Container image
 
 On a Linux host with Docker (run as root, or drop `sudo` if your user is in the `docker` group):

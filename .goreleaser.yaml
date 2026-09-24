@@ -67,6 +67,51 @@ archives:
       - NOTICE
       - docs/man/linuxctl.1
 
+# .deb and .rpm: the same binaries, installed to /usr/bin with a systemd
+# unit. Configs are not conffiles - postinstall copies the templates only
+# where no config exists yet (like scripts/install.sh), since linuxctl
+# rewrites users.yaml and mcp-sudo.yaml.
+nfpms:
+  - id: packages
+    package_name: linux-mcp-daemon
+    ids: [mcpd, linuxctl-linux]
+    file_name_template: "{{ .ConventionalFileName }}"
+    formats: [deb, rpm]
+    vendor: Vadim Nesterov
+    maintainer: Vadim Nesterov
+    homepage: https://nucleusv.github.io/linux-mcp-daemon/
+    description: |-
+      MCP daemon that lets AI agents inspect and administer a Linux host.
+      mcpd serves Model Context Protocol tools over HTTP/SSE and runs each
+      call as the calling user's own OS account, or as root only where
+      mcp-sudo.yaml grants it. linuxctl is its command-line client.
+    license: Apache-2.0
+    section: admin
+    priority: optional
+    bindir: /usr/bin
+    recommends: [smartmontools, traceroute]
+    contents:
+      - src: packaging/nfpm/mcpd.service
+        dst: /usr/lib/systemd/system/mcpd.service
+      - src: packaging/configs/daemon.yaml
+        dst: /usr/share/linux-mcp-daemon/configs/daemon.yaml
+      - src: packaging/configs/users.yaml
+        dst: /usr/share/linux-mcp-daemon/configs/users.yaml
+      - src: packaging/configs/mcp-sudo.yaml
+        dst: /usr/share/linux-mcp-daemon/configs/mcp-sudo.yaml
+      - src: docs/man/mcpd.8
+        dst: /usr/share/man/man8/mcpd.8
+      - src: docs/man/linuxctl.1
+        dst: /usr/share/man/man1/linuxctl.1
+      - src: LICENSE
+        dst: /usr/share/doc/linux-mcp-daemon/LICENSE
+      - src: NOTICE
+        dst: /usr/share/doc/linux-mcp-daemon/NOTICE
+    scripts:
+      postinstall: packaging/nfpm/postinstall.sh
+      preremove: packaging/nfpm/preremove.sh
+      postremove: packaging/nfpm/postremove.sh
+
 checksum:
   name_template: checksums.txt
   algorithm: sha256
@@ -101,5 +146,7 @@ release:
     ```bash
     curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash -s -- --version {{ .Tag }}
     ```
+
+    Or install a package below: `sudo apt install ./linux-mcp-daemon_{{ .Version }}_amd64.deb` / `sudo dnf install ./linux-mcp-daemon-{{ .Version }}-1.x86_64.rpm` (arm64: `_arm64.deb` / `.aarch64.rpm`) - [next steps](https://nucleusv.github.io/linux-mcp-daemon/installation/#packages-deb-rpm).
 
     Container image: `ghcr.io/nucleusv/linux-mcp-daemon:{{ .Version }}` (linux/amd64, linux/arm64).
