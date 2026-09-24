@@ -10,7 +10,7 @@ Re-reads mcpd's config files - `daemon.yaml`, `users.yaml` and `mcp-sudo.yaml` -
 - **Needs a restart:** `server.port`, `server.tls` and `worker.containerized`. When they changed, the reply lists them under "Need a restart to take effect".
 - **Only for users granted it** in `mcp-sudo.yaml` (`daemon/reload-config: {allowed: true}`); for everyone else it isn't in `tools/list`. `scripts/install.sh` grants it to the first user. See [mcp-sudo.yaml](../../../configuration/mcp-sudo#applying-config-changes-daemonreload-config).
 
-The daemon logs every reload with the calling user, e.g. `[CONFIG] reloaded by user=privileged: 2 change(s): user testuser: added; grants testuser: + disks/usage (root; paths [/var])`. Token values and hashes never appear in the reply or the log.
+The daemon writes every reload as an audit line - at any log level - with the calling user and the changes, e.g. `2026-09-24T10:41:28.180Z INFO  config reloaded audit=true user=privileged changes=2 detail="user testuser: added; grants testuser: + disks/usage (root; paths [/var])"`; a rejected reload is a `WARN  config reload rejected, keeping the current config` line. Token values and hashes never appear in the reply or the log.
 
 ## Example
 

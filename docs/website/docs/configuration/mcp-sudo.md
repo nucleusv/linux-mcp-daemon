@@ -148,7 +148,7 @@ users:
 
 The tool only **reads** the files - there is deliberately no MCP tool that edits them, so no agent can grant itself anything. The files are changed on the host (`linuxctl create|update|delete mcpd user`, `linuxctl edit mcpd config sudo`), and those commands call the tool afterwards themselves. `scripts/install.sh` grants it to the first user it creates.
 
-Every change is validated before it's applied, strictly: a misspelled key (`path:` for `paths:`) is an error instead of a restriction silently left out, and an invalid file leaves the running config untouched. The reload's reply - and the daemon log, as `[CONFIG] reloaded by user=...` - lists what changed:
+Every change is validated before it's applied, strictly: a misspelled key (`path:` for `paths:`) is an error instead of a restriction silently left out, and an invalid file leaves the running config untouched. The reload's reply - and the daemon log, as an audit line `INFO  config reloaded audit=true user=... changes=... detail=...` - lists what changed:
 
 ```
 Changes:

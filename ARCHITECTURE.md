@@ -35,6 +35,14 @@ The config directory holds `daemon.yaml` (server/worker/limits), `users.yaml` (u
 - **One snapshot per request.** `RPCHandler.settings` is an `atomic.Pointer` swapped whole; `HandleToolsCall`/`HandleResourcesRead`/`HandleToolsList` take `sudoCfg := h.Sudo()` once, so the authorization check and the call it authorizes see the same rules. Users (`daemonConfig`, under `cfgMu`) and grants switch inside the same critical section, and `checkAndPinUID` mutates user entries under `cfgMu` too - `go test -race ./cmd/mcpd` covers this.
 - A reload drops the tool/resource caches (results may have been produced under revoked grants) and closes the SSE sessions of removed users and users whose token changed. `server.*` and `worker.containerized` still need a restart.
 
+## Symlinks under a `paths:` limit (`_no_follow`)
+
+`config.PathAllowed` is lexical - it can't know where a symlink under an allowed directory leads. So for a root call limited by `paths:` that don't cover `/` (`config.CoversRoot`), `HandleToolsCall` sets `_no_follow: true` in the worker's arguments (after dropping any caller-supplied value, like `_network_policy`). The path tools then resolve the path with `internal/fsafe` - one component at a time, `openat(O_PATH|O_NOFOLLOW)` - and operate on the verified descriptor (`Reopen`, `CreateFile` via `openat` on the verified parent, `ProcPath` for directory reads, `Chdir` for `files/find`, which then searches `.`). `files/chmod`/`chown` always work that way. Keep `internal/fsafe/tools_symlink_test.go` passing - it attacks every path tool with file and directory links, with a control proving the attack works without the flag. Hard links aren't covered: the kernel's `fs.protected_hardlinks` (on by default) stops users from hard-linking files they don't own.
+
+## Logging (`internal/logging`)
+
+`log/slog` behind a small package: `logging.Configure` (from `daemon.yaml`'s `logging:`, re-applied on reload), leveled `Debug/Info/Warn/Error`, and three level-independent writers: `Access` (per HTTP request, `access_log`), `Audit` (host-changing tool calls and config reloads, `audit=true`) and `Fatal` (why mcpd stops, then exit 1). The text format is positional - `TIME LEVEL message key=value...` (`text.go`) - and `json` keeps every key. Never log tool output or unredacted arguments: `logToolCall` logs `redactArgs` output and an error truncated to 200 bytes; responses only by size, at debug.
+
 ## Known Tools & Resources Mapping
 
 ### Disks & Storage
