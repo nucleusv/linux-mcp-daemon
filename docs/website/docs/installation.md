@@ -9,7 +9,7 @@ Every release is published on [GitHub Releases](https://github.com/nucleusv/linu
 
 ## Linux with systemd (recommended)
 
-You need a Linux host (amd64 or arm64), root access via `sudo`, and `curl` (minimal images such as the `ubuntu`/`debian` containers don't ship it: `apt install curl ca-certificates`).
+You need a Linux host (amd64 or arm64), root access via `sudo`, and `curl`. Minimal images such as the `ubuntu`/`debian` containers ship neither `curl` nor `sudo`, and have empty package lists: as root there, run `apt update && apt install -y curl ca-certificates` and pipe the script to plain `bash` instead of `sudo bash`.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash
@@ -38,7 +38,7 @@ The script:
 
 Run those three commands (with your token) as any user on the host - `linuxctl` talks to mcpd over HTTP, so no `sudo` is needed. `linuxctl get processes top` is another quick check.
 
-**Without systemd** (e.g. inside a plain container) the script installs everything except the service, warns `systemd not detected`, and prints how to start mcpd by hand: `cd /etc/mcpd && sudo /usr/local/bin/mcpd`.
+**Without systemd** (e.g. inside a plain container) the script installs everything except the service, warns `systemd not detected`, and prints how to start mcpd by hand: `cd /etc/mcpd && sudo /usr/local/bin/mcpd`. It runs in the foreground - use a second terminal for "Try it", or start it with `&` in the background. Nothing restarts or stops it for you: after an upgrade restart it yourself, and `--uninstall` only warns that it is still running.
 
 ### Options
 
@@ -87,6 +87,25 @@ With `checksums.txt` next to the archive the script verifies its sha256 (and ref
 
 Run the same command again. Binaries are replaced (the service is restarted only if `mcpd` actually changed); **existing configs in `/etc/mcpd/configs` are never overwritten**, and no extra user is created. Without `--version` you get the latest release; with `--version` you get exactly that one.
 
+**Upgrading from v0.1.0.** Existing tokens keep working, and two things differ from a fresh install:
+
+- Users stay in `daemon.yaml` (mcpd logs a warning) until the next `linuxctl create|update|delete mcpd user` moves them to `users.yaml` - nothing to do by hand.
+- No user may apply config changes (`daemon/reload-config`) yet, so new users would only work after a restart. The installer says so; grant it once to your first user and restart mcpd this one time:
+
+  ```bash
+  sudo -E /usr/local/bin/linuxctl edit mcpd config sudo --config-path /etc/mcpd/configs
+  ```
+
+  It opens the file in `$VISUAL` or `$EDITOR` (default `vi`) - `sudo -E` passes yours through; plain `sudo` drops it. Under your user (`mcp`), replace `tools: {}` with
+
+  ```yaml
+        tools:
+          daemon/reload-config:
+            allowed: true
+  ```
+
+  save, and run `sudo systemctl restart mcpd`. (On save `linuxctl` tries to apply the change and reports `Not applied: user mcp is not authorized to run daemon/reload-config` - expected, the restart applies it.) From then on, [adding users](#adding-more-users) needs no restart.
+
 ### Adding more users
 
 Each MCP user needs an OS account of the same name - every tool call runs as that account. For a user `alice`:
@@ -97,7 +116,16 @@ sudo useradd --system --shell /usr/sbin/nologin alice
 sudo -E /usr/local/bin/linuxctl create mcpd user alice --config-path /etc/mcpd/configs   # prints alice's token once
 ```
 
-`linuxctl` writes the files and then asks the running mcpd to reload them (as the `mcp` user - that's what `MCP_TOKEN` and `sudo -E` are for), so `alice` can connect right away - no restart. (The full path matters on RHEL, Rocky, Alma and Fedora, whose `sudo` doesn't search `/usr/local/bin`: `sudo linuxctl` fails there with `command not found`.)
+The output ends with the reload:
+
+```text
+Asking mcpd at http://127.0.0.1:9091 to reload its config...
+Reloaded configs/daemon.yaml, configs/users.yaml and configs/mcp-sudo.yaml.
+Changes:
+  user alice: added
+```
+
+`linuxctl` writes the files and then asks the running mcpd to reload them (as the `mcp` user - that's what `MCP_TOKEN` and `sudo -E` are for), so `alice` can connect right away - no restart. (Its "Next steps" repeat the `useradd` you already ran. The full path matters on RHEL, Rocky, Alma and Fedora, whose `sudo` doesn't search `/usr/local/bin`: `sudo linuxctl` fails there with `command not found`.) If it prints `Not applied: user mcp is not authorized to run daemon/reload-config` instead, your install predates that tool - see [Upgrading from v0.1.0](#upgrading).
 
 `alice` can now call every tool as her own OS account. To let her run specific tools as root, grant them in `mcp-sudo.yaml` - `sudo -E /usr/local/bin/linuxctl edit mcpd config sudo --config-path /etc/mcpd/configs` opens it in your editor, checks it when you save (like `visudo`) and applies it; see [mcp-sudo.yaml](./configuration/mcp-sudo). More commands (list, rotate, delete): [Daemon User Administration](./linuxctl/mcpd-admin).
 
@@ -108,7 +136,7 @@ curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scri
 curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash -s -- --uninstall --purge   # also deletes /etc/mcpd
 ```
 
-This removes the service, the binaries and the man pages. Reinstalling after a plain `--uninstall` reuses the kept configs, so the existing users and tokens keep working (and no new token is printed). **The OS accounts** created for MCP users (`mcp`, plus any you added) are left in place either way - remove them with `sudo userdel -r mcp`.
+This removes the service, the binaries and the man pages. Reinstalling after a plain `--uninstall` reuses the kept configs, so the existing users and tokens keep working (and no new token is printed). With `--archive` (offline hosts), uninstall with the same local copy: `sudo bash install.sh --uninstall`. **The OS accounts** created for MCP users (`mcp`, plus any you added) are left in place either way - remove them with `sudo userdel -r mcp`.
 
 ### Optional system tools
 
@@ -156,7 +184,7 @@ sudo docker exec -e MCP_TOKEN=<token from step 2> mcpd linuxctl get system os-re
 or from any machine with `linuxctl` installed: `export MCP_SERVER=http://<host>:9091 MCP_TOKEN=<token>`, then `linuxctl get system os-release`.
 
 - **MCP users must be OS accounts that exist inside the image** - `testuser`, `unpriviliged` (spelled that way) and `privileged` are built in; the name decides which UID each call runs as. For other names, build your own image `FROM` this one with `RUN useradd -m NAME`.
-- **Unprivileged calls see the container, not the host.** A call reaches the real host only when it is made with `privileged: true` (`--privileged true` in `linuxctl`) *and* the user is granted that tool in `mcp-sudo.yaml` - the image's config sets `worker.containerized: true`, so such calls join the host's mount namespace. `--network host --pid host --privileged` plus the read-only host root mount make that possible; without them, mcpd only administers its own container. The user created in step 2 starts with **no grants** (its name, `privileged`, is just the OS account). To grant it, e.g., `system/os-release`, replace the contents of `/etc/mcpd/configs/mcp-sudo.yaml` with (e.g. `sudo nano /etc/mcpd/configs/mcp-sudo.yaml`):
+- **Unprivileged calls see the container, not the host.** A call reaches the real host only when it is made with `privileged: true` (`--privileged true` in `linuxctl`) *and* the user is granted that tool in `mcp-sudo.yaml` - the image's config sets `worker.containerized: true`, so such calls join the host's mount namespace. `--network host --pid host --privileged` plus the read-only host root mount make that possible; without them, mcpd only administers its own container. The user created in step 2 is granted only `daemon/reload-config` - nothing as root (its name, `privileged`, is just the OS account). To grant it, e.g., `system/os-release`, replace the contents of `/etc/mcpd/configs/mcp-sudo.yaml` with (e.g. `sudo nano /etc/mcpd/configs/mcp-sudo.yaml`):
 
   ```yaml
   users:
@@ -171,7 +199,7 @@ or from any machine with `linuxctl` installed: `export MCP_SERVER=http://<host>:
   ```
 
   then apply it with `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl reload daemon` and call `linuxctl get system os-release --privileged true` - it now reports the host's OS. If the file has a mistake, the reload says so and mcpd keeps the config it has. All options: [mcp-sudo.yaml](./configuration/mcp-sudo).
-- The image ships **no users and no tokens** - step 2 is required. After adding or changing users (`docker run --rm ... linuxctl create mcpd user ...` as in step 2) or grants, apply them with `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl reload daemon` - or `sudo docker restart mcpd`.
+- The image ships **no users and no tokens** - step 2 is required. With mcpd running, add more users inside the container, which also applies the change: `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl create mcpd user testuser --config-path /root/configs`. After changing files any other way (a `docker run --rm ... linuxctl ...` as in step 2, or an editor), apply them with `sudo docker exec -e MCP_TOKEN=<token> mcpd linuxctl reload daemon` - or `sudo docker restart mcpd`.
 
 ## macOS: the CLI
 

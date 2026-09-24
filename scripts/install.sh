@@ -45,9 +45,25 @@ UNINSTALL=0
 PURGE=0
 BIN_DIR_SET=0
 
-say()  { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
-warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
-die()  { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+# Colours only on a terminal - not in a log file or a CI transcript.
+if [ -t 1 ]; then C_OK='\033[1;32m' C_WARN='\033[1;33m' C_ERR='\033[1;31m' C_OFF='\033[0m'
+else C_OK='' C_WARN='' C_ERR='' C_OFF=''; fi
+say()  { printf "${C_OK}==>${C_OFF} %s\n" "$*"; }
+warn() { printf "${C_WARN}warning:${C_OFF} %s\n" "$*" >&2; }
+die()  { printf "${C_ERR}error:${C_OFF} %s\n" "$*" >&2; exit 1; }
+
+# mcpd_pids prints the PIDs of running mcpd daemons (not systemd-managed
+# ones' workers - those exit on their own). Without pgrep, scans /proc.
+mcpd_pids() {
+    if command -v pgrep >/dev/null 2>&1; then
+        pgrep -x mcpd || true
+    else
+        for d in /proc/[0-9]*; do
+            [ "$(cat "$d/comm" 2>/dev/null)" = mcpd ] && echo "${d#/proc/}"
+        done
+        true
+    fi
+}
 
 # fetch URL OUT - curl, or wget where curl isn't installed.
 fetch() {
@@ -183,6 +199,10 @@ if [ "$UNINSTALL" -eq 1 ]; then
     fi
     rm -f "$UNIT" "$BIN_DIR/mcpd" "$BIN_DIR/linuxctl" "$MAN_DIR/man8/mcpd.8" "$MAN_DIR/man1/linuxctl.1"
     [ "$HAVE_SYSTEMD" -eq 1 ] && systemctl daemon-reload
+    # Without systemd mcpd was started by hand - removing the binary
+    # doesn't stop it.
+    pids="$(mcpd_pids | xargs)"
+    [ -z "$pids" ] || warn "mcpd is still running (pid $pids) - stop it with: kill $pids"
     if [ "$PURGE" -eq 1 ]; then
         rm -rf "$CONF_ROOT"
         say "mcpd uninstalled, $CONF_ROOT deleted"
@@ -256,12 +276,14 @@ fi
 
 install -d -m 0750 "$CONF_DIR"
 FRESH=0
-UPGRADE=0
-[ -e "$CONF_DIR/daemon.yaml" ] && UPGRADE=1
+# KEPT: configs from an earlier install (an upgrade, or a reinstall after
+# a plain --uninstall) - their users and tokens stay valid.
+KEPT=0
+[ -e "$CONF_DIR/daemon.yaml" ] && KEPT=1
 for f in daemon.yaml users.yaml mcp-sudo.yaml; do
     if [ -e "$CONF_DIR/$f" ]; then
         say "Keeping existing $CONF_DIR/$f"
-    elif [ "$f" = users.yaml ] && { [ "$UPGRADE" -eq 1 ] || [ ! -e "$TMP/x/packaging/configs/$f" ]; }; then
+    elif [ "$f" = users.yaml ] && { [ "$KEPT" -eq 1 ] || [ ! -e "$TMP/x/packaging/configs/$f" ]; }; then
         # Configs from before users.yaml keep their users in daemon.yaml;
         # an empty users.yaml next to them would make mcpd refuse to start
         # (users in two places). linuxctl moves them on its next user change.
@@ -309,6 +331,10 @@ if [ "$HAVE_SYSTEMD" -eq 1 ]; then
     fi
 else
     warn "systemd not detected - the service was not installed. Start it manually: cd $CONF_ROOT && $BIN_DIR/mcpd"
+    pids="$(mcpd_pids | xargs)"
+    if [ -n "$pids" ] && [ "$CHANGED" -eq 1 ]; then
+        warn "an mcpd started by hand is still running the old binary (pid $pids) - restart it: kill $pids, then start it again"
+    fi
 fi
 
 # ------------------------------------------------------------------ report
@@ -330,8 +356,26 @@ elif [ "$HAVE_SYSTEMD" -eq 1 ]; then
 else
     say "Installed, not started (no systemd). Start it with: cd $CONF_ROOT && $BIN_DIR/mcpd (it will listen on port $PORT on all interfaces)"
 fi
-if [ "$UPGRADE" -eq 0 ] && [ "$FRESH" -eq 0 ]; then
+if [ "$UPGRADE" -eq 0 ] && [ "$KEPT" -eq 1 ]; then
     echo "  Existing configs in $CONF_DIR were kept - their users and tokens still work."
+fi
+# Configs from before daemon/reload-config (v0.1.0) grant it to nobody, so
+# `linuxctl create mcpd user` can't apply a new user without a restart.
+if [ "$KEPT" -eq 1 ] && ! grep -q 'daemon/reload-config' "$CONF_DIR/mcp-sudo.yaml" 2>/dev/null; then
+    RESTART="sudo systemctl restart mcpd"
+    [ "$HAVE_SYSTEMD" -eq 1 ] || RESTART="stop mcpd and start it again"
+    cat <<EOF
+
+  No MCP user may apply config changes (daemon/reload-config) yet, so users
+  you add would need an mcpd restart. Grant it once to your first user:
+    sudo -E /usr/local/bin/linuxctl edit mcpd config sudo --config-path $CONF_DIR
+  and under that user (e.g. mcp) replace "tools: {}" with
+      tools:
+        daemon/reload-config:
+          allowed: true
+  then restart mcpd this one time: $RESTART
+  (details: https://nucleusv.github.io/linux-mcp-daemon/installation/#upgrading)
+EOF
 fi
 if [ "$FRESH" -eq 1 ] && [ -z "$MCP_USER" ]; then
     cat <<EOF

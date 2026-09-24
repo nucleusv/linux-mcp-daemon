@@ -37,3 +37,5 @@ Each of these edits the files locally (`--config-path`, default `./configs`) and
 ## Upgrading from `users:` in `daemon.yaml`
 
 Older configs list users in `daemon.yaml`. mcpd still reads them from there (and logs a warning) as long as there is no `users.yaml`. The next `linuxctl create|update|delete mcpd user` - or `linuxctl edit mcpd config users` - moves the list to a new `users.yaml` (mode `0600`) and removes it from `daemon.yaml`. Users in both files is an error.
+
+Configs that old also grant [`daemon/reload-config`](../mcp-api/tools/daemon/reload-config) to nobody, so these commands can't apply their change until mcpd restarts. Grant it once to your admin user and restart mcpd - see [Upgrading from v0.1.0](../installation#upgrading).

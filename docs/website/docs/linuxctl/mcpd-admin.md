@@ -45,7 +45,7 @@ Changes:
   user alice: added
 ```
 
-`sudo -E` keeps your `MCP_SERVER`/`MCP_TOKEN` for the reload (the token's user needs `daemon/reload-config` granted - the installer's first user has it). Without them the files are still written, and `linuxctl` says how to apply them:
+`sudo -E` keeps your `MCP_SERVER`/`MCP_TOKEN` for the reload (the token's user needs `daemon/reload-config` granted - the installer's first user has it; on an install [upgraded from v0.1.0](../installation#upgrading) grant it first). Without them the files are still written, and `linuxctl` says how to apply them:
 
 ```
 Not applied yet: no MCP_TOKEN to call mcpd with.
@@ -56,7 +56,7 @@ A rotated or deleted token stops working the moment the reload runs, and that us
 
 ## Editing a config file by hand: `linuxctl edit mcpd config`
 
-Like `visudo`: the file is copied, the copy opened in `$VISUAL` or `$EDITOR` (default `vi`), and on save checked with the same strict parser the daemon uses on reload. Only a valid file replaces the original (atomically, keeping its owner and mode), and then the daemon is reloaded:
+Like `visudo`: the file is copied, the copy opened in `$VISUAL` or `$EDITOR` (default `vi`; plain `sudo` drops your `EDITOR`, `sudo -E` keeps it), and on save checked with the same strict parser the daemon uses on reload. Only a valid file replaces the original (atomically, keeping its owner and mode), and then the daemon is reloaded:
 
 ```bash
 $ sudo -E /usr/local/bin/linuxctl edit mcpd config sudo --config-path /etc/mcpd/configs
@@ -65,15 +65,16 @@ Saved /etc/mcpd/configs/mcp-sudo.yaml.
 Asking mcpd at http://127.0.0.1:9091 to reload its config...
 Reloaded configs/daemon.yaml, configs/users.yaml and configs/mcp-sudo.yaml.
 Changes:
-  grants testuser: + disks/usage (root; paths [/var])
+  grants alice: + files/list (root; paths [/var/log])
 ```
 
 An invalid edit never reaches the real file - a misspelled key included:
 
 ```
 mcp-sudo.yaml is not valid: yaml: unmarshal errors:
-  line 15: field path not found in type config.ToolPrivilege
-(e)dit again or (d)iscard the edit? [e]
+  line 17: field path not found in type config.ToolPrivilege
+(e)dit again or (d)iscard the edit? [e] d
+Discarded the edit - /etc/mcpd/configs/mcp-sudo.yaml left unchanged.
 ```
 
 Consistent-but-suspicious edits are saved with a warning, e.g. `mcp-sudo.yaml has grants for "alice", which isn't an mcpd user`.

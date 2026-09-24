@@ -40,7 +40,7 @@ Communication happens directly between the AI agent and the daemon via HTTP Serv
 curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash
 ```
 
-Needs `sudo` and `curl` on an amd64/arm64 host. This downloads the latest release for your architecture (amd64/arm64), **verifies its sha256 checksum**, installs `mcpd` and `linuxctl` to `/usr/local/bin`, writes clean configs to `/etc/mcpd/configs` (no default users or tokens), creates a first user `mcp` and **prints its token once**, and starts the `mcpd` systemd service. Then:
+Needs `sudo` and `curl` on an amd64/arm64 host (in a bare `ubuntu`/`debian` container: `apt update && apt install -y curl ca-certificates`, then pipe to `bash` as root). This downloads the latest release for your architecture (amd64/arm64), **verifies its sha256 checksum**, installs `mcpd` and `linuxctl` to `/usr/local/bin`, writes clean configs to `/etc/mcpd/configs` (no default users or tokens), creates a first user `mcp` and **prints its token once**, and starts the `mcpd` systemd service. Then:
 
 ```bash
 export MCP_SERVER=http://127.0.0.1:9091
@@ -49,7 +49,7 @@ linuxctl get system os-release
 linuxctl get processes top
 ```
 
-- **Upgrade:** run the same command again - configs are kept, the service restarts only if `mcpd` changed.
+- **Upgrade:** run the same command again - configs are kept, the service restarts only if `mcpd` changed. From v0.1.0, grant your first user `daemon/reload-config` once - see [Upgrading](https://nucleusv.github.io/linux-mcp-daemon/installation/#upgrading).
 - **Pin a version / name the user:** `... | sudo bash -s -- --version v0.1.0 --user alice`
 - **More users:** each needs an OS account of the same name - see [Adding more users](https://nucleusv.github.io/linux-mcp-daemon/installation/#adding-more-users).
 - **Uninstall:** `... | sudo bash -s -- --uninstall` (add `--purge` to delete `/etc/mcpd`; the `mcp` OS account stays - `sudo userdel -r mcp`)
