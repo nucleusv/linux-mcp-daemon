@@ -87,9 +87,9 @@ func runCompletionScript(args []string) {
 	case "zsh":
 		fmt.Print(zshCompletionScript)
 	default:
-		fmt.Println("Usage: linuxctl completion <bash|zsh>")
-		fmt.Println("  bash:  source <(linuxctl completion bash)   # add to ~/.bashrc")
-		fmt.Println("  zsh:   source <(linuxctl completion zsh)    # add to ~/.zshrc")
+		fmt.Fprintln(os.Stderr, "Usage: linuxctl completion <bash|zsh>")
+		fmt.Fprintln(os.Stderr, "  bash:  source <(linuxctl completion bash)   # add to ~/.bashrc")
+		fmt.Fprintln(os.Stderr, "  zsh:   source <(linuxctl completion zsh)    # add to ~/.zshrc")
 		os.Exit(1)
 	}
 }

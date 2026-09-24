@@ -20,13 +20,13 @@ func reloadDaemon() {
 		authToken = os.Getenv("MCP_TOKEN")
 	}
 	if authToken == "" {
-		fmt.Printf("\nNot applied yet: no MCP_TOKEN to call mcpd with.\n%s\n", manual)
+		fmt.Fprintf(os.Stderr, "\nNot applied yet: no MCP_TOKEN to call mcpd with.\n%s\n", manual)
 		return
 	}
 
 	fmt.Printf("\nAsking mcpd at %s to reload its config...\n", *serverURL)
 	if err := connect(authToken, "mcpd"); err != nil {
-		fmt.Printf("Not applied yet: %v\n%s\n", err, manual)
+		fmt.Fprintf(os.Stderr, "Not applied yet: %v\n%s\n", err, manual)
 		return
 	}
 	resp, err := tryCallMethod(authToken, nextID(), "tools/call", map[string]interface{}{
@@ -34,11 +34,11 @@ func reloadDaemon() {
 		"arguments": map[string]interface{}{},
 	}, 30*time.Second)
 	if err != nil {
-		fmt.Printf("Not applied yet: %v\n%s\n", err, manual)
+		fmt.Fprintf(os.Stderr, "Not applied yet: %v\n%s\n", err, manual)
 		return
 	}
 	if resp.Error != nil {
-		fmt.Printf("Not applied yet: %s\n%s\n", resp.Error.Message, manual)
+		fmt.Fprintf(os.Stderr, "Not applied yet: %s\n%s\n", resp.Error.Message, manual)
 		return
 	}
 
@@ -54,15 +54,15 @@ func reloadDaemon() {
 		text.WriteString(c.Text)
 	}
 	if result.IsError {
-		fmt.Printf("Not applied: %s\n", strings.TrimSpace(text.String()))
+		fmt.Fprintf(os.Stderr, "Not applied: %s\n", strings.TrimSpace(text.String()))
 		if strings.Contains(text.String(), "not authorized") {
-			fmt.Println("Your token's user needs daemon/reload-config granted in mcp-sudo.yaml.")
+			fmt.Fprintln(os.Stderr, "Your token's user needs daemon/reload-config granted in mcp-sudo.yaml.")
 		}
-		fmt.Println(manual)
+		fmt.Fprintln(os.Stderr, manual)
 		return
 	}
 	fmt.Print(text.String())
 	if strings.Contains(text.String(), "No changes.") {
-		fmt.Printf("mcpd at %s saw no change - is it reading a different config than --config-path?\n", *serverURL)
+		fmt.Fprintf(os.Stderr, "mcpd at %s saw no change - is it reading a different config than --config-path?\n", *serverURL)
 	}
 }

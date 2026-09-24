@@ -28,7 +28,7 @@ var editConfigFiles = map[string]string{
 func mcpdEditConfig(cfgPath, which string) bool {
 	name, ok := editConfigFiles[which]
 	if !ok {
-		fmt.Printf("Error: unknown config %q (expected sudo, users or daemon)\n", which)
+		fmt.Fprintf(os.Stderr, "Error: unknown config %q (expected sudo, users or daemon)\n", which)
 		os.Exit(1)
 	}
 	path := filepath.Join(cfgPath, name)
@@ -37,12 +37,12 @@ func mcpdEditConfig(cfgPath, which string) bool {
 	}
 	orig, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	info, err := os.Stat(path)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -51,25 +51,25 @@ func mcpdEditConfig(cfgPath, which string) bool {
 	// holds token hashes.
 	tmp, err := os.CreateTemp(cfgPath, "."+name+".edit-*")
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	tmpPath := tmp.Name()
 	defer os.Remove(tmpPath)
 	if _, err := tmp.Write(orig); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	tmp.Close()
 
 	for {
 		if err := runEditor(tmpPath); err != nil {
-			fmt.Printf("Error: %v - %s left unchanged\n", err, path)
+			fmt.Fprintf(os.Stderr, "Error: %v - %s left unchanged\n", err, path)
 			os.Exit(1)
 		}
 		edited, err := os.ReadFile(tmpPath)
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 		if bytes.Equal(edited, orig) {
@@ -82,15 +82,15 @@ func mcpdEditConfig(cfgPath, which string) bool {
 			if askEditAgain() {
 				continue
 			}
-			fmt.Printf("Discarded the edit - %s left unchanged.\n", path)
+			fmt.Fprintf(os.Stderr, "Discarded the edit - %s left unchanged.\n", path)
 			os.Exit(1) // the edit asked for didn't happen
 		}
 		for _, w := range warnings {
-			fmt.Printf("Warning: %s\n", w)
+			fmt.Fprintf(os.Stderr, "Warning: %s\n", w)
 		}
 
 		if err := os.Chmod(tmpPath, info.Mode().Perm()); err != nil {
-			fmt.Printf("Error: %v - %s left unchanged\n", err, path)
+			fmt.Fprintf(os.Stderr, "Error: %v - %s left unchanged\n", err, path)
 			os.Exit(1)
 		}
 		if st, ok := info.Sys().(*syscall.Stat_t); ok {
@@ -98,7 +98,7 @@ func mcpdEditConfig(cfgPath, which string) bool {
 			_ = os.Chown(tmpPath, int(st.Uid), int(st.Gid))
 		}
 		if err := os.Rename(tmpPath, path); err != nil {
-			fmt.Printf("Error: %v - %s left unchanged\n", err, path)
+			fmt.Fprintf(os.Stderr, "Error: %v - %s left unchanged\n", err, path)
 			os.Exit(1)
 		}
 		fmt.Printf("Saved %s.\n", path)

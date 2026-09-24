@@ -26,6 +26,7 @@ var (
 	serverURL   = flag.String("server", defaultServerURL(), "The URL of the mcpd server (default from MCP_SERVER env var)")
 	token       = flag.String("token", "", "Bearer token for authentication")
 	showVersion = flag.Bool("version", false, "Print the linuxctl version and exit")
+	silent      = flag.Bool("silent", false, "Print no errors or warnings (stderr), like curl -s - the exit status still tells a failure (for scripts)")
 	configPath  = flag.String("config-path", defaultConfigPath(), "Local path to the daemon's configs/ directory (used only by the local-only 'mcpd' admin group; default from MCPD_CONFIG_DIR, else ./configs)")
 )
 
@@ -77,8 +78,19 @@ func defaultServerURL() string {
 	return "https://localhost:9091" // mcpd's default: TLS on 9091
 }
 
+func init() {
+	flag.BoolVar(silent, "s", false, "Short for -silent")
+}
+
 func main() {
 	flag.Parse()
+	if *silent {
+		// Everything linuxctl reports besides the output itself goes to
+		// stderr; the exit status still tells a failure.
+		if devNull, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0); err == nil {
+			os.Stderr = devNull
+		}
+	}
 	rawArgs := flag.Args()
 
 	if *showVersion || (len(rawArgs) == 1 && rawArgs[0] == "version") {
@@ -110,8 +122,8 @@ func main() {
 	if authToken == "" {
 		authToken = os.Getenv("MCP_TOKEN")
 		if authToken == "" {
-			fmt.Println("Error: Authentication token is required.")
-			fmt.Println("Provide it via -token flag or MCP_TOKEN environment variable.")
+			fmt.Fprintln(os.Stderr, "Error: Authentication token is required.")
+			fmt.Fprintln(os.Stderr, "Provide it via -token flag or MCP_TOKEN environment variable.")
 			os.Exit(1)
 		}
 	}
@@ -123,7 +135,7 @@ func main() {
 
 	// 2. Connect to SSE
 	if err := connect(authToken, firstWord); err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
@@ -178,7 +190,7 @@ func main() {
 	// answers.
 	if firstWord == "get" && len(rawArgs) > 1 && rawArgs[1] == "mcp-api" {
 		if len(rawArgs) < 3 {
-			fmt.Println("Usage: linuxctl get mcp-api <tools|resources|prompts|info>")
+			fmt.Fprintln(os.Stderr, "Usage: linuxctl get mcp-api <tools|resources|prompts|info>")
 			os.Exit(1)
 		}
 		switch rawArgs[2] {
@@ -191,7 +203,7 @@ func main() {
 		case "info":
 			printMCPInfo(authToken)
 		default:
-			fmt.Printf("Error: unknown mcp-api catalog %q (expected tools, resources, prompts, or info)\n", rawArgs[2])
+			fmt.Fprintf(os.Stderr, "Error: unknown mcp-api catalog %q (expected tools, resources, prompts, or info)\n", rawArgs[2])
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -199,12 +211,12 @@ func main() {
 
 	if firstWord == "resource" {
 		if len(rawArgs) < 2 {
-			fmt.Println("Error: resource URI required. Example: linuxctl resource os://uname")
+			fmt.Fprintln(os.Stderr, "Error: resource URI required. Example: linuxctl resource os://uname")
 			os.Exit(1)
 		}
 		_, positional, outputFormat := splitFlagsAndPositional(rawArgs[1:])
 		if len(positional) == 0 {
-			fmt.Println("Error: resource URI required. Example: linuxctl resource os://uname")
+			fmt.Fprintln(os.Stderr, "Error: resource URI required. Example: linuxctl resource os://uname")
 			os.Exit(1)
 		}
 		respRPC := callMethod(authToken, nextID(), "resources/read", map[string]interface{}{"uri": positional[0]})
@@ -241,7 +253,7 @@ func main() {
 
 	action, err := Resolve(reg, verb, group, positional)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -256,7 +268,7 @@ func main() {
 			toolArgs[k] = v
 		}
 		if len(remaining) > 0 {
-			fmt.Printf("Warning: %d extra argument(s) ignored: %s\n", len(remaining), strings.Join(remaining, " "))
+			fmt.Fprintf(os.Stderr, "Warning: %d extra argument(s) ignored: %s\n", len(remaining), strings.Join(remaining, " "))
 		}
 		respRPC := callMethod(authToken, nextID(), "tools/call", map[string]interface{}{
 			"name":      action.Tool.Name,
@@ -324,7 +336,7 @@ func printMCPInfo(authToken string) {
 		"clientInfo":      map[string]interface{}{"name": "linuxctl", "version": version.Version},
 	})
 	if respRPC.Error != nil {
-		fmt.Printf("Error: %s (Code: %d)\n", respRPC.Error.Message, respRPC.Error.Code)
+		fmt.Fprintf(os.Stderr, "Error: %s (Code: %d)\n", respRPC.Error.Message, respRPC.Error.Code)
 		os.Exit(1)
 	}
 	var result map[string]interface{}
@@ -340,7 +352,7 @@ func printResourcesList(authToken string) {
 
 	resList, ok := resResult["resources"].([]interface{})
 	if !ok {
-		fmt.Println("Failed to fetch resources from daemon.")
+		fmt.Fprintln(os.Stderr, "Failed to fetch resources from daemon.")
 		return
 	}
 	fmt.Println("Available static resources:")
@@ -462,7 +474,7 @@ func runExplain(reg Registry, args []string) {
 // bypasses the verb/group resolver entirely.
 func runToolByName(authToken string, args []string) {
 	if len(args) == 0 {
-		fmt.Println("Usage: linuxctl tool <group>/<command> [--flag val ...]")
+		fmt.Fprintln(os.Stderr, "Usage: linuxctl tool <group>/<command> [--flag val ...]")
 		os.Exit(1)
 	}
 	toolName := args[0]
@@ -479,7 +491,7 @@ func runToolByName(authToken string, args []string) {
 		}
 	}
 	if !found {
-		fmt.Printf("Error: tool %q not found.\n", toolName)
+		fmt.Fprintf(os.Stderr, "Error: tool %q not found.\n", toolName)
 		os.Exit(1)
 	}
 	mapPositionalArgs(tool.InputSchema, flagArgs, positional)
@@ -565,7 +577,7 @@ func formatCell(v interface{}) string {
 // identically-shaped results.
 func renderResponse(respRPC JSONRPCResponse, outputFormat, contentKey string) {
 	if respRPC.Error != nil {
-		fmt.Printf("Error: %s (Code: %d)\n", respRPC.Error.Message, respRPC.Error.Code)
+		fmt.Fprintf(os.Stderr, "Error: %s (Code: %d)\n", respRPC.Error.Message, respRPC.Error.Code)
 		os.Exit(1)
 	}
 
@@ -575,7 +587,7 @@ func renderResponse(respRPC JSONRPCResponse, outputFormat, contentKey string) {
 	contentList, ok := result[contentKey].([]interface{})
 	if !ok {
 		if result["isError"] == true {
-			fmt.Println("Tool executed with an error, but no specific text was provided.")
+			fmt.Fprintln(os.Stderr, "Tool executed with an error, but no specific text was provided.")
 			os.Exit(1)
 		}
 		b, _ := json.MarshalIndent(respRPC.Result, "", "  ")
@@ -594,8 +606,10 @@ func renderResponse(respRPC JSONRPCResponse, outputFormat, contentKey string) {
 		}
 		if result["isError"] == true {
 			// An error message isn't data: print it as is, never try to
-			// render it as a table/json/yaml.
-			outputFormat = ""
+			// render it as a table/json/yaml, and to stderr, apart from
+			// the output a script reads.
+			fmt.Fprintln(os.Stderr, text)
+			continue
 		}
 		printFormatted(text, outputFormat)
 	}
@@ -783,7 +797,7 @@ func connect(authToken, firstWord string) error {
 			line, err := reader.ReadString('\n')
 			if err != nil {
 				if err != io.EOF {
-					fmt.Printf("\nSSE stream error: %v\n", err)
+					fmt.Fprintf(os.Stderr, "\nSSE stream error: %v\n", err)
 				}
 				return
 			}
@@ -833,7 +847,7 @@ func connect(authToken, firstWord string) error {
 func callMethod(authToken string, id string, method string, params interface{}) JSONRPCResponse {
 	resp, err := tryCallMethod(authToken, id, method, params, 0)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	return resp

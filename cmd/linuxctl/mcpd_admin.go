@@ -34,7 +34,7 @@ const (
 func generateHexSecret(n int) string {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {
-		fmt.Printf("Error: failed to generate random secret: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to generate random secret: %v\n", err)
 		os.Exit(1)
 	}
 	return hex.EncodeToString(b)
@@ -101,7 +101,7 @@ func usersFileFor(cfgPath string) string {
 	daemonPath := filepath.Join(cfgPath, "daemon.yaml")
 	daemonDoc, err := loadYAMLDoc(daemonPath)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	legacy := daemonUsersSeq(daemonDoc.Content[0], false)
@@ -122,17 +122,17 @@ func usersFileFor(cfgPath string) string {
 	// users.yaml holds token hashes: create it readable by its owner only,
 	// before anything is written to it.
 	if err := os.WriteFile(usersPath, nil, 0600); err != nil {
-		fmt.Printf("Error creating %s: %v\n", usersPath, err)
+		fmt.Fprintf(os.Stderr, "Error creating %s: %v\n", usersPath, err)
 		os.Exit(1)
 	}
 	if err := yamledit.SaveDoc(usersPath, usersDoc); err != nil {
-		fmt.Printf("Error writing %s: %v\n", usersPath, err)
+		fmt.Fprintf(os.Stderr, "Error writing %s: %v\n", usersPath, err)
 		os.Exit(1)
 	}
 	if legacy != nil {
 		yamledit.MapDelete(daemonDoc.Content[0], "users")
 		if err := yamledit.SaveDoc(daemonPath, daemonDoc); err != nil {
-			fmt.Printf("Error writing %s: %v\n", daemonPath, err)
+			fmt.Fprintf(os.Stderr, "Error writing %s: %v\n", daemonPath, err)
 			os.Exit(1)
 		}
 		fmt.Printf("Moved the users list from %s to %s.\n", daemonPath, usersPath)
@@ -161,7 +161,7 @@ func handleMcpdAdmin(args []string) {
 	isConfig := verb == "edit" && target == "config"
 	isTLS := verb == "describe" && target == "tls"
 	if !strings.HasPrefix(target, "user") && !isConfig && !isTLS {
-		fmt.Printf("Error: unknown mcpd target %q (expected \"user\", \"users\" or, for edit, \"config\")\n", target)
+		fmt.Fprintf(os.Stderr, "Error: unknown mcpd target %q (expected \"user\", \"users\" or, for edit, \"config\")\n", target)
 		os.Exit(1)
 	}
 
@@ -173,7 +173,7 @@ func handleMcpdAdmin(args []string) {
 		switch rest[i] {
 		case "--set-token", "--config-path", "--grant":
 			if i+1 >= len(rest) {
-				fmt.Printf("Error: %s needs a value\n", rest[i])
+				fmt.Fprintf(os.Stderr, "Error: %s needs a value\n", rest[i])
 				os.Exit(1)
 			}
 			value := rest[i+1]
@@ -195,13 +195,13 @@ func handleMcpdAdmin(args []string) {
 		default:
 			switch {
 			case strings.HasPrefix(rest[i], "-"):
-				fmt.Printf("Error: unknown option %q\n\n", rest[i])
+				fmt.Fprintf(os.Stderr, "Error: unknown option %q\n\n", rest[i])
 				printMcpdAdminUsage()
 				os.Exit(1)
 			case username == "":
 				username = rest[i]
 			default:
-				fmt.Printf("Error: unexpected argument %q\n\n", rest[i])
+				fmt.Fprintf(os.Stderr, "Error: unexpected argument %q\n\n", rest[i])
 				printMcpdAdminUsage()
 				os.Exit(1)
 			}
@@ -213,7 +213,7 @@ func handleMcpdAdmin(args []string) {
 	switch verb {
 	case "edit":
 		if !isConfig {
-			fmt.Println("Error: expected `linuxctl edit mcpd config sudo|users|daemon`")
+			fmt.Fprintln(os.Stderr, "Error: expected `linuxctl edit mcpd config sudo|users|daemon`")
 			os.Exit(1)
 		}
 		which := username // the positional argument
@@ -240,7 +240,7 @@ func handleMcpdAdmin(args []string) {
 		mcpdDescribeUser(sudoPath, username)
 		return
 	default:
-		fmt.Printf("Error: unknown mcpd verb %q (expected create, delete, update, list, describe or edit)\n", verb)
+		fmt.Fprintf(os.Stderr, "Error: unknown mcpd verb %q (expected create, delete, update, list, describe or edit)\n", verb)
 		os.Exit(1)
 	}
 	if reload {
@@ -269,19 +269,19 @@ to re-read its config with daemon/reload-config; --no-reload skips that.`)
 
 func mcpdCreateUser(usersPath, sudoPath, username, setToken string, grants []string) {
 	if username == "" {
-		fmt.Println("Error: username required")
+		fmt.Fprintln(os.Stderr, "Error: username required")
 		os.Exit(1)
 	}
 
 	doc, err := loadYAMLDoc(usersPath)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	root := doc.Content[0]
 	seq := daemonUsersSeq(root, true)
 	if daemonFindUser(seq, username) != nil {
-		fmt.Printf("Error: user %q already exists in %s\n", username, usersPath)
+		fmt.Fprintf(os.Stderr, "Error: user %q already exists in %s\n", username, usersPath)
 		os.Exit(1)
 	}
 
@@ -314,13 +314,13 @@ func mcpdCreateUser(usersPath, sudoPath, username, setToken string, grants []str
 	seq.Content = append(seq.Content, entry)
 
 	if err := yamledit.SaveDoc(usersPath, doc); err != nil {
-		fmt.Printf("Error writing %s: %v\n", usersPath, err)
+		fmt.Fprintf(os.Stderr, "Error writing %s: %v\n", usersPath, err)
 		os.Exit(1)
 	}
 
 	sudoDoc, err := loadYAMLDoc(sudoPath)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	sudoRoot := sudoDoc.Content[0]
@@ -352,7 +352,7 @@ func mcpdCreateUser(usersPath, sudoPath, username, setToken string, grants []str
 	yamledit.MapSet(usersMap, username, freshBlock)
 
 	if err := yamledit.SaveDoc(sudoPath, sudoDoc); err != nil {
-		fmt.Printf("Error writing %s: %v\n", sudoPath, err)
+		fmt.Fprintf(os.Stderr, "Error writing %s: %v\n", sudoPath, err)
 		os.Exit(1)
 	}
 
@@ -370,13 +370,13 @@ func mcpdCreateUser(usersPath, sudoPath, username, setToken string, grants []str
 
 func mcpdDeleteUser(usersPath, sudoPath, username string) {
 	if username == "" {
-		fmt.Println("Error: username required")
+		fmt.Fprintln(os.Stderr, "Error: username required")
 		os.Exit(1)
 	}
 
 	doc, err := loadYAMLDoc(usersPath)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	root := doc.Content[0]
@@ -392,17 +392,17 @@ func mcpdDeleteUser(usersPath, sudoPath, username string) {
 		}
 	}
 	if !removed {
-		fmt.Printf("Error: user %q not found in %s\n", username, usersPath)
+		fmt.Fprintf(os.Stderr, "Error: user %q not found in %s\n", username, usersPath)
 		os.Exit(1)
 	}
 	if err := yamledit.SaveDoc(usersPath, doc); err != nil {
-		fmt.Printf("Error writing %s: %v\n", usersPath, err)
+		fmt.Fprintf(os.Stderr, "Error writing %s: %v\n", usersPath, err)
 		os.Exit(1)
 	}
 
 	sudoDoc, err := loadYAMLDoc(sudoPath)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	sudoRoot := sudoDoc.Content[0]
@@ -410,7 +410,7 @@ func mcpdDeleteUser(usersPath, sudoPath, username string) {
 		yamledit.MapDelete(usersMap, username)
 	}
 	if err := yamledit.SaveDoc(sudoPath, sudoDoc); err != nil {
-		fmt.Printf("Error writing %s: %v\n", sudoPath, err)
+		fmt.Fprintf(os.Stderr, "Error writing %s: %v\n", sudoPath, err)
 		os.Exit(1)
 	}
 
@@ -420,20 +420,20 @@ func mcpdDeleteUser(usersPath, sudoPath, username string) {
 
 func mcpdUpdateUser(usersPath, username, setToken string) {
 	if username == "" {
-		fmt.Println("Error: username required")
+		fmt.Fprintln(os.Stderr, "Error: username required")
 		os.Exit(1)
 	}
 
 	doc, err := loadYAMLDoc(usersPath)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	root := doc.Content[0]
 	seq := daemonUsersSeq(root, false)
 	entry := daemonFindUser(seq, username)
 	if entry == nil {
-		fmt.Printf("Error: user %q not found in %s (use create instead)\n", username, usersPath)
+		fmt.Fprintf(os.Stderr, "Error: user %q not found in %s (use create instead)\n", username, usersPath)
 		os.Exit(1)
 	}
 
@@ -476,7 +476,7 @@ func mcpdUpdateUser(usersPath, username, setToken string) {
 	yamledit.MapDelete(entry, "os_uid")
 
 	if err := yamledit.SaveDoc(usersPath, doc); err != nil {
-		fmt.Printf("Error writing %s: %v\n", usersPath, err)
+		fmt.Fprintf(os.Stderr, "Error writing %s: %v\n", usersPath, err)
 		os.Exit(1)
 	}
 
@@ -493,7 +493,7 @@ func mcpdUpdateUser(usersPath, username, setToken string) {
 func mcpdListUsers(usersPath string) {
 	doc, err := loadYAMLDoc(usersPath)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	root := doc.Content[0]
@@ -534,12 +534,12 @@ func mcpdListUsers(usersPath string) {
 
 func mcpdDescribeUser(sudoPath, username string) {
 	if username == "" {
-		fmt.Println("Error: username required")
+		fmt.Fprintln(os.Stderr, "Error: username required")
 		os.Exit(1)
 	}
 	doc, err := loadYAMLDoc(sudoPath)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	root := doc.Content[0]
@@ -551,7 +551,7 @@ func mcpdDescribeUser(sudoPath, username string) {
 	}
 	out, err := yaml.Marshal(entry)
 	if err != nil {
-		fmt.Printf("Error encoding grants: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error encoding grants: %v\n", err)
 		os.Exit(1)
 	}
 	fmt.Printf("Grants for %q (from %s):\n%s", username, sudoPath, string(out))
@@ -562,19 +562,19 @@ func mcpdDescribeUser(sudoPath, username string) {
 func mcpdDescribeTLS(cfgPath string) {
 	cfg, err := config.LoadDaemonConfig(filepath.Join(cfgPath, config.DaemonFile), false)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	if !cfg.Server.TLS.Enabled {
-		fmt.Println("TLS is not enabled in daemon.yaml (server.tls.enabled).")
+		fmt.Fprintln(os.Stderr, "TLS is not enabled in daemon.yaml (server.tls.enabled).")
 		os.Exit(1)
 	}
 	certFile, _ := cfg.TLSFiles(cfgPath)
 	fp, cert, err := tlsutil.FileFingerprint(certFile)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		if cfg.Server.TLS.Generate {
-			fmt.Println("(mcpd creates it on its first start with TLS enabled)")
+			fmt.Fprintln(os.Stderr, "(mcpd creates it on its first start with TLS enabled)")
 		}
 		os.Exit(1)
 	}

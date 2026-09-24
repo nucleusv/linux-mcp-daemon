@@ -40,6 +40,17 @@ linuxctl completion <bash|zsh>
 - `-config-path DIR`
   Local path to the daemon's `configs/` directory. Only used by the local-only `mcpd` admin group - defaults to `./configs`.
 
+- `-silent`, `-s`
+  Print no errors or warnings, like `curl -s` - for scripts. Output goes to stdout and errors to stderr either way; `-s` only discards stderr. The exit status still tells a failure: 0 on success, 1 on any error, a tool's own failure included:
+  ```bash
+  if ! linuxctl -s get files read --path /etc/app.conf > app.conf; then
+      echo "could not read the config" >&2
+  fi
+  ```
+
+- `-tls-insecure`, `-k`
+  Skip TLS certificate verification, like `curl -k` (or `MCP_TLS_INSECURE=1`). Testing only - see below.
+
 ## Environment Variables
 
 - `MCP_TOKEN`
