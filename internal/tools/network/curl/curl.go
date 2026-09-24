@@ -1,7 +1,7 @@
 package curl
 
 import (
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/netpolicy"
+	"github.com/nucleusv/linux-mcp-daemon/internal/netpolicy"
 
 	"bytes"
 	"crypto/tls"

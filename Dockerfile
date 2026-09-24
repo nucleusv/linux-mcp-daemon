@@ -26,12 +26,12 @@ COPY . .
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
-    -ldflags "-s -w -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Version=${VERSION} -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Commit=${COMMIT} -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Date=${BUILD_DATE}" \
+    -ldflags "-s -w -X github.com/nucleusv/linux-mcp-daemon/internal/version.Version=${VERSION} -X github.com/nucleusv/linux-mcp-daemon/internal/version.Commit=${COMMIT} -X github.com/nucleusv/linux-mcp-daemon/internal/version.Date=${BUILD_DATE}" \
     -o mcpd ./cmd/mcpd
 # linuxctl too: it's how users and tokens are created, even for a container
 # (docker run ... linuxctl create mcpd user ...).
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
-    -ldflags "-s -w -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Version=${VERSION} -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Commit=${COMMIT} -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Date=${BUILD_DATE}" \
+    -ldflags "-s -w -X github.com/nucleusv/linux-mcp-daemon/internal/version.Version=${VERSION} -X github.com/nucleusv/linux-mcp-daemon/internal/version.Commit=${COMMIT} -X github.com/nucleusv/linux-mcp-daemon/internal/version.Date=${BUILD_DATE}" \
     -o linuxctl ./cmd/linuxctl
 
 # Docs Build Stage - static output, so it too runs on the build platform.

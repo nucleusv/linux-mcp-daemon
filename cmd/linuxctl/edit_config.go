@@ -11,7 +11,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
 )
 
 // editConfigFiles maps `linuxctl edit mcpd config <which>` to a file name.

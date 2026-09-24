@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version"
+	"github.com/nucleusv/linux-mcp-daemon/internal/version"
 
 	"encoding/json"
 	"log"

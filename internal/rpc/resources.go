@@ -7,15 +7,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/os/release"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/system/hostname"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/system/locale"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/system/timezone"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/disks"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/file"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/process"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/resources/templates/service"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
+	"github.com/nucleusv/linux-mcp-daemon/internal/resources/os/release"
+	"github.com/nucleusv/linux-mcp-daemon/internal/resources/system/hostname"
+	"github.com/nucleusv/linux-mcp-daemon/internal/resources/system/locale"
+	"github.com/nucleusv/linux-mcp-daemon/internal/resources/system/timezone"
+	"github.com/nucleusv/linux-mcp-daemon/internal/resources/templates/disks"
+	"github.com/nucleusv/linux-mcp-daemon/internal/resources/templates/file"
+	"github.com/nucleusv/linux-mcp-daemon/internal/resources/templates/process"
+	"github.com/nucleusv/linux-mcp-daemon/internal/resources/templates/service"
+	"github.com/nucleusv/linux-mcp-daemon/internal/worker"
 )
 
 func charsToString(ca []int8) string {

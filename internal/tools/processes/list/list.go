@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/procstat"
+	"github.com/nucleusv/linux-mcp-daemon/internal/procstat"
 
 	"fmt"
 	"io/ioutil"

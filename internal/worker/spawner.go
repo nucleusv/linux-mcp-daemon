@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
 )
 
 // Containerized indicates this daemon process itself runs inside a

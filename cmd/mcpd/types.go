@@ -9,10 +9,10 @@ import (
 
 	"golang.org/x/sync/singleflight"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/auth"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/cache"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/rpc"
+	"github.com/nucleusv/linux-mcp-daemon/internal/auth"
+	"github.com/nucleusv/linux-mcp-daemon/internal/cache"
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/rpc"
 )
 
 // Config is daemon.yaml (see internal/config).

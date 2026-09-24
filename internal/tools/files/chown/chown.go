@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/fsafe"
+	"github.com/nucleusv/linux-mcp-daemon/internal/fsafe"
 )
 
 // ChownArgs defines the parameters for the files/chown tool.

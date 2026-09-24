@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/procstat"
+	"github.com/nucleusv/linux-mcp-daemon/internal/procstat"
 )
 
 func TestTimePlus(t *testing.T) {

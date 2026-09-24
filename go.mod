@@ -1,4 +1,4 @@
-module github.com/nucleusv/linux-mcp-daemon-by-antigravity
+module github.com/nucleusv/linux-mcp-daemon
 
 go 1.26.0
 

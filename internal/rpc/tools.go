@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
-	sudorules "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/auth/sudo-rules"
-	systemcontrol "github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/tools/kernel/system-control"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	sudorules "github.com/nucleusv/linux-mcp-daemon/internal/tools/auth/sudo-rules"
+	systemcontrol "github.com/nucleusv/linux-mcp-daemon/internal/tools/kernel/system-control"
+	"github.com/nucleusv/linux-mcp-daemon/internal/worker"
 )
 
 func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {

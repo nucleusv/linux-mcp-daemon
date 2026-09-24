@@ -3,7 +3,7 @@ package ping
 import (
 	"context"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/netpolicy"
+	"github.com/nucleusv/linux-mcp-daemon/internal/netpolicy"
 
 	"encoding/json"
 	"fmt"

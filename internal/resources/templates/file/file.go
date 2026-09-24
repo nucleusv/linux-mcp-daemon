@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/worker"
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/worker"
 )
 
 func Handle(uri string, sessionUser string, sudoConfig *config.SudoConfig) (string, string, error) {

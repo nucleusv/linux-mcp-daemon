@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/yamledit"
+	"github.com/nucleusv/linux-mcp-daemon/internal/yamledit"
 	"gopkg.in/yaml.v3"
 )
 

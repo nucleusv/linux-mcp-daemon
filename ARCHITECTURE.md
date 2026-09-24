@@ -1,6 +1,6 @@
 # Architecture & Agent Context
 
-This document serves as persistent memory for AI agents interacting with the `linux-mcp-daemon-by-antigravity` repository.
+This document serves as persistent memory for AI agents interacting with the `linux-mcp-daemon` repository.
 
 ## Core Philosophy
 - **Kernel-First, Zero-Dependency**: We avoid wrapping messy external CLI binaries unless absolutely necessary. We prefer parsing native Linux structures (like `/proc` and `/sys`).

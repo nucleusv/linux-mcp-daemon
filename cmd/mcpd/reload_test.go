@@ -12,9 +12,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/auth"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/rpc"
+	"github.com/nucleusv/linux-mcp-daemon/internal/auth"
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/rpc"
 )
 
 func mustDaemon(t *testing.T, doc string) Config {

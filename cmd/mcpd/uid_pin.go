@@ -6,7 +6,7 @@ import (
 	"os/user"
 	"sync"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/yamledit"
+	"github.com/nucleusv/linux-mcp-daemon/internal/yamledit"
 )
 
 // uidPinMu serializes writes to users.yaml from checkAndPinUID. Multiple

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
 )
 
 // GetSudoRulesArgs has no arguments since we just return the caller's rules.

@@ -18,9 +18,9 @@ builds:
     flags: [-trimpath]
     ldflags: &ldflags
       - -s -w
-      - -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Version={{ .Version }}
-      - -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Commit={{ .ShortCommit }}
-      - -X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Date={{ .Date }}
+      - -X github.com/nucleusv/linux-mcp-daemon/internal/version.Version={{ .Version }}
+      - -X github.com/nucleusv/linux-mcp-daemon/internal/version.Commit={{ .ShortCommit }}
+      - -X github.com/nucleusv/linux-mcp-daemon/internal/version.Date={{ .Date }}
 
   # linuxctl is built twice so each archive holds the same binaries on every
   # platform it covers: Linux archives ship it next to mcpd, macOS archives

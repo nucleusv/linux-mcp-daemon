@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/netpolicy"
+	"github.com/nucleusv/linux-mcp-daemon/internal/netpolicy"
 )
 
 type SudoConfig struct {

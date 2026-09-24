@@ -1,6 +1,6 @@
 // Package version holds the build's version, set at link time:
 //
-//	go build -ldflags "-X github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/version.Version=0.1.0"
+//	go build -ldflags "-X github.com/nucleusv/linux-mcp-daemon/internal/version.Version=0.1.0"
 //
 // Release builds (GoReleaser, the release Docker image) set all three;
 // local builds report "dev".

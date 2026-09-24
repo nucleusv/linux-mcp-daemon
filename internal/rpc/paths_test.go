@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/cache"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/cache"
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
 	"golang.org/x/sync/singleflight"
 )
 

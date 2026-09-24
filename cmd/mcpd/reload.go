@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/auth"
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/auth"
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
 )
 
 // reloadMu serializes reloads, so two concurrent daemon/reload-config

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/fsafe"
+	"github.com/nucleusv/linux-mcp-daemon/internal/fsafe"
 )
 
 // Mode is a chmod mode that may arrive as a JSON string ("0755", "u+x") or

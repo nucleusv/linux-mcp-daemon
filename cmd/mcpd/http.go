@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nucleusv/linux-mcp-daemon-by-antigravity/internal/rpc"
+	"github.com/nucleusv/linux-mcp-daemon/internal/rpc"
 )
 
 // newSessionID returns an opaque, random identifier for an SSE session.
