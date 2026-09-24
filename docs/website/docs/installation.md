@@ -9,6 +9,8 @@ Every release is published on [GitHub Releases](https://github.com/nucleusv/linu
 
 ## Linux with systemd (recommended)
 
+You need a Linux host (amd64 or arm64), root access via `sudo`, and `curl` (minimal images such as the `ubuntu`/`debian` containers don't ship it: `apt install curl ca-certificates`).
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash
 ```
@@ -34,26 +36,77 @@ The script:
     linuxctl get system os-release
 ```
 
+Run those three commands (with your token) as any user on the host - `linuxctl` talks to mcpd over HTTP, so no `sudo` is needed. `linuxctl get processes top` is another quick check.
+
+**Without systemd** (e.g. inside a plain container) the script installs everything except the service, warns `systemd not detected`, and prints how to start mcpd by hand: `cd /etc/mcpd && sudo /usr/local/bin/mcpd`.
+
 ### Options
 
-Pass options after `bash -s --`, or as environment variables:
+Pass options after `bash -s --`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash -s -- --version v0.1.0 --user alice
+```
+
+or as environment variables - put them **after `sudo`**, since `sudo` drops variables exported in your shell (`export MCPD_USER=alice` beforehand is silently ignored):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo MCPD_VERSION=v0.1.0 MCPD_USER=alice bash
 ```
 
 | Option | Env | Meaning |
 |---|---|---|
 | `--version vX.Y.Z` | `MCPD_VERSION` | Install this release instead of the latest |
 | `--user NAME` | `MCPD_USER` | Name of the first MCP user (default `mcp`; `""` to create none) |
-| `--no-start` | | Install and enable the service, but don't start it |
-| `--archive FILE` | | Install from a downloaded release archive (offline hosts) |
+| `--no-start` | | Install and enable the service, but don't start it (`sudo systemctl start mcpd` later) |
+| `--archive FILE` | | Install from a downloaded release archive (offline hosts - see below) |
 | `--uninstall` | | Stop and remove mcpd; keeps `/etc/mcpd` |
 | `--uninstall --purge` | | Also delete `/etc/mcpd` |
+| `--bin-dir DIR` | | macOS only: where to install `linuxctl` |
+
+### Offline hosts
+
+The release archive doesn't contain the installer. On a machine with internet access, download three files for your architecture (`amd64` or `arm64`) - the archive, `checksums.txt` and `install.sh`:
+
+```bash
+V=0.1.0 ARCH=amd64
+curl -fsSLO https://github.com/nucleusv/linux-mcp-daemon/releases/download/v$V/linux-mcp-daemon_${V}_linux_${ARCH}.tar.gz
+curl -fsSLO https://github.com/nucleusv/linux-mcp-daemon/releases/download/v$V/checksums.txt
+curl -fsSLO https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh
+```
+
+Copy all three into one directory on the offline host and run:
+
+```bash
+sudo bash install.sh --archive linux-mcp-daemon_0.1.0_linux_amd64.tar.gz
+```
+
+With `checksums.txt` next to the archive the script verifies its sha256 (and refuses a mismatch); without it, it warns and installs unverified.
 
 ### Upgrading
 
-Run the same command again. Binaries are replaced (the service is restarted only if `mcpd` actually changed); **existing configs in `/etc/mcpd/configs` are never overwritten**, and no extra user is created.
+Run the same command again. Binaries are replaced (the service is restarted only if `mcpd` actually changed); **existing configs in `/etc/mcpd/configs` are never overwritten**, and no extra user is created. Without `--version` you get the latest release; with `--version` you get exactly that one.
+
+### Adding more users
+
+Each MCP user needs an OS account of the same name - every tool call runs as that account. For a user `alice`:
+
+```bash
+sudo useradd --system --shell /usr/sbin/nologin alice
+sudo /usr/local/bin/linuxctl create mcpd user alice --config-path /etc/mcpd/configs   # prints alice's token once
+sudo systemctl restart mcpd
+```
+
+(The full path matters on RHEL, Rocky, Alma and Fedora, whose `sudo` doesn't search `/usr/local/bin`: `sudo linuxctl` fails there with `command not found`.) `alice` can now call every tool as her own OS account; to let her run specific tools as root, grant them in `/etc/mcpd/configs/mcp-sudo.yaml` - see [mcp-sudo.yaml](./configuration/mcp-sudo) - and restart mcpd again. More commands (list, rotate, delete): [Daemon User Administration](./linuxctl/mcpd-admin).
+
+### Uninstalling
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash -s -- --uninstall           # keeps /etc/mcpd
+curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | sudo bash -s -- --uninstall --purge   # also deletes /etc/mcpd
+```
+
+This removes the service, the binaries and the man pages. Reinstalling after a plain `--uninstall` reuses the kept configs, so the existing users and tokens keep working (and no new token is printed). **The OS accounts** created for MCP users (`mcp`, plus any you added) are left in place either way - remove them with `sudo userdel -r mcp`.
 
 ### Optional system tools
 
@@ -63,7 +116,11 @@ A few tools wrap standard binaries - `disks/health` (`smartctl`), `network/trace
 sudo apt install smartmontools traceroute file iproute2
 ```
 
+On RHEL/Fedora: `sudo dnf install smartmontools traceroute file iproute`.
+
 ## Container image
+
+On a Linux host with Docker (run as root, or drop `sudo` if your user is in the `docker` group):
 
 ```bash
 IMAGE=ghcr.io/nucleusv/linux-mcp-daemon:latest   # or a fixed version, e.g. :0.1.0
@@ -71,8 +128,9 @@ IMAGE=ghcr.io/nucleusv/linux-mcp-daemon:latest   # or a fixed version, e.g. :0.1
 # 1. Seed a configs directory on the host from the image's clean defaults
 sudo mkdir -p /etc/mcpd/configs
 sudo docker run --rm -v /etc/mcpd/configs:/out --entrypoint cp $IMAGE -r /root/configs/. /out/
+sudo chmod 600 /etc/mcpd/configs/*.yaml    # they will hold token hashes
 
-# 2. Create a user and print its token (once)
+# 2. Create a user and print its token (once) - save it
 sudo docker run --rm -v /etc/mcpd/configs:/root/configs $IMAGE \
   linuxctl create mcpd user privileged --config-path /root/configs
 
@@ -84,9 +142,31 @@ sudo docker run -d --name mcpd --restart unless-stopped \
   $IMAGE
 ```
 
-- **MCP users must be OS accounts that exist inside the image** - `testuser`, `unpriviliged` and `privileged` are built in (the name decides which UID each call runs as).
-- `--network host --pid host --privileged` plus the read-only host root mount let privileged calls act on the real host (the image's config sets `worker.containerized: true`). Without them, mcpd only administers its own container.
-- The image ships **no users and no tokens** - step 2 is required.
+Step 2's "Next steps" text is written for the systemd install - in the container ignore its `useradd` and `systemctl` lines (the account already exists in the image, and step 3 starts mcpd with the new user).
+
+Try it - the image contains `linuxctl`, so you don't need it on the host:
+
+```bash
+sudo docker exec -e MCP_TOKEN=<token from step 2> mcpd linuxctl get system os-release
+```
+
+or from any machine with `linuxctl` installed: `export MCP_SERVER=http://<host>:9091 MCP_TOKEN=<token>`, then `linuxctl get system os-release`.
+
+- **MCP users must be OS accounts that exist inside the image** - `testuser`, `unpriviliged` (spelled that way) and `privileged` are built in; the name decides which UID each call runs as. For other names, build your own image `FROM` this one with `RUN useradd -m NAME`.
+- **Unprivileged calls see the container, not the host.** A call reaches the real host only when it is made with `privileged: true` (`--privileged true` in `linuxctl`) *and* the user is granted that tool in `mcp-sudo.yaml` - the image's config sets `worker.containerized: true`, so such calls join the host's mount namespace. `--network host --pid host --privileged` plus the read-only host root mount make that possible; without them, mcpd only administers its own container. The user created in step 2 starts with **no grants** (its name, `privileged`, is just the OS account). To grant it, e.g., `system/os-release`, replace the contents of `/etc/mcpd/configs/mcp-sudo.yaml` with (e.g. `sudo nano /etc/mcpd/configs/mcp-sudo.yaml`):
+
+  ```yaml
+  users:
+    privileged:
+      privileged:
+        tools:
+          system/os-release:
+            allowed: true
+        resources: {}
+  ```
+
+  then `sudo docker restart mcpd` and call `linuxctl get system os-release --privileged true` - it now reports the host's OS. All options: [mcp-sudo.yaml](./configuration/mcp-sudo).
+- The image ships **no users and no tokens** - step 2 is required. After adding or changing users or grants, `sudo docker restart mcpd`.
 
 ## macOS: the CLI
 
@@ -94,11 +174,12 @@ sudo docker run -d --name mcpd --restart unless-stopped \
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | bash -s -- --bin-dir ~/.local/bin
-export MCP_SERVER=http://your-server:9091 MCP_TOKEN=...
+export PATH="$HOME/.local/bin:$PATH"     # ~/.local/bin isn't on macOS's default PATH
+export MCP_SERVER=http://your-server:9091 MCP_TOKEN=<token>
 linuxctl get system os-release
 ```
 
-Without `--bin-dir` it installs to `/usr/local/bin` (run with `sudo` if that isn't writable). `--uninstall --bin-dir DIR` removes it. Or download `linuxctl_<version>_darwin_arm64.tar.gz` (Apple Silicon) / `..._darwin_amd64.tar.gz` (Intel) from the [release page](https://github.com/nucleusv/linux-mcp-daemon/releases) yourself.
+The `export PATH` line lasts for the current terminal; add it to `~/.zshrc` to keep it. Without `--bin-dir` the script installs to `/usr/local/bin` (run it with `sudo bash` instead of `bash` if that isn't writable). To remove it: `curl -fsSL https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/scripts/install.sh | bash -s -- --uninstall --bin-dir ~/.local/bin`. Or download `linuxctl_<version>_darwin_arm64.tar.gz` (Apple Silicon) / `..._darwin_amd64.tar.gz` (Intel) from the [release page](https://github.com/nucleusv/linux-mcp-daemon/releases) yourself.
 
 Shell completion: see [Autocompletion](./linuxctl/autocompletion).
 
@@ -106,7 +187,7 @@ Shell completion: see [Autocompletion](./linuxctl/autocompletion).
 
 - mcpd listens on **all interfaces**, and speaks **plain HTTP** unless TLS is enabled in `daemon.yaml` (`server.tls`). Bearer tokens travel in every request - firewall the port to trusted addresses, or enable TLS, before reaching it over a network.
 - Tokens only authenticate; what a user may do **as root** is granted per tool in `mcp-sudo.yaml` - see [mcp-sudo.yaml](./configuration/mcp-sudo). Without grants, a user can call every tool, but only as its own OS account.
-- To add more users: `sudo linuxctl create mcpd user NAME --config-path /etc/mcpd/configs`, create the matching OS account, then `sudo systemctl restart mcpd`. See [Daemon User Administration](./linuxctl/mcpd-admin).
+- To add more users, see [Adding more users](#adding-more-users) above.
 
 ## Connecting an AI agent
 

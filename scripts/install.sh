@@ -11,13 +11,15 @@
 #                      its token is printed once. --user "" skips this.
 #   --no-start         install and enable, but don't start the service
 #   --archive FILE     install from a local release tarball instead of
-#                      downloading (offline installs, testing)
+#                      downloading (offline installs, testing); verified
+#                      if the release's checksums.txt sits next to it
 #   --uninstall        stop and remove mcpd (keeps /etc/mcpd)
 #   --purge            with --uninstall: also delete /etc/mcpd
 #   --bin-dir DIR      macOS only: where to put linuxctl (default /usr/local/bin)
 #
-# Environment variables work too (handy with curl | bash):
-#   MCPD_VERSION=v0.1.0   MCPD_USER=name
+# Environment variables work too - put them after sudo, which drops
+# variables exported in your shell:
+#   curl -fsSL .../install.sh | sudo MCPD_VERSION=v0.1.0 MCPD_USER=name bash
 #
 # Re-running on an installed host upgrades the binaries (restarting the
 # service only if they changed); existing configs in /etc/mcpd/configs are
@@ -78,7 +80,8 @@ Install, upgrade or uninstall linux-mcp-daemon (mcpd + linuxctl).
   --version vX.Y.Z   install this release (default: latest)      env: MCPD_VERSION
   --user NAME        MCP user created on first install (default: mcp; "" to skip)  env: MCPD_USER
   --no-start         install and enable, but don't start the service
-  --archive FILE     install from a local release tarball
+  --archive FILE     install from a local release tarball (sha256-verified
+                     when the release's checksums.txt is in the same directory)
   --uninstall        remove mcpd (keeps /etc/mcpd); add --purge to delete it too
   --bin-dir DIR      macOS only: where to put linuxctl (default /usr/local/bin)
 
@@ -186,6 +189,7 @@ if [ "$UNINSTALL" -eq 1 ]; then
     else
         say "mcpd uninstalled ($CONF_ROOT kept - use --purge to delete it)"
     fi
+    echo "  OS accounts created for MCP users (e.g. mcp) are kept; remove one with: userdel -r NAME"
     exit 0
 fi
 
@@ -201,7 +205,18 @@ trap 'rm -rf "$TMP"' EXIT
 
 if [ -n "$ARCHIVE" ]; then
     [ -f "$ARCHIVE" ] || die "archive not found: $ARCHIVE"
-    say "Installing from local archive $ARCHIVE (checksum not verified)"
+    # Verify against the release's checksums.txt when it sits next to the
+    # archive (the offline instructions say to download both).
+    sums="$(dirname "$ARCHIVE")/checksums.txt"
+    name="$(basename "$ARCHIVE")"
+    if [ -f "$sums" ]; then
+        expected="$(awk -v f="$name" '$2 == f {print $1}' "$sums")"
+        [ -n "$expected" ] || die "$name is not listed in $sums"
+        [ "$expected" = "$(sha256 "$ARCHIVE")" ] || die "checksum mismatch for $name - refusing to install"
+        say "Installing from local archive $ARCHIVE (sha256 verified against $sums)"
+    else
+        warn "no checksums.txt next to $ARCHIVE - installing it unverified"
+    fi
     cp "$ARCHIVE" "$TMP/release.tar.gz"
 else
     resolve_version
@@ -264,17 +279,20 @@ if [ "$FRESH" -eq 1 ] && [ -n "$MCP_USER" ]; then
     TOKEN_MSG="$TOKEN"
 fi
 
+RUNNING=0
 if [ "$HAVE_SYSTEMD" -eq 1 ]; then
     install -m 0644 "$TMP/x/packaging/mcpd.service" "$UNIT"
     systemctl daemon-reload
     systemctl enable mcpd >/dev/null 2>&1
     if [ "$START" -eq 1 ] && [ "$CHANGED" -eq 0 ] && [ -z "$TOKEN_MSG" ] && systemctl is-active --quiet mcpd; then
         say "mcpd binary unchanged - not restarting ($("$BIN_DIR/mcpd" --version))"
+        RUNNING=1
     elif [ "$START" -eq 1 ]; then
         systemctl restart mcpd
         sleep 1
         systemctl is-active --quiet mcpd || die "mcpd failed to start - see: journalctl -u mcpd -n 50"
         say "mcpd is running ($("$BIN_DIR/mcpd" --version))"
+        RUNNING=1
     else
         say "mcpd installed and enabled, not started (--no-start)"
     fi
@@ -294,8 +312,24 @@ PORT="${PORT:-9091}"
 echo
 if [ "$UPGRADE" -eq 1 ]; then
     say "Upgrade complete. Configs in $CONF_DIR were left untouched."
-else
+elif [ "$RUNNING" -eq 1 ]; then
     say "Installed. mcpd listens on port $PORT on all interfaces."
+elif [ "$HAVE_SYSTEMD" -eq 1 ]; then
+    say "Installed, not started. Start it with: systemctl start mcpd (it will listen on port $PORT on all interfaces)"
+else
+    say "Installed, not started (no systemd). Start it with: cd $CONF_ROOT && $BIN_DIR/mcpd (it will listen on port $PORT on all interfaces)"
+fi
+if [ "$UPGRADE" -eq 0 ] && [ "$FRESH" -eq 0 ]; then
+    echo "  Existing configs in $CONF_DIR were kept - their users and tokens still work."
+fi
+if [ "$FRESH" -eq 1 ] && [ -z "$MCP_USER" ]; then
+    cat <<EOF
+
+  No MCP user was created (--user ""). Add one - each needs a matching OS account:
+    useradd --system --shell /usr/sbin/nologin NAME
+    $BIN_DIR/linuxctl create mcpd user NAME --config-path $CONF_DIR
+    systemctl restart mcpd
+EOF
 fi
 if [ -n "$TOKEN_MSG" ]; then
     cat <<EOF
