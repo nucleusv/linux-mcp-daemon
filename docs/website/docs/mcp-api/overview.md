@@ -96,7 +96,7 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 - [`network/curl`](./tools/network/curl) - Transfer data from a URL using native HTTP client.
 - [`network/arp`](./tools/network/arp) - View the system ARP cache (IP to MAC address mappings).
 - [`network/ping`](./tools/network/ping) - Measure TCP reachability and latency to a host.
-- [`network/connections`](./tools/network/connections) - Lists active network connections and listening ports.
+- [`network/connections`](./tools/network/connections) - TCP and UDP sockets with their owning processes, like `ss -tuanp`, read natively from /proc.
 - [`network/trace-path`](./tools/network/trace-path) - Traces the network path to a host (equivalent to traceroute).
 
 **memory**
