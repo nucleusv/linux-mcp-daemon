@@ -35,6 +35,12 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 	}
 
 	uid, _ := strconv.Atoi(u.Uid)
+	// An MCP user must be an unprivileged OS account. With uid 0 every call
+	// would run as root - privileged: true or not - past every limit in
+	// mcp-sudo.yaml (paths, network, sysctl).
+	if uid == 0 {
+		return "", fmt.Errorf("MCP user %q is the OS account %s with uid 0 (root) - refused: map MCP users to unprivileged accounts, and grant root per tool in mcp-sudo.yaml", username, u.Username)
+	}
 	targetUID := uint32(uid)
 	gid, _ := strconv.Atoi(u.Gid)
 	targetGID := uint32(gid)

@@ -15,6 +15,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -270,6 +271,12 @@ to re-read its config with daemon/reload-config; --no-reload skips that.`)
 func mcpdCreateUser(usersPath, sudoPath, username, setToken string, grants []string) {
 	if username == "" {
 		fmt.Fprintln(os.Stderr, "Error: username required")
+		os.Exit(1)
+	}
+	// mcpd runs every call of an MCP user as the OS account of that name,
+	// and refuses one with uid 0: it would be root without any grant.
+	if u, err := user.Lookup(username); err == nil && u.Uid == "0" {
+		fmt.Fprintf(os.Stderr, "Error: %q is a root account (uid 0) - mcpd refuses to run calls as it. Use an unprivileged account and grant root per tool (--grant, mcp-sudo.yaml)\n", username)
 		os.Exit(1)
 	}
 

@@ -1,6 +1,9 @@
 package worker
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestLooksLikePermissionError(t *testing.T) {
 	for msg, want := range map[string]bool{
@@ -14,5 +17,12 @@ func TestLooksLikePermissionError(t *testing.T) {
 		if got := looksLikePermissionError(msg); got != want {
 			t.Errorf("%q: got %t", msg, got)
 		}
+	}
+}
+
+func TestSpawnWorkerRefusesRootAccount(t *testing.T) {
+	_, err := SpawnWorker("root", "system/os-release", []byte("{}"), false, nil, 5)
+	if err == nil || !strings.Contains(err.Error(), "uid 0") {
+		t.Fatalf("want a uid 0 refusal, got %v", err)
 	}
 }
