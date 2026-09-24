@@ -339,10 +339,10 @@ fi
 
 # ------------------------------------------------------------------ report
 missing=""
-for bin in smartctl traceroute file ss journalctl; do
+for bin in smartctl traceroute journalctl; do
     command -v "$bin" >/dev/null 2>&1 || missing="$missing $bin"
 done
-[ -n "$missing" ] && warn "optional tools not found:$missing - the tools that wrap them won't work (Debian/Ubuntu: apt install smartmontools traceroute file iproute2)"
+[ -n "$missing" ] && warn "optional tools not found:$missing - the tools that wrap them won't work (Debian/Ubuntu: apt install smartmontools traceroute)"
 
 PORT="$(awk '/^server:/ {s=1} s && /^  port:/ {print $2; exit}' "$CONF_DIR/daemon.yaml")"
 PORT="${PORT:-9091}"

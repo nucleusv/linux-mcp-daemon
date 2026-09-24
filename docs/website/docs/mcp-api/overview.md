@@ -73,7 +73,7 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 - [`files/create`](./tools/files/create) - Create a new file or replace file contents.
 - [`files/update`](./tools/files/update) - Programmatically edit a file by appending text or replacing specific line ranges.
 - [`files/find`](./tools/files/find) - Search for files in a directory hierarchy.
-- [`files/filetype`](./tools/files/filetype) - Determines a file's MIME type (equivalent to `file -b --mime-type`).
+- [`files/filetype`](./tools/files/filetype) - Determines a file's MIME type natively (what `file -b --mime-type` answers).
 - [`files/chmod`](./tools/files/chmod) - Changes permission bits (octal or symbolic); never follows symlinks.
 - [`files/chown`](./tools/files/chown) - Changes owner and/or group; never follows symlinks.
 

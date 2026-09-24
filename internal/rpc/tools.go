@@ -33,7 +33,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 		duDesc += " (Authorized for 'privileged: true' to traverse protected subdirectories)"
 	}
 
-	filetypeDesc := "Determines a file's MIME type (equivalent to `file -b --mime-type`). Use files/stat for size/permissions/ownership instead."
+	filetypeDesc := "Determines a file's MIME type - the answer `file -b --mime-type` gives, detected natively from the file's first bytes (no file(1) needed). A symlink is reported as inode/symlink, not followed. Use files/stat for size/permissions/ownership instead."
 	if sudoCfg.CanRunAsRoot(session.User, "files/filetype") {
 		filetypeDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
 	}
@@ -351,7 +351,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "network/connections",
 				"tools_group":   "network",
 				"linuxctl_verb": "connections",
-				"description":   "Lists active network connections and listening ports. Hint: For physical network links and IPs, use the network://interfaces resource.",
+				"description":   "Lists TCP and UDP sockets in every state with their owning processes, like `ss -tuanp` - read natively from /proc/net (no ss needed). Owning processes of other users' sockets are shown only with privileged: true. state filters by LISTEN (includes unconnected UDP), ESTABLISHED, TIME_WAIT, ... or the groups connected/synchronized. Hint: For physical network links and IPs, use the network://interfaces resource.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{

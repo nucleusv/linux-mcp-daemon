@@ -140,13 +140,13 @@ This removes the service, the binaries and the man pages. Reinstalling after a p
 
 ### Optional system tools
 
-A few tools wrap standard binaries - `disks/health` (`smartctl`), `network/trace-path` (`traceroute`), `files/filetype` (`file`), `network/connections` (`ss`), `logs/journal-control` (`journalctl`). The installer warns about missing ones; on Debian/Ubuntu:
+A few tools wrap standard binaries - `disks/health` (`smartctl`), `network/trace-path` (`traceroute`), `logs/journal-control` (`journalctl`, part of systemd). Everything else reads the kernel directly. The installer warns about missing ones; on Debian/Ubuntu:
 
 ```bash
-sudo apt install smartmontools traceroute file iproute2
+sudo apt install smartmontools traceroute
 ```
 
-On RHEL/Fedora: `sudo dnf install smartmontools traceroute file iproute`.
+On RHEL/Fedora: `sudo dnf install smartmontools traceroute`.
 
 ## Container image
 
