@@ -4,13 +4,13 @@ Every item here is grounded in a specific scenario actually tested live against 
 
 ## Bugs in existing tools (fix, don't build)
 
-### 1. `processes/list`'s `sort_by: cpu` is non-functional
+### 1. ~~`processes/list`'s `sort_by: cpu` is non-functional~~ — done (5f9d96d: two-sample CPU% via `internal/procstat`, shared with `processes/top`)
 **Evidence**: `cpu-performance.md` #2. The schema accepts `sort_by: cpu`, but there's no CPU field on the returned object at all, and the sort silently falls through to unsorted order — confirmed by comparing against working `sort_by: pid` (correctly ascending) and `sort_by: mem` (correctly descending).
 **Impact**: Blocks `cpu-performance.md` #2 (the single most common "server is slow" question) and weakens #6, `containers-kubernetes.md` #3.
 **Fix**: Add per-process CPU% (sampled via two `/proc/[pid]/stat` `utime`+`stime` reads a short interval apart, same technique `top` uses) to the `Process` struct, and implement the `cpu` case in the sort switch. This is the single highest-value item in this backlog.
 **Test plan**: Call `processes/list` with `sort_by: cpu` twice, once at idle and once while a CPU-bound process runs (e.g. spin up a `yes > /dev/null` on the real host via a privileged call, or use an existing busy process); confirm the busy process sorts to the top with a plausible non-zero CPU% distinct from `mem`-sorted order.
 
-### 2. `network/connections`'s `state` filter rejects standard `ss` state names
+### 2. ~~`network/connections`'s `state` filter rejects standard `ss` state names~~ — done (3a7c7ac: case-insensitive mapping to ss names; all sockets listed by default)
 **Evidence**: `network.md` setup (before scenario 1). `state: "LISTEN"` fails with `ss: wrong state name: LISTEN`; omitting the filter and reading full output works fine and even the tool's own listed output literally shows the string `LISTEN` in the `State` column.
 **Fix**: Either lowercase the value before passing to `ss` (`ss` expects `listening`, not `LISTEN`), or document the exact accepted values in the schema description so callers don't guess wrong from the tool's own output format.
 **Test plan**: Call with `state: "listening"` (lowercase) and confirm it returns only `LISTEN` rows; call with the currently-broken `"LISTEN"` and confirm it now either works or gives a clear "did you mean" error instead of a raw `ss` stderr dump.
@@ -58,15 +58,34 @@ Every item here is grounded in a specific scenario actually tested live against 
 
 ## Smaller/lower-priority items (single-scenario, still real)
 
-- **11. `files/list` ownership/mode fields** (`users-auth.md` #1) — add UID/GID/mode to the existing output rather than requiring a separate stat call.
+- ~~**11. `files/list` ownership/mode fields**~~ — done (2bde2c0: `files/list` is now `ls -la`, with mode/owner/group in text and JSON) (`users-auth.md` #1) — add UID/GID/mode to the existing output rather than requiring a separate stat call.
 - **12. `dmesg` `since`/`until` filters** (`logs-diagnostics.md` #3) — bring it to parity with `journal-control`'s existing time filters.
-- **13. `journalctl -b` (since-last-boot) shortcut** (`boot-kernel-hardware.md` #5) — a `boot: true`/`boot_offset` parameter on `logs/journal-control`.
+- ~~**13. `journalctl -b` (since-last-boot) shortcut**~~ — done (`logs/journal-control` has `boot` / `boot_offset`) (`boot-kernel-hardware.md` #5) — a `boot: true`/`boot_offset` parameter on `logs/journal-control`.
 - **14. cgroup-aware CPU/memory stats** (`cpu-performance.md` #5, `containers-kubernetes.md` #3) — read `/sys/fs/cgroup/*/cpu.stat` and `memory.current` for per-container/per-slice attribution; natively parseable, no new dependency.
 - **15. "Which package provides this binary" lookup** (`packages-updates.md` #4) — cross-reference `dpkg -S`-equivalent (parse `/var/lib/dpkg/info/*.list`) against a binary path.
 - **16. Package install/remove** (`packages-updates.md` #3, roadmap item 4) — needs the dry-run/confirmation governance layer roadmap item 5 already flags as a prerequisite; don't ship standalone.
 - **17. `auth/ssh-keys`** (`users-auth.md` #3, roadmap item 1).
 - **18. Account lock/expiry status without touching password hashes** (`users-auth.md` #4) — needs its own careful scoping (expose only non-hash `/etc/shadow` fields), not a blanket shadow-read.
 - **19. Swap thrashing rate** (`memory.md` #5) and **disk I/O live rate** (`disk-storage.md` #6) — both need two time-separated samples and a delta calculation; currently only cumulative-since-boot counters are exposed.
+
+## Daemon infrastructure
+
+### 20. Leveled, configurable daemon logging
+**Now**: 27 plain `log.Printf` calls across 5 files - no levels, no configuration, ad-hoc prefixes (`[ACCESS]`, `[SECURITY]`, `[THROTTLED]`, `[TOOL CALL]`, `WARNING:`). Every request writes several lines (connect, `Received JSON-RPC`, access line, response size, disconnect), which is noise on a busy host - the VPS journal was dominated by it - yet there's no way to turn detail *up* when debugging either.
+**Build**: stdlib `log/slog` (keeps the zero-dependency rule), configured in `daemon.yaml`:
+```yaml
+logging:
+  level: info        # error | warn | info | debug
+  format: text       # text | json (json for journald/Loki/ELK field extraction)
+  access_log: true   # one line per HTTP request, independent of level
+```
+Suggested mapping of what exists today:
+- **error**: worker spawn failures, config errors, TLS/listen failures.
+- **warn**: `[SECURITY]` (session hijack attempts), `[THROTTLED]`, containerized-mode mismatches, denied privileged calls, worker timeouts.
+- **info**: startup/shutdown with version and config summary, one line per tool call (user, tool, privileged, duration, ok/error), and an **audit** line for every mutating call - `files/create|update|chmod|chown`, `processes/delete`, `services/manage`, sysctl writes - that must stay on even when detail is turned down (a separate `audit` attribute or logger, not tied to the level).
+- **debug**: per-request JSON-RPC method/id, SSE session lifecycle, cache hits/misses, rate-limiter decisions, worker exit codes and stderr.
+Carry structured fields (`user`, `session`, `tool`, `privileged`, `duration_ms`, `exit`) rather than formatted strings. Keep the existing safeguards: arguments go through `redactArgs`, responses are logged by size only - **debug must never dump tool output or tokens**. Optional: change the level at runtime (SIGHUP re-reading `logging`, or a `linuxctl` admin command) so debugging a live host doesn't need a restart.
+**Test plan**: at `info`, a tool call writes exactly one call line (plus one audit line if mutating) and no per-request JSON-RPC lines; at `debug`, the session lifecycle and RPC lines appear; at `warn`, a throttled or hijack attempt still logs while normal calls don't; `format: json` output parses line by line; grep every level's output for a known test token and a known file's contents to prove neither leaks.
 
 ## Explicitly not recommended (from `plan/linux-admin-roadmap.md`, reaffirmed by this investigation)
 
