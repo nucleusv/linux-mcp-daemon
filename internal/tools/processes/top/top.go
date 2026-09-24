@@ -38,8 +38,10 @@ type Summary struct {
 	LoadAverage [3]float64 `json:"load_average"`
 	Tasks       Tasks      `json:"tasks"`
 	CPU         CPUPercent `json:"cpu_percent"`
-	MemMiB      MemMiB     `json:"mem_mib"`
-	SwapMiB     SwapMiB    `json:"swap_mib"`
+	Mem         MemBytes   `json:"mem_bytes"`
+	Swap        SwapBytes  `json:"swap_bytes"`
+	MemMiB      MemMiB     `json:"-"` // top's rounded header values, for human_readable text
+	SwapMiB     SwapMiB    `json:"-"`
 	kib         memKiB     // exact values behind MemMiB/SwapMiB, for byte output
 }
 
@@ -68,6 +70,22 @@ type memKiB struct {
 	total, free, used, buffCache, swapTotal, swapFree, swapUsed, avail uint64
 }
 
+// MemBytes and SwapBytes are the header's memory figures in JSON, in bytes
+// like every other tool's output.
+type MemBytes struct {
+	Total     uint64 `json:"total"`
+	Free      uint64 `json:"free"`
+	Used      uint64 `json:"used"`
+	BuffCache uint64 `json:"buff_cache"`
+}
+
+type SwapBytes struct {
+	Total    uint64 `json:"total"`
+	Free     uint64 `json:"free"`
+	Used     uint64 `json:"used"`
+	AvailMem uint64 `json:"avail_mem"`
+}
+
 type MemMiB struct {
 	Total     float64 `json:"total"`
 	Free      float64 `json:"free"`
@@ -88,9 +106,12 @@ type Row struct {
 	User       string  `json:"user"`
 	PR         string  `json:"pr"`
 	NI         int64   `json:"ni"`
-	VirtKiB    uint64  `json:"virt_kib"`
-	ResKiB     uint64  `json:"res_kib"`
-	ShrKiB     uint64  `json:"shr_kib"`
+	VirtBytes  uint64  `json:"virt_bytes"`
+	ResBytes   uint64  `json:"res_bytes"`
+	ShrBytes   uint64  `json:"shr_bytes"`
+	VirtKiB    uint64  `json:"-"` // top's own unit, for the text layout
+	ResKiB     uint64  `json:"-"`
+	ShrKiB     uint64  `json:"-"`
 	State      string  `json:"s"`
 	CPUPercent float64 `json:"cpu_percent"`
 	MemPercent float64 `json:"mem_percent"`
@@ -232,6 +253,9 @@ func Take(interval time.Duration) (Snapshot, error) {
 			User:       userName(names, p.EUID),
 			PR:         priority(p.Priority),
 			NI:         p.Nice,
+			VirtBytes:  p.VirtKiB * 1024,
+			ResBytes:   p.ResKiB * 1024,
+			ShrBytes:   p.ShrKiB * 1024,
 			VirtKiB:    p.VirtKiB,
 			ResKiB:     p.ResKiB,
 			ShrKiB:     p.ShrKiB,
@@ -259,6 +283,18 @@ func Take(interval time.Duration) (Snapshot, error) {
 			LoadAverage: load,
 			Tasks:       tasks,
 			CPU:         cpuPercent(cpu1, cpu2),
+			Mem: MemBytes{
+				Total:     mem.Total * 1024,
+				Free:      mem.Free * 1024,
+				Used:      mem.Used() * 1024,
+				BuffCache: mem.BuffCache() * 1024,
+			},
+			Swap: SwapBytes{
+				Total:    mem.SwapTotal * 1024,
+				Free:     mem.SwapFree * 1024,
+				Used:     (mem.SwapTotal - mem.SwapFree) * 1024,
+				AvailMem: mem.Available * 1024,
+			},
 			MemMiB: MemMiB{
 				Total:     mib(mem.Total),
 				Free:      mib(mem.Free),

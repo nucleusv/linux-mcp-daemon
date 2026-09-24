@@ -115,6 +115,24 @@ func TestTakeComputesCPUFromTwoSamples(t *testing.T) {
 	if s.MemMiB.Total != 2000 || s.MemMiB.BuffCache != 976.6 {
 		t.Errorf("mem %+v", s.MemMiB)
 	}
+	if s.Mem.Total != 2000*1024*1024 || s.Swap.Total != s.kib.swapTotal*1024 {
+		t.Errorf("mem bytes %+v, swap bytes %+v", s.Mem, s.Swap)
+	}
+	if r := snap.Processes[1]; r.ResBytes != r.ResKiB*1024 || r.VirtBytes != r.VirtKiB*1024 {
+		t.Errorf("row bytes %+v", r)
+	}
+	// JSON carries bytes only - no KiB/MiB fields.
+	j, _ := json.Marshal(snap)
+	for _, key := range []string{`"mem_bytes"`, `"swap_bytes"`, `"res_bytes"`} {
+		if !strings.Contains(string(j), key) {
+			t.Errorf("JSON lacks %s: %s", key, j)
+		}
+	}
+	for _, key := range []string{"_mib", "_kib"} {
+		if strings.Contains(string(j), key) {
+			t.Errorf("JSON still has a %s field: %s", key, j)
+		}
+	}
 	// systemd: RES 3360 pages * pagesize / 2048000 KiB
 	sysd := snap.Processes[1]
 	if sysd.Command != "systemd" || sysd.Cmdline != "/sbin/init splash" || sysd.TimePlus != "0:05.10" || sysd.PR != "20" {

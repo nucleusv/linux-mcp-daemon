@@ -33,7 +33,7 @@ type Process struct {
 	Comm    string `json:"comm"`
 	State   string `json:"state"`
 	PPID    int    `json:"ppid"`
-	RSS     int64  `json:"rss_kb"`
+	RSS     int64  `json:"rss_bytes"` // resident set size, bytes
 	Cmdline string `json:"cmdline"`
 	// CPUPercent is only measured for sort_by: cpu (it needs two samples
 	// over an interval, which costs half a second).
@@ -98,7 +98,7 @@ func Processes(argsJSON []byte) (string, error) {
 					p.State = fields[0]
 					p.PPID, _ = strconv.Atoi(fields[1])
 					rssPages, _ := strconv.ParseInt(fields[21], 10, 64)
-					p.RSS = (rssPages * 4096) / 1024 // KB
+					p.RSS = rssPages * int64(os.Getpagesize())
 				}
 			}
 		}
@@ -186,11 +186,11 @@ func Processes(argsJSON []byte) (string, error) {
 // formatText prints processes like `ps -eo pid,ppid,user,stat,rss,args`
 // (plus %CPU when it was measured).
 func formatText(procs []Process, withCPU, humanReadable bool) string {
-	rss := func(kb int64) string {
+	rss := func(bytes int64) string {
 		if humanReadable {
-			return humanBytes(kb * 1024)
+			return humanBytes(bytes)
 		}
-		return fmt.Sprint(kb * 1024)
+		return fmt.Sprint(bytes)
 	}
 	var b strings.Builder
 	w := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)

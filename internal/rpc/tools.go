@@ -244,7 +244,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "processes/top",
 				"tools_group":   "processes",
 				"linuxctl_verb": "top",
-				"description":   "A snapshot like `top -b -n 1`: header with uptime, logged-in users, load average, task counts by state, CPU breakdown (us/sy/ni/id/wa/hi/si/st) and memory/swap in MiB, followed by the process table with all of top's columns (PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND). %CPU is measured over a short sampling interval, as top does. Use processes/list for a plain listing, processes/delete to signal a process.",
+				"description":   "A snapshot like `top -b -n 1`: header with uptime, logged-in users, load average, task counts by state, CPU breakdown (us/sy/ni/id/wa/hi/si/st) and memory/swap (bytes; MiB with human_readable), followed by the process table with all of top's columns (PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND). %CPU is measured over a short sampling interval, as top does. Use processes/list for a plain listing, processes/delete to signal a process.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -253,7 +253,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"limit":          map[string]interface{}{"type": "integer", "description": "Maximum processes to list (default: all)"},
 						"user":           map[string]interface{}{"type": "string", "description": "Only this user's processes"},
 						"interval_ms":    map[string]interface{}{"type": "integer", "description": "%CPU sampling interval in milliseconds (default 1000, max 10000)"},
-						"output_format":  map[string]interface{}{"type": "string", "description": "Default/table: top's own layout. wide: adds PPID, THR and full command lines (like top -c). json/yaml: structured {summary, processes}"},
+						"output_format":  map[string]interface{}{"type": "string", "description": "Default/table: top's own layout. wide: adds PPID, THR and full command lines (like top -c). json/yaml: structured {summary, processes}, memory in bytes (mem_bytes, swap_bytes, virt_bytes, res_bytes, shr_bytes)"},
 						"privileged":     map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 					},
 				},
