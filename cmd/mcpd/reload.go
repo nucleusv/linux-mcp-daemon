@@ -57,7 +57,11 @@ func reloadConfig(byUser string) (string, error) {
 	closed := closeSessions(closeUsers)
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "Reloaded %s, %s and %s.\n", filepath.Join(configDir, config.DaemonFile), nextUsersPath, sudoConfigPath())
+	if daemonPath := filepath.Join(configDir, config.DaemonFile); nextUsersPath == daemonPath {
+		fmt.Fprintf(&b, "Reloaded %s (including its users) and %s.\n", daemonPath, sudoConfigPath())
+	} else {
+		fmt.Fprintf(&b, "Reloaded %s, %s and %s.\n", daemonPath, nextUsersPath, sudoConfigPath())
+	}
 	if len(changes) == 0 {
 		b.WriteString("No changes.\n")
 	} else {
