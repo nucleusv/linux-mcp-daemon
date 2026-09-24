@@ -131,3 +131,10 @@ func always(lv slog.Level, msg string, args ...any) {
 	r.Add(args...)
 	_ = h.Handle(context.Background(), r)
 }
+
+// Fatal logs why mcpd can't run and exits. Like Audit it ignores the
+// level: a daemon that stops must always say why.
+func Fatal(msg string, args ...any) {
+	always(slog.LevelError, msg, args...)
+	os.Exit(1)
+}

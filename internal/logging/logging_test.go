@@ -3,6 +3,8 @@ package logging
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -90,4 +92,23 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// Fatal must not be filtered out by the level: run it in a subprocess.
+func TestFatalIgnoresLevel(t *testing.T) {
+	if os.Getenv("LOGGING_FATAL_CHILD") == "1" {
+		SetOutput(os.Stdout, Config{Level: "error"})
+		Info("hidden")
+		Fatal("cannot serve HTTP", "addr", ":9091")
+		return
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=TestFatalIgnoresLevel")
+	cmd.Env = append(os.Environ(), "LOGGING_FATAL_CHILD=1")
+	out, err := cmd.Output()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
+		t.Fatalf("want exit 1, got %v", err)
+	}
+	if !strings.Contains(string(out), `level=ERROR msg="cannot serve HTTP"`) || strings.Contains(string(out), "hidden") {
+		t.Errorf("fatal line missing or level not applied:\n%s", out)
+	}
 }

@@ -178,14 +178,14 @@ func main() {
 		case strings.HasPrefix(os.Args[i], "--config-dir="):
 			configDir = strings.TrimPrefix(os.Args[i], "--config-dir=")
 		default:
-			log.Fatalf("unknown argument %q (usage: mcpd [--config-dir DIR] | mcpd --version)", os.Args[i])
+			logging.Fatal("unknown argument (usage: mcpd [--config-dir DIR] | mcpd --version)", "arg", os.Args[i])
 		}
 	}
 
 	var err error
 	daemonConfig, usersPath, err = loadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		logging.Fatal("cannot load config", "err", err)
 	}
 	logging.Configure(daemonConfig.Logging)
 	logging.Info("config loaded", "dir", configDir, "log_level", logLevel(daemonConfig))
@@ -199,7 +199,7 @@ func main() {
 	if err != nil {
 		strictErr := err
 		if sudoConfig, err = config.LoadSudoConfig(sudoConfigPath()); err != nil {
-			log.Fatalf("Failed to load mcp-sudo.yaml: %v", err)
+			logging.Fatal("cannot load mcp-sudo.yaml", "err", err)
 		}
 		logging.Warn("mcp-sudo.yaml loaded leniently; daemon/reload-config and linuxctl edit will refuse it until it's fixed", "err", strictErr)
 	}
@@ -246,13 +246,13 @@ func main() {
 		go func() {
 			logging.Info("listening", "version", version.Version, "transport", "https", "addr", tlsAddr)
 			if err := http.ListenAndServeTLS(tlsAddr, daemonConfig.Server.TLS.CertFile, daemonConfig.Server.TLS.KeyFile, handler); err != nil {
-				log.Fatalf("Daemon TLS crashed: %v", err)
+				logging.Fatal("cannot serve HTTPS", "addr", tlsAddr, "err", err)
 			}
 		}()
 	}
 
 	logging.Info("listening", "version", version.Version, "transport", "http", "addr", addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {
-		log.Fatalf("Daemon crashed: %v", err)
+		logging.Fatal("cannot serve HTTP", "addr", addr, "err", err)
 	}
 }
