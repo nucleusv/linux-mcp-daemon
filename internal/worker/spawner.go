@@ -27,6 +27,15 @@ import (
 // for root always means root on the real host being administered.
 var Containerized bool
 
+// NoRoot is set by `mcpd stdio`: nothing may run as root, whatever the
+// caller asks for. Over stdio there is no token and no MCP user, so a root
+// grant would belong to whoever controls the client's config. Checked here,
+// the one place every tool and resource call goes through.
+var NoRoot bool
+
+// ErrNoRoot is the refusal of privileged: true under NoRoot.
+var ErrNoRoot = errors.New("privileged: true is not available when mcpd serves over stdio - it never runs anything as root. For root on specific tools, use the mcpd network daemon with a grant in mcp-sudo.yaml")
+
 // SpawnWorker forks a child process to execute the requested tool with strict privilege isolation.
 func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, sudoCfg *config.SudoConfig, timeoutSeconds int) (string, error) {
 	u, err := user.Lookup(username)
@@ -55,6 +64,9 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 		}
 	}
 
+	if privileged && NoRoot {
+		return "", ErrNoRoot
+	}
 	if privileged {
 		if strings.HasPrefix(toolName, "read_") {
 			targetUID, targetGID, targetGroups = 0, 0, []uint32{0} // Internal resource workers (caller already verified)
@@ -86,7 +98,16 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 	// Gid at its zero value - so every "unprivileged" worker ran with group
 	// root (gid 0) and could use any group-root file permission.
 	cmd.SysProcAttr = &syscall.SysProcAttr{}
-	cmd.SysProcAttr.Credential = &syscall.Credential{Uid: targetUID, Gid: targetGID, Groups: targetGroups}
+	if euid := os.Geteuid(); euid != 0 {
+		// A non-root mcpd (`mcpd stdio` started by an ordinary user) can't
+		// switch accounts - setgroups needs CAP_SETGID. Its workers simply
+		// stay the account it runs as, which must be the caller.
+		if targetUID != uint32(euid) {
+			return "", fmt.Errorf("mcpd runs as uid %d and cannot start a worker as %s (uid %d)", euid, username, targetUID)
+		}
+	} else {
+		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: targetUID, Gid: targetGID, Groups: targetGroups}
+	}
 
 	var outBuf bytes.Buffer
 	var errBuf bytes.Buffer

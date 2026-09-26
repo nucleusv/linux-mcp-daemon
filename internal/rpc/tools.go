@@ -783,6 +783,12 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 				execErr = fmt.Errorf("path must be absolute, got %q", baseArgs.Path)
 			}
 
+			// Over stdio root is never available: say so before the path
+			// check below answers as if a grant were merely missing.
+			if execErr == nil && baseArgs.Privileged && worker.NoRoot {
+				execErr = worker.ErrNoRoot
+			}
+
 			// _no_follow is the daemon's to set, never the caller's.
 			params.Arguments = withoutKey(params.Arguments, "_no_follow")
 

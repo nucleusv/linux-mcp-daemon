@@ -11,6 +11,8 @@ An agent needs two things:
 - the SSE endpoint: `https://<host>:9091/sse` (TLS is on by default);
 - a bearer token, sent as the `Authorization: Bearer <token>` header - one per MCP user, created with `linuxctl create mcpd user` (see [Installation](./installation)).
 
+No daemon, no port, no token? A client can also start mcpd itself as a local process - on its own machine, over SSH (`ssh host mcpd stdio`) or inside a container - see [Stdio mode](./configuration/stdio-mode). It never runs anything as root.
+
 ## Trusting mcpd's certificate
 
 By default mcpd serves a **self-signed** certificate it generated on first start (`/etc/mcpd/configs/tls/mcpd.crt`). A client has to trust it, or the TLS handshake fails:

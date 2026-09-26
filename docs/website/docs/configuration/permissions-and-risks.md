@@ -8,6 +8,9 @@ sidebar_position: 4
 A grant in `mcp-sudo.yaml` gives **an AI agent** root on your host - an agent that follows instructions found in the files, web pages and logs it reads. Several grants that look narrow are, in practice, **full root**: write access to `/etc`, `services/manage`, unrestricted sysctl writes. Grant the least a task needs, limit it with `paths:`, `network:` and `sysctl:`, and assume that anything an agent may do, someone who controls its input may make it do.
 :::
 
+In [stdio mode](./stdio-mode) (`mcpd stdio`) none of this applies: there are no grants, and nothing runs as root.
+
+
 This page is about the defaults - what a user can do with no grant, and what each kind of grant adds - and about the grants that are riskier than they look. The syntax of every option is on [Sudo Privileges](./mcp-sudo).
 
 ## Who a call runs as

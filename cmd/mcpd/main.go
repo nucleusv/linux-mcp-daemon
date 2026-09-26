@@ -168,6 +168,14 @@ func main() {
 	}
 
 	// ==========================================
+	// STDIO MODE (one client over stdin/stdout)
+	// ==========================================
+	if len(os.Args) > 1 && os.Args[1] == "stdio" {
+		runStdio(os.Args[2:])
+		return
+	}
+
+	// ==========================================
 	// MASTER DAEMON MODE
 	// ==========================================
 	if dir := os.Getenv("MCPD_CONFIG_DIR"); dir != "" {
@@ -181,7 +189,7 @@ func main() {
 		case strings.HasPrefix(os.Args[i], "--config-dir="):
 			configDir = strings.TrimPrefix(os.Args[i], "--config-dir=")
 		default:
-			logging.Fatal("unknown argument (usage: mcpd [--config-dir DIR] | mcpd --version)", "arg", os.Args[i])
+			logging.Fatal("unknown argument (usage: mcpd [--config-dir DIR] | mcpd stdio [--user NAME] [--config-dir DIR] | mcpd --version)", "arg", os.Args[i])
 		}
 	}
 

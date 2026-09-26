@@ -6,12 +6,30 @@ mcpd \- Linux Model Context Protocol Daemon
 .RB [ \-\-config\-dir
 .IR DIR ]
 .br
+.B mcpd stdio
+.RB [ \-\-user
+.IR NAME ]
+.RB [ \-\-config\-dir
+.IR DIR ]
+.br
 .B mcpd \-\-version
 .SH DESCRIPTION
 .B mcpd
 is a background daemon designed to securely bridge AI agents directly with the Linux operating system using the Model Context Protocol (MCP). It allows AI agents to introspect and interact with the host system via raw syscalls and the Virtual File System (/proc, /sys).
 .PP
 The daemon listens on a configurable port (default 9091) for HTTP Server-Sent Events (SSE) and JSON-RPC messages. It enforces rate limiting and requires Bearer token authentication.
+.SH STDIO MODE
+.B mcpd stdio
+serves MCP over stdin/stdout for a client that starts it as a local process \- on the same machine, over
+.B ssh host mcpd stdio
+or through
+.BR "docker exec \-i" .
+There is no token and no MCP user: each tool call runs as the OS user who started mcpd. Nothing runs as root:
+.B privileged: true
+is always refused and mcp-sudo.yaml is not read. Started as root, mcpd requires
+.B \-\-user
+.I NAME
+(an unprivileged account) and runs each call as NAME. Logs go to stderr; stdout carries only MCP messages.
 .SH CONFIGURATION
 .B mcpd
 reads its configuration upon startup from the directory given by \fB\-\-config\-dir\fR, else \fB$MCPD_CONFIG_DIR\fR (the container image sets \fB/etc/mcpd/configs\fR), else \fBconfigs/\fR under its working directory (the systemd unit's \fB/etc/mcpd\fR): \fBdaemon.yaml\fR (server port, TLS, rate limits, worker timeouts), \fBusers.yaml\fR (users and salted token hashes) and \fBmcp-sudo.yaml\fR (which tools each user may run as root).

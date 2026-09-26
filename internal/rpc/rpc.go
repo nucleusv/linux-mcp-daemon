@@ -14,11 +14,17 @@ func (h *RPCHandler) ProcessJSONRPC(session *Session, req JSONRPCRequest) {
 		ID:      req.ID,
 	}
 
+	// A message without an id is a notification (notifications/initialized,
+	// notifications/cancelled, ...): JSON-RPC forbids answering it. Over SSE
+	// a stray answer went unnoticed; over stdio the client reads it as an
+	// unexpected message. MCP never sends a request with a null id.
+	if req.ID == nil {
+		return
+	}
+
 	switch req.Method {
 	case "initialize":
 		h.HandleInitialize(&resp)
-	case "notifications/initialized":
-		return
 	case "ping":
 		// Ping is just an empty map, handled implicitly
 	case "resources/list":

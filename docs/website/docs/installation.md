@@ -7,6 +7,8 @@ sidebar_label: 'Installation'
 
 Every release is published on [GitHub Releases](https://github.com/nucleusv/linux-mcp-daemon/releases) (Linux amd64/arm64 archives with `mcpd` and `linuxctl`, macOS archives with `linuxctl`, all listed in `checksums.txt`) and as a multi-arch container image, `ghcr.io/nucleusv/linux-mcp-daemon`. Versions follow [SemVer](https://semver.org/); `mcpd --version` and `linuxctl --version` print the installed one.
 
+Only want an agent on this one machine, or over SSH, without running a daemon? Put the `mcpd` binary on the host and let the MCP client start it: see [Stdio mode](./configuration/stdio-mode).
+
 ## Linux with systemd (recommended)
 
 You need a Linux host (amd64 or arm64), root access via `sudo`, and `curl`. Minimal images such as the `ubuntu`/`debian` containers ship neither `curl` nor `sudo`, and have empty package lists: as root there, run `apt update && apt install -y curl ca-certificates` and pipe the script to plain `bash` instead of `sudo bash`.
