@@ -1,6 +1,6 @@
-<p align="center"><img src="https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/docs/imgs/mcpd-badge.png" alt="mcpd: a penguin in sunglasses" width="260"></p>
-
 # Linux MCPd
+
+![mcpd: a penguin in sunglasses](https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/docs/imgs/mcpd-badge-256.png)
 
 [![Docs](https://img.shields.io/badge/docs-nucleusv.github.io-blue)](https://nucleusv.github.io/linux-mcp-daemon/)
 [![Release](https://img.shields.io/github/v/release/nucleusv/linux-mcp-daemon)](https://github.com/nucleusv/linux-mcp-daemon/releases)
@@ -28,9 +28,7 @@ An AI agent that helps run a server needs to see it - load, memory, disks, proce
 
 ## How It Works
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/docs/imgs/linux-mcp-daemon-architecture.svg" alt="linux-mcp-daemon architecture: clients call the mcpd master over JSON-RPC; the master authenticates, rate-limits, routes and checks mcp-sudo.yaml, then spawns an ephemeral worker under the caller's OS user that acts on /proc, /sys, DBus/systemd and the filesystem" width="860">
-</p>
+![linux-mcp-daemon architecture: clients call the mcpd master over JSON-RPC; the master authenticates, rate-limits, routes and checks mcp-sudo.yaml, then spawns an ephemeral worker under the caller's OS user that acts on /proc, /sys, DBus/systemd and the filesystem](https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/docs/imgs/linux-mcp-daemon-architecture.svg)
 
 - **Every tool/resource call spawns a fresh worker process and exits.** There's no long-lived state per call - `internal/worker/spawner.go` re-execs the `mcpd` binary itself in `worker` mode (arguments on stdin, never argv), with `syscall.Credential{Uid, Gid, Groups}` set to a real OS account resolved via `user.Lookup()`. This is the actual privilege isolation, not a config flag: an unprivileged user's worker process is a genuinely different Linux UID than a privileged one's.
 - **`configs/mcp-sudo.yaml` decides, per user and per tool, whether `privileged: true` is honored.** Two grants exist for resources specifically (see `ARCHITECTURE.md`'s gotcha section) - one for the resource URI itself, one for the internal worker tool name behind it.
