@@ -15,53 +15,33 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get network arp
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS, first 25 lines):
 ```text
 [
   {
-    "ip_address": "172.19.0.8",
+    "ip_address": "172.29.172.2",
     "hw_type": "0x1",
     "flags": "0x2",
-    "hw_address": "d6:ee:9a:61:0c:f8",
+    "hw_address": "52:db:73:89:f9:26",
     "mask": "*",
-    "device": "eth0"
+    "device": "amn0"
   },
   {
-    "ip_address": "10.244.0.3",
+    "ip_address": "172.17.0.3",
     "hw_type": "0x1",
     "flags": "0x2",
-    "hw_address": "d2:f4:ff:a6:64:23",
+    "hw_address": "6a:14:de:e7:cd:85",
     "mask": "*",
-    "device": "veth785ec824"
+    "device": "docker0"
   },
   {
-    "ip_address": "172.19.0.3",
+    "ip_address": "172.29.172.4",
     "hw_type": "0x1",
-    "flags": "0x2",
-    "hw_address": "02:82:72:c2:cd:d8",
+    "flags": "0x0",
+    "hw_address": "00:00:00:00:00:00",
     "mask": "*",
-    "device": "eth0"
+    "device": "amn0"
   },
-  {
-    "ip_address": "10.244.0.2",
-    "hw_type": "0x1",
-    "flags": "0x2",
-    "hw_address": "c6:a2:80:2b:82:36",
-    "mask": "*",
-    "device": "vethfdafeed9"
-  },
-  {
-    "ip_address": "10.244.0.7",
-    "hw_type": "0x1",
-    "flags": "0x2",
-    "hw_address": "c2:73:6d:dc:17:a1",
-    "mask": "*",
-    "device": "vethbdcd73f8"
-  },
-  {
-    "ip_address": "10.244.0.5",
-    "hw_type": "0x1",
-    "flags": "0x
 ...
 ```
 
@@ -88,12 +68,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "15",
+  "id": "1",
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "[\n  {\n    \"ip_address\": \"172.19.0.8\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"d6:ee:9a:61:0c:f8\",\n    \"mask\": \"*\",\n    \"device\": \"eth0\"\n  },\n  {\n    \"ip_address\": \"10.244.0.3\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"d2:f4:ff:a6:64:23\",\n    \"mask\": \"*\",\n    \"device\": \"veth785ec824\"\n  },\n  {\n    \"ip_address\": \"172.19.0.3\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"02:82:72:c2:cd:d8\",\n    \"mask\": \"*\",\n    \"device\": \"eth0\"\n  },\n  {\n    \"ip_address\": \"10.244.0.2\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"c6:a2:80:2b:82:36\",\n    \"mask\": \"*\",\n    \"device\": \"vethfdafeed9\"\n  },\n  {\n    \"ip_address\": \"10.244.0.7\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"c2:73:6d:dc:17:a1\",\n    \"mask\": \"*\",\n    \"device\": \"vethbdcd73f8\"\n  },\n  {\n    \"ip_address\": \"10.244.0.5\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x\n..."
+        "text": "[\n  {\n    \"ip_address\": \"172.29.172.2\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"52:db:73:89:f9:26\",\n    \"mask\": \"*\",\n    \"device\": \"amn0\"\n  },\n  {\n    \"ip_address\": \"172.17.0.3\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x2\",\n    \"hw_address\": \"6a:14:de:e7:cd:85\",\n    \"mask\": \"*\",\n    \"device\": \"docker0\"\n  },\n  {\n    \"ip_address\": \"172.29.172.4\",\n    \"hw_type\": \"0x1\",\n    \"flags\": \"0x0\",\n    \"hw_address\": \"00:00:00:00:00:00\",\n    \"mask\": \"*\",\n    \"device\": \"amn0\"\n  },\n..."
       }
     ]
   }

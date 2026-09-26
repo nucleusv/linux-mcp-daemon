@@ -17,9 +17,34 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get system packages
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS, first 25 lines):
 ```text
-148 packages installed (dpkg)
+756 packages installed (dpkg)
+NAME                                   VERSION                                  ARCH
+adduser                                3.137ubuntu1                             all
+adwaita-icon-theme                     46.0-1                                   all
+amd64-microcode                        3.20251202.1ubuntu0.24.04.1              amd64
+apparmor                               4.0.0-beta3-0ubuntu3                     amd64
+apport                                 2.28.1-0ubuntu3.8                        all
+apport-core-dump-handler               2.28.1-0ubuntu3.8                        all
+apport-symptoms                        0.25                                     all
+appstream                              1.0.2-1build6                            amd64
+apt                                    2.7.14build2                             amd64
+apt-utils                              2.7.14build2                             amd64
+at-spi2-common                         2.52.0-1build1                           all
+at-spi2-core                           2.52.0-1build1                           amd64
+atop                                   2.10.0-2ubuntu2                          amd64
+base-files                             13ubuntu10                               amd64
+base-passwd                            3.6.3build1                              amd64
+bash                                   5.2.21-2ubuntu4                          amd64
+bash-completion                        1:2.11-8                                 all
+bc                                     1.07.1-3ubuntu4                          amd64
+bcache-tools                           1.0.8-5build1                            amd64
+bind9-dnsutils                         1:9.18.39-0ubuntu0.24.04.7               amd64
+bind9-host                             1:9.18.39-0ubuntu0.24.04.7               amd64
+bind9-libs                             1:9.18.39-0ubuntu0.24.04.7               amd64
+bolt                                   0.9.7-1                                  amd64
+...
 ```
 
 </details>
@@ -45,12 +70,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "28",
+  "id": "1",
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "148 packages installed (dpkg)"
+        "text": "756 packages installed (dpkg)\nNAME                                   VERSION                                  ARCH\nadduser                                3.137ubuntu1                             all\nadwaita-icon-theme                     46.0-1                                   all\namd64-microcode                        3.20251202.1ubuntu0.24.04.1              amd64\napparmor                               4.0.0-beta3-0ubuntu3                     amd64\napport                                 2.28.1-0ubuntu3.8                        all\napport-core-dump-handler               2.28.1-0ubuntu3.8                        all\napport-symptoms                        0.25                                     all\nappstream                              1.0.2-1build6                            amd64\napt                                    2.7.14build2                             amd64\napt-utils                              2.7.14build2                             amd64\nat-spi2-common                         2.52.0-1build1                           all\nat-spi2-core                           2.52.0-1build1                           amd64\natop                                   2.10.0-2ubuntu2                          amd64\nbase-files                             13ubuntu10                               amd64\nbase-passwd                            3.6.3build1                              amd64\nbash                                   5.2.21-2ubuntu4                          amd64\nbash-completion                        1:2.11-8                                 all\nbc                                     1.07.1-3ubuntu4                          amd64\nbcache-tools                           1.0.8-5build1                            amd64\nbind9-dnsutils                         1:9.18.39-0ubuntu0.24.04.7               amd64\nbind9-host                             1:9.18.39-0ubuntu0.24.04.7               amd64\nbind9-libs                             1:9.18.39-0ubuntu0.24.04.7               amd64\nbolt                                   0.9.7-1                                  amd64\n..."
       }
     ]
   }

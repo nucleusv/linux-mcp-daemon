@@ -15,22 +15,15 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource devices://usb
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```json
 [
   {
     "bus_id": "usb1",
     "vendor_id": "1d6b",
-    "product_id": "0002",
-    "manufacturer": "Linux 7.0.12-linuxkit vhci_hcd",
-    "product": "USB/IP Virtual Host Controller"
-  },
-  {
-    "bus_id": "usb2",
-    "vendor_id": "1d6b",
-    "product_id": "0003",
-    "manufacturer": "Linux 7.0.12-linuxkit vhci_hcd",
-    "product": "USB/IP Virtual Host Controller"
+    "product_id": "0001",
+    "manufacturer": "Linux 6.8.0-142-generic uhci_hcd",
+    "product": "UHCI Host Controller"
   }
 ]
 ```
@@ -54,12 +47,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "38",
+  "id": "1",
   "result": {
     "contents": [
       {
         "mimeType": "application/json",
-        "text": "[\n  {\n    \"bus_id\": \"usb1\",\n    \"vendor_id\": \"1d6b\",\n    \"product_id\": \"0002\",\n    \"manufacturer\": \"Linux 7.0.12-linuxkit vhci_hcd\",\n    \"product\": \"USB/IP Virtual Host Controller\"\n  },\n  {\n    \"bus_id\": \"usb2\",\n    \"vendor_id\": \"1d6b\",\n    \"product_id\": \"0003\",\n    \"manufacturer\": \"Linux 7.0.12-linuxkit vhci_hcd\",\n    \"product\": \"USB/IP Virtual Host Controller\"\n  }\n]",
+        "text": "[\n  {\n    \"bus_id\": \"usb1\",\n    \"vendor_id\": \"1d6b\",\n    \"product_id\": \"0001\",\n    \"manufacturer\": \"Linux 6.8.0-142-generic uhci_hcd\",\n    \"product\": \"UHCI Host Controller\"\n  }\n]",
         "uri": "devices://usb"
       }
     ]

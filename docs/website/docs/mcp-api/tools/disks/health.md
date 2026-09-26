@@ -15,7 +15,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get disks health vda
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS, first 25 lines):
 ```json
 {
   "json_format_version": [
@@ -29,7 +29,7 @@ Output:
     ],
     "pre_release": false,
     "svn_revision": "5530",
-    "platform_info": "aarch64-linux-7.0.12-linuxkit",
+    "platform_info": "x86_64-linux-6.8.0-142-generic",
     "build_info": "(local build)",
     "argv": [
       "smartctl",
@@ -42,14 +42,7 @@ Output:
         "string": "/dev/vda: Unable to detect device type",
         "severity": "error"
       }
-    ],
-    "exit_status": 1
-  },
-  "local_time": {
-    "time_t": 1790163825,
-    "asctime": "Wed Sep 23 11:43:45 2026 UTC"
-  }
-}
+...
 ```
 
 </details>
@@ -75,12 +68,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "10",
+  "id": "1",
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "{\n  \"json_format_version\": [\n    1,\n    0\n  ],\n  \"smartctl\": {\n    \"version\": [\n      7,\n      4\n    ],\n    \"pre_release\": false,\n    \"svn_revision\": \"5530\",\n    \"platform_info\": \"aarch64-linux-7.0.12-linuxkit\",\n    \"build_info\": \"(local build)\",\n    \"argv\": [\n      \"smartctl\",\n      \"-j\",\n      \"-a\",\n      \"/dev/vda\"\n    ],\n    \"messages\": [\n      {\n        \"string\": \"/dev/vda: Unable to detect device type\",\n        \"severity\": \"error\"\n      }\n    ],\n    \"exit_status\": 1\n  },\n  \"local_time\": {\n    \"time_t\": 1790163825,\n    \"asctime\": \"Wed Sep 23 11:43:45 2026 UTC\"\n  }\n}"
+        "text": "{\n  \"json_format_version\": [\n    1,\n    0\n  ],\n  \"smartctl\": {\n    \"version\": [\n      7,\n      4\n    ],\n    \"pre_release\": false,\n    \"svn_revision\": \"5530\",\n    \"platform_info\": \"x86_64-linux-6.8.0-142-generic\",\n    \"build_info\": \"(local build)\",\n    \"argv\": [\n      \"smartctl\",\n      \"-j\",\n      \"-a\",\n      \"/dev/vda\"\n    ],\n    \"messages\": [\n      {\n        \"string\": \"/dev/vda: Unable to detect device type\",\n        \"severity\": \"error\"\n      }\n..."
       }
     ]
   }

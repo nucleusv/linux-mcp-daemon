@@ -15,11 +15,11 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get disks performance vda
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```text
 Device       Reads        Writes       SectRead     SectWrite    I/O(ms)     
 ----------------------------------------------------------------------------
-vda          9558735      2162109      4052204522   78536488     1742699
+vda          18284        208946       1869176      5710280      26466       
 ```
 
 </details>
@@ -45,12 +45,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "9",
+  "id": "1",
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "Device       Reads        Writes       SectRead     SectWrite    I/O(ms)     \n----------------------------------------------------------------------------\nvda          9558735      2162109      4052204522   78536488     1742699"
+        "text": "Device       Reads        Writes       SectRead     SectWrite    I/O(ms)     \n----------------------------------------------------------------------------\nvda          18284        208946       1869176      5710280      26466       \n"
       }
     ]
   }

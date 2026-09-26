@@ -12,18 +12,18 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 <summary><b>linuxctl</b></summary>
 
 ```bash
-linuxctl resource service://kubelet.service/status
+linuxctl resource service://ssh.service/status
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```json
 {
-  "name": "kubelet.service",
-  "description": "kubelet: The Kubernetes Node Agent",
+  "name": "ssh.service",
+  "description": "OpenBSD Secure Shell server",
   "load_state": "loaded",
   "active_state": "active",
   "sub_state": "running",
-  "fragment_path": "/etc/systemd/system/kubelet.service"
+  "fragment_path": "/usr/lib/systemd/system/ssh.service"
 }
 ```
 
@@ -39,20 +39,20 @@ curl -N -s --cacert mcpd.crt -H "Authorization: Bearer $MCP_TOKEN" https://local
 curl -s --cacert mcpd.crt -X POST "https://localhost:9091/message?session_id=<from step 1>" \
   -H "Authorization: Bearer $MCP_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "service://kubelet.service/status"}}'
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "service://ssh.service/status"}}'
 ```
 
 Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "44",
+  "id": "1",
   "result": {
     "contents": [
       {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"kubelet.service\",\n  \"description\": \"kubelet: The Kubernetes Node Agent\",\n  \"load_state\": \"loaded\",\n  \"active_state\": \"active\",\n  \"sub_state\": \"running\",\n  \"fragment_path\": \"/etc/systemd/system/kubelet.service\"\n}",
-        "uri": "service://kubelet.service/status"
+        "text": "{\n  \"name\": \"ssh.service\",\n  \"description\": \"OpenBSD Secure Shell server\",\n  \"load_state\": \"loaded\",\n  \"active_state\": \"active\",\n  \"sub_state\": \"running\",\n  \"fragment_path\": \"/usr/lib/systemd/system/ssh.service\"\n}",
+        "uri": "service://ssh.service/status"
       }
     ]
   }

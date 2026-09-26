@@ -15,13 +15,13 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource os://uname
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```text
 Sysname: Linux
-Nodename: desktop-control-plane
-Release: 7.0.12-linuxkit
-Version: #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026
-Machine: aarch64
+Nodename: vps.example.com
+Release: 6.8.0-142-generic
+Version: #142-Ubuntu SMP PREEMPT_DYNAMIC Wed Sep  2 14:24:27 UTC 2026
+Machine: x86_64
 ```
 
 </details>
@@ -43,12 +43,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "31",
+  "id": "1",
   "result": {
     "contents": [
       {
         "mimeType": "text/plain",
-        "text": "Sysname: Linux\nNodename: desktop-control-plane\nRelease: 7.0.12-linuxkit\nVersion: #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026\nMachine: aarch64",
+        "text": "Sysname: Linux\nNodename: vps.example.com\nRelease: 6.8.0-142-generic\nVersion: #142-Ubuntu SMP PREEMPT_DYNAMIC Wed Sep  2 14:24:27 UTC 2026\nMachine: x86_64",
         "uri": "os://uname"
       }
     ]

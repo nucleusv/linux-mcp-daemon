@@ -15,56 +15,33 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource network://routes
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS, first 25 lines):
 ```text
 [
   {
+    "destination": "0.0.0.0/0",
+    "gateway": "203.0.113.1",
     "iface": "eth0",
-    "destination": "00000000",
-    "gateway": "010013AC",
-    "flags": "0003",
-    "ref_cnt": "0",
-    "use": "0",
-    "metric": "0",
-    "mask": "00000000",
-    "mtu": "0",
-    "window": "0",
-    "irtt": "0"
+    "metric": 100,
+    "flags": [
+      "up",
+      "gateway"
+    ],
+    "mtu": 0,
+    "window": 0,
+    "irtt": 0,
+    "default": true
   },
   {
-    "iface": "vethfdafeed9",
-    "destination": "0200F40A",
-    "gateway": "00000000",
-    "flags": "0005",
-    "ref_cnt": "0",
-    "use": "0",
-    "metric": "0",
-    "mask": "FFFFFFFF",
-    "mtu": "0",
-    "window": "0",
-    "irtt": "0"
-  },
-  {
-    "iface": "veth785ec824",
-    "destination": "0300F40A",
-    "gateway": "00000000",
-    "flags": "0005",
-    "ref_cnt": "0",
-    "use": "0",
-    "metric": "0",
-    "mask": "FFFFFFFF",
-    "mtu": "0",
-    "window": "0",
-    "irtt": "0"
-  },
-  {
-    "iface": "veth5eefa300",
-    "destination": "0400F40A",
-    "gateway": "00000000",
-    "flags": "0005",
-    "ref_cnt": "0",
-    "use": "0",
-    "metric": "0"
+    "destination": "1.1.1.1/32",
+    "gateway": "203.0.113.1",
+    "iface": "eth0",
+    "metric": 100,
+    "flags": [
+      "up",
+      "gateway",
+      "host"
+    ],
 ...
 ```
 
@@ -87,12 +64,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "37",
+  "id": "1",
   "result": {
     "contents": [
       {
         "mimeType": "application/json",
-        "text": "[\n  {\n    \"iface\": \"eth0\",\n    \"destination\": \"00000000\",\n    \"gateway\": \"010013AC\",\n    \"flags\": \"0003\",\n    \"ref_cnt\": \"0\",\n    \"use\": \"0\",\n    \"metric\": \"0\",\n    \"mask\": \"00000000\",\n    \"mtu\": \"0\",\n    \"window\": \"0\",\n    \"irtt\": \"0\"\n  },\n  {\n    \"iface\": \"vethfdafeed9\",\n    \"destination\": \"0200F40A\",\n    \"gateway\": \"00000000\",\n    \"flags\": \"0005\",\n    \"ref_cnt\": \"0\",\n    \"use\": \"0\",\n    \"metric\": \"0\",\n    \"mask\": \"FFFFFFFF\",\n    \"mtu\": \"0\",\n    \"window\": \"0\",\n    \"irtt\": \"0\"\n  },\n  {\n    \"iface\": \"veth785ec824\",\n    \"destination\": \"0300F40A\",\n    \"gateway\": \"00000000\",\n    \"flags\": \"0005\",\n    \"ref_cnt\": \"0\",\n    \"use\": \"0\",\n    \"metric\": \"0\",\n    \"mask\": \"FFFFFFFF\",\n    \"mtu\": \"0\",\n    \"window\": \"0\",\n    \"irtt\": \"0\"\n  },\n  {\n    \"iface\": \"veth5eefa300\",\n    \"destination\": \"0400F40A\",\n    \"gateway\": \"00000000\",\n    \"flags\": \"0005\",\n    \"ref_cnt\": \"0\",\n    \"use\": \"0\",\n    \"metric\": \"0\"\n...",
+        "text": "[\n  {\n    \"destination\": \"0.0.0.0/0\",\n    \"gateway\": \"203.0.113.1\",\n    \"iface\": \"eth0\",\n    \"metric\": 100,\n    \"flags\": [\n      \"up\",\n      \"gateway\"\n    ],\n    \"mtu\": 0,\n    \"window\": 0,\n    \"irtt\": 0,\n    \"default\": true\n  },\n  {\n    \"destination\": \"1.1.1.1/32\",\n    \"gateway\": \"203.0.113.1\",\n    \"iface\": \"eth0\",\n    \"metric\": 100,\n    \"flags\": [\n      \"up\",\n      \"gateway\",\n      \"host\"\n    ],\n...",
         "uri": "network://routes"
       }
     ]

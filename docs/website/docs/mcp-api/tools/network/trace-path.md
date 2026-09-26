@@ -15,12 +15,14 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get network trace-path 1.1.1.1 --max_hops 5
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```text
-traceroute to 1.1.1.1 (1.1.1.1), 3 hops max, 60 byte packets
- 1  172.19.0.1 (172.19.0.1)  1.643 ms  0.054 ms  0.009 ms
- 2  * * *
- 3  * * *
+traceroute to 1.1.1.1 (1.1.1.1), 5 hops max, 60 byte packets
+ 1  2.57.243.2 (2.57.243.2)  0.772 ms  0.620 ms  0.588 ms
+ 2  212.237.216.242 (212.237.216.242)  5.186 ms  5.178 ms  5.203 ms
+ 3  162.158.236.14 (162.158.236.14)  18.799 ms  18.785 ms  18.806 ms
+ 4  162.158.236.11 (162.158.236.11)  1.470 ms  1.486 ms  1.482 ms
+ 5  one.one.one.one (1.1.1.1)  1.012 ms  1.072 ms  1.017 ms
 ```
 
 </details>
@@ -46,12 +48,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "18",
+  "id": "1",
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "traceroute to 1.1.1.1 (1.1.1.1), 3 hops max, 60 byte packets\n 1  172.19.0.1 (172.19.0.1)  1.643 ms  0.054 ms  0.009 ms\n 2  * * *\n 3  * * *"
+        "text": "traceroute to 1.1.1.1 (1.1.1.1), 5 hops max, 60 byte packets\n 1  2.57.243.2 (2.57.243.2)  1.526 ms  1.472 ms  1.481 ms\n 2  212.237.216.242 (212.237.216.242)  0.664 ms  0.634 ms  0.644 ms\n 3  162.158.236.14 (162.158.236.14)  1.410 ms  1.423 ms  1.439 ms\n 4  162.158.236.11 (162.158.236.11)  1.883 ms  1.902 ms 162.158.236.13 (162.158.236.13)  12.654 ms\n 5  one.one.one.one (1.1.1.1)  1.130 ms  1.106 ms  1.085 ms\n"
       }
     ]
   }

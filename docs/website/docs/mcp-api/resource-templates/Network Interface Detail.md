@@ -15,28 +15,27 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource network://interfaces/eth0
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```json
 {
   "addresses": [
-    "172.19.0.7/16",
-    "fc00:f853:ccd:e793::7/64",
-    "fe80::b444:e3ff:fec0:4fd2/64"
+    "203.0.113.117/24",
+    "fe80::216:3cff:fe43:d371/64"
   ],
   "flags": "up|broadcast|multicast|running",
-  "index": 11,
-  "mac": "b6:44:e3:c0:4f:d2",
-  "mtu": 65535,
+  "index": 2,
+  "mac": "00:16:3c:43:d3:71",
+  "mtu": 1500,
   "name": "eth0",
   "statistics": {
-    "rx_bytes": 683918914,
+    "rx_bytes": 3587472995,
     "rx_dropped": 0,
     "rx_errors": 0,
-    "rx_packets": 890576,
-    "tx_bytes": 864826874,
+    "rx_packets": 3680882,
+    "tx_bytes": 3449167247,
     "tx_dropped": 0,
     "tx_errors": 0,
-    "tx_packets": 713740
+    "tx_packets": 3703963
   }
 }
 ```
@@ -60,12 +59,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "43",
+  "id": "1",
   "result": {
     "contents": [
       {
         "mimeType": "application/json",
-        "text": "{\n  \"addresses\": [\n    \"172.19.0.7/16\",\n    \"fc00:f853:ccd:e793::7/64\",\n    \"fe80::b444:e3ff:fec0:4fd2/64\"\n  ],\n  \"flags\": \"up|broadcast|multicast|running\",\n  \"index\": 11,\n  \"mac\": \"b6:44:e3:c0:4f:d2\",\n  \"mtu\": 65535,\n  \"name\": \"eth0\",\n  \"statistics\": {\n    \"rx_bytes\": 683918914,\n    \"rx_dropped\": 0,\n    \"rx_errors\": 0,\n    \"rx_packets\": 890576,\n    \"tx_bytes\": 864826874,\n    \"tx_dropped\": 0,\n    \"tx_errors\": 0,\n    \"tx_packets\": 713740\n  }\n}",
+        "text": "{\n  \"addresses\": [\n    \"203.0.113.117/24\",\n    \"fe80::216:3cff:fe43:d371/64\"\n  ],\n  \"flags\": \"up|broadcast|multicast|running\",\n  \"index\": 2,\n  \"mac\": \"00:16:3c:43:d3:71\",\n  \"mtu\": 1500,\n  \"name\": \"eth0\",\n  \"statistics\": {\n    \"rx_bytes\": 3587482318,\n    \"rx_dropped\": 0,\n    \"rx_errors\": 0,\n    \"rx_packets\": 3680926,\n    \"tx_bytes\": 3449175439,\n    \"tx_dropped\": 0,\n    \"tx_errors\": 0,\n    \"tx_packets\": 3703996\n  }\n}",
         "uri": "network://interfaces/eth0"
       }
     ]

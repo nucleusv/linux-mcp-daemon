@@ -15,24 +15,24 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource disks://vda/stats
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```json
 [
   {
-    "major": 254,
+    "major": 253,
     "minor": 0,
     "device_name": "vda",
-    "reads_completed": 9558738,
-    "reads_merged": 506656,
-    "sectors_read": 4052204802,
-    "time_reading_ms": 9788136,
-    "writes_completed": 2162223,
-    "writes_merged": 1689822,
-    "sectors_written": 78537752,
-    "time_writing_ms": 5850628,
+    "reads_completed": 18279,
+    "reads_merged": 4481,
+    "sectors_read": 1868616,
+    "time_reading_ms": 7478,
+    "writes_completed": 208573,
+    "writes_merged": 102639,
+    "sectors_written": 5705840,
+    "time_writing_ms": 102022,
     "ios_in_progress": 0,
-    "time_doing_ios_ms": 1742727,
-    "weighted_time_ios_ms": 16081971
+    "time_doing_ios_ms": 26452,
+    "weighted_time_ios_ms": 118412
   }
 ]
 ```
@@ -56,12 +56,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "45",
+  "id": "1",
   "result": {
     "contents": [
       {
         "mimeType": "application/json",
-        "text": "[\n  {\n    \"major\": 254,\n    \"minor\": 0,\n    \"device_name\": \"vda\",\n    \"reads_completed\": 9558738,\n    \"reads_merged\": 506656,\n    \"sectors_read\": 4052204802,\n    \"time_reading_ms\": 9788136,\n    \"writes_completed\": 2162223,\n    \"writes_merged\": 1689822,\n    \"sectors_written\": 78537752,\n    \"time_writing_ms\": 5850628,\n    \"ios_in_progress\": 0,\n    \"time_doing_ios_ms\": 1742727,\n    \"weighted_time_ios_ms\": 16081971\n  }\n]",
+        "text": "[\n  {\n    \"major\": 253,\n    \"minor\": 0,\n    \"device_name\": \"vda\",\n    \"reads_completed\": 18279,\n    \"reads_merged\": 4481,\n    \"sectors_read\": 1868616,\n    \"time_reading_ms\": 7478,\n    \"writes_completed\": 208573,\n    \"writes_merged\": 102639,\n    \"sectors_written\": 5705840,\n    \"time_writing_ms\": 102022,\n    \"ios_in_progress\": 0,\n    \"time_doing_ios_ms\": 26452,\n    \"weighted_time_ios_ms\": 118412\n  }\n]",
         "uri": "disks://vda/stats"
       }
     ]

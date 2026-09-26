@@ -17,23 +17,21 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 <summary><b>linuxctl</b></summary>
 
 ```bash
-$ linuxctl get disks partitions vda --output json
+linuxctl get disks partitions vda --output json
+```
+
+Output (Ubuntu 24.04 VPS):
+```text
 [
   {
     "device": "vda1",
     "parent_disk": "vda",
     "number": 1,
     "start_sector": 2048,
-    "size_sectors": 124997632,
-    "size_bytes": 63998787584
+    "size_sectors": 31455232,
+    "size_bytes": 16105078784
   }
 ]
-```
-
-Output:
-```text
-DEVICE         PARENT     NUM    START(SECT)    SIZE(SECT)     SIZE(BYTES)   
-vda1           vda        1      2048           124997632      63998787584
 ```
 
 </details>
@@ -55,12 +53,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "11",
+  "id": "1",
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "DEVICE         PARENT     NUM    START(SECT)    SIZE(SECT)     SIZE(BYTES)   \nvda1           vda        1      2048           124997632      63998787584"
+        "text": "[\n  {\n    \"device\": \"vda1\",\n    \"parent_disk\": \"vda\",\n    \"number\": 1,\n    \"start_sector\": 2048,\n    \"size_sectors\": 31455232,\n    \"size_bytes\": 16105078784\n  }\n]"
       }
     ]
   }

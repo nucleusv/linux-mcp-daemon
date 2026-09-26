@@ -15,13 +15,13 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get system os-release
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```text
 OS Release Info:
-PRETTY_NAME="Ubuntu 24.04.5 LTS"
+PRETTY_NAME="Ubuntu 24.04 LTS"
 NAME="Ubuntu"
 VERSION_ID="24.04"
-VERSION="24.04.5 LTS (Noble Numbat)"
+VERSION="24.04 LTS (Noble Numbat)"
 VERSION_CODENAME=noble
 ID=ubuntu
 ID_LIKE=debian
@@ -33,7 +33,7 @@ UBUNTU_CODENAME=noble
 LOGO=ubuntu-logo
 
 Kernel Info:
-Linux desktop-control-plane 7.0.12-linuxkit #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026 aarch64
+Linux vps.example.com 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC Wed Sep  2 14:24:27 UTC 2026 x86_64
 ```
 
 </details>
@@ -59,12 +59,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "27",
+  "id": "1",
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "OS Release Info:\nPRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.5 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n\nKernel Info:\nLinux desktop-control-plane 7.0.12-linuxkit #1 SMP PREEMPT Thu Aug 27 14:02:21 UTC 2026 aarch64"
+        "text": "OS Release Info:\nPRETTY_NAME=\"Ubuntu 24.04 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n\nKernel Info:\nLinux vps.example.com 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC Wed Sep  2 14:24:27 UTC 2026 x86_64\n"
       }
     ]
   }

@@ -15,18 +15,13 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl get network curl http://127.0.0.1:9091/ping
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```json
 {
-  "status_code": 404,
-  "status": "404 Not Found",
-  "headers": {
-    "Content-Length": "19",
-    "Content-Type": "text/plain; charset=utf-8",
-    "Date": "Wed, 23 Sep 2026 11:43:46 GMT",
-    "X-Content-Type-Options": "nosniff"
-  },
-  "body": "404 page not found\n"
+  "status_code": 400,
+  "status": "400 Bad Request",
+  "headers": {},
+  "body": "Client sent an HTTP request to an HTTPS server.\n"
 }
 ```
 
@@ -53,12 +48,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "14",
+  "id": "1",
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "{\n  \"status_code\": 404,\n  \"status\": \"404 Not Found\",\n  \"headers\": {\n    \"Content-Length\": \"19\",\n    \"Content-Type\": \"text/plain; charset=utf-8\",\n    \"Date\": \"Wed, 23 Sep 2026 11:43:46 GMT\",\n    \"X-Content-Type-Options\": \"nosniff\"\n  },\n  \"body\": \"404 page not found\\n\"\n}"
+        "text": "{\n  \"status_code\": 400,\n  \"status\": \"400 Bad Request\",\n  \"headers\": {},\n  \"body\": \"Client sent an HTTP request to an HTTPS server.\\n\"\n}"
       }
     ]
   }

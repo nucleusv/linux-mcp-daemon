@@ -23,14 +23,14 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 <summary><b>linuxctl</b></summary>
 
 ```bash
-linuxctl get system services --pattern "kube*"
+linuxctl get system services --pattern "ssh*"
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```text
-[active] kubelet.service
+[active] ssh.service
   State: running (active) | Load: loaded
-  Desc: kubelet: The Kubernetes Node Agent
+  Desc: OpenBSD Secure Shell server
 
 Hint: To read detailed properties of a specific service, use the resource: service://<name>/status
 ```
@@ -49,7 +49,7 @@ curl -N -s --cacert mcpd.crt -H "Authorization: Bearer $MCP_TOKEN" https://local
 curl -s --cacert mcpd.crt -X POST "https://localhost:9091/message?session_id=<from step 1>" \
   -H "Authorization: Bearer $MCP_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "services/list", "arguments": {"pattern": "kube*"}}}'
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "tools/call", "params": {"name": "services/list", "arguments": {"pattern": "ssh*"}}}'
 
 # 3. The result arrives on the SSE stream opened in step 1
 ```
@@ -58,12 +58,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "20",
+  "id": "1",
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "[active] kubelet.service\n  State: running (active) | Load: loaded\n  Desc: kubelet: The Kubernetes Node Agent\n\nHint: To read detailed properties of a specific service, use the resource: service://<name>/status"
+        "text": "[active] ssh.service\n  State: running (active) | Load: loaded\n  Desc: OpenBSD Secure Shell server\n\nHint: To read detailed properties of a specific service, use the resource: service://<name>/status\n"
       }
     ]
   }

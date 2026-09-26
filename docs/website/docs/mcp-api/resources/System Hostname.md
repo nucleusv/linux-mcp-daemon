@@ -15,9 +15,9 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 linuxctl resource system://hostname
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```text
-desktop-control-plane
+vps.example.com
 ```
 
 </details>
@@ -39,12 +39,12 @@ Response:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "33",
+  "id": "1",
   "result": {
     "contents": [
       {
         "mimeType": "text/plain",
-        "text": "desktop-control-plane",
+        "text": "vps.example.com",
         "uri": "system://hostname"
       }
     ]

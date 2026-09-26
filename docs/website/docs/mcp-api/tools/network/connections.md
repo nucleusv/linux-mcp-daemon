@@ -26,19 +26,17 @@ Output captured live on an Ubuntu 24.04 host.
 linuxctl get network connections --state listening --privileged true
 ```
 
-Output:
+Output (Ubuntu 24.04 VPS):
 ```text
 Netid  State   Recv-Q  Send-Q  Local Address:Port  Peer Address:Port  Process
-tcp    LISTEN  0       0       127.0.0.53:53       0.0.0.0:*          users:(("systemd-resolve",pid=66576,fd=15))
-tcp    LISTEN  0       0       127.0.0.54:53       0.0.0.0:*          users:(("systemd-resolve",pid=66576,fd=17))
-tcp    LISTEN  0       0       0.0.0.0:22          0.0.0.0:*          users:(("systemd",pid=1,fd=70),("sshd",pid=66594,fd=3))
-tcp    LISTEN  0       0       [::]:9092           [::]:*             users:(("mcpd",pid=130215,fd=4))
-tcp    LISTEN  0       0       [::]:9091           [::]:*             users:(("mcpd",pid=124908,fd=4))
-tcp    LISTEN  0       0       [::]:22             [::]:*             users:(("systemd",pid=1,fd=71),("sshd",pid=66594,fd=4))
-udp    UNCONN  0       0       127.0.0.54:53       0.0.0.0:*          users:(("systemd-resolve",pid=66576,fd=16))
-udp    UNCONN  0       0       127.0.0.53:53       0.0.0.0:*          users:(("systemd-resolve",pid=66576,fd=14))
-udp    UNCONN  0       0       127.0.0.1:323       0.0.0.0:*          users:(("chronyd",pid=66616,fd=5))
-udp    UNCONN  0       0       [::1]:323           [::]:*             users:(("chronyd",pid=66616,fd=6))
+tcp    LISTEN  0       0       0.0.0.0:22          0.0.0.0:*          users:(("systemd",pid=1,fd=118),("sshd",pid=837,fd=3))
+tcp    LISTEN  0       0       127.0.0.1:45861     0.0.0.0:*          users:(("containerd",pid=813,fd=15))
+tcp    LISTEN  0       0       [::]:22             [::]:*             users:(("systemd",pid=1,fd=119),("sshd",pid=837,fd=4))
+tcp    LISTEN  0       0       [::]:9091           [::]:*             users:(("mcpd",pid=29372,fd=4))
+tcp    LISTEN  0       0       [::]:9092           [::]:*             users:(("mcpd",pid=29447,fd=4))
+udp    UNCONN  0       0       0.0.0.0:40414       0.0.0.0:*          users:(("docker-proxy",pid=7295,fd=7))
+udp    UNCONN  0       0       203.0.113.117:68   0.0.0.0:*          users:(("systemd-network",pid=399,fd=21))
+udp    UNCONN  0       0       [::]:40414          [::]:*             users:(("docker-proxy",pid=7300,fd=7))
 ```
 
 Structured, for one port:
@@ -99,7 +97,7 @@ Response:
     "content": [
       {
         "type": "text",
-        "text": "Netid  State   Recv-Q  Send-Q  Local Address:Port  Peer Address:Port  Process\ntcp    LISTEN  0       0       127.0.0.53:53       0.0.0.0:*          users:((\"systemd-resolve\",pid=66576,fd=15))\ntcp    LISTEN  0       0       127.0.0.54:53       0.0.0.0:*          users:((\"systemd-resolve\",pid=66576,fd=17))\ntcp    LISTEN  0       0       0.0.0.0:22          0.0.0.0:*          users:((\"systemd\",pid=1,fd=70),(\"sshd\",pid=66594,fd=3))\ntcp    LISTEN  0       0       [::]:9092           [::]:*             users:((\"mcpd\",pid=130215,fd=4))\ntcp    LISTEN  0       0       [::]:9091           [::]:*             users:((\"mcpd\",pid=124908,fd=4))\ntcp    LISTEN  0       0       [::]:22             [::]:*             users:((\"systemd\",pid=1,fd=71),(\"sshd\",pid=66594,fd=4))\nudp    UNCONN  0       0       127.0.0.54:53       0.0.0.0:*          users:((\"systemd-resolve\",pid=66576,fd=16))\nudp    UNCONN  0       0       127.0.0.53:53       0.0.0.0:*          users:((\"systemd-resolve\",pid=66576,fd=14))\nudp    UNCONN  0       0       127.0.0.1:323       0.0.0.0:*          users:((\"chronyd\",pid=66616,fd=5))\nudp    UNCONN  0       0       [::1]:323           [::]:*             users:((\"chronyd\",pid=66616,fd=6))\n"
+        "text": "Netid  State   Recv-Q  Send-Q  Local Address:Port  Peer Address:Port  Process\ntcp    LISTEN  0       0       0.0.0.0:22          0.0.0.0:*          users:((\"systemd\",pid=1,fd=118),(\"sshd\",pid=837,fd=3))\ntcp    LISTEN  0       0       127.0.0.1:45861     0.0.0.0:*          users:((\"containerd\",pid=813,fd=15))\ntcp    LISTEN  0       0       [::]:22             [::]:*             users:((\"systemd\",pid=1,fd=119),(\"sshd\",pid=837,fd=4))\ntcp    LISTEN  0       0       [::]:9091           [::]:*             users:((\"mcpd\",pid=29372,fd=4))\ntcp    LISTEN  0       0       [::]:9092           [::]:*             users:((\"mcpd\",pid=29447,fd=4))\nudp    UNCONN  0       0       0.0.0.0:40414       0.0.0.0:*          users:((\"docker-proxy\",pid=7295,fd=7))\nudp    UNCONN  0       0       203.0.113.117:68   0.0.0.0:*          users:((\"systemd-network\",pid=399,fd=21))\nudp    UNCONN  0       0       [::]:40414          [::]:*             users:((\"docker-proxy\",pid=7300,fd=7))\n"
       }
     ]
   }
