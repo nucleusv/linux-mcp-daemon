@@ -132,6 +132,10 @@ Carry structured fields (`user`, `session`, `tool`, `privileged`, `duration_ms`,
 
 **Listing mcpd:** add `glama.json` and an MCP Registry `server.json`; tagline naming the difference (remote over HTTPS, per-user privilege-isolated workers, per-tool root grants); categories Monitoring, System Administration, Security; tool/resource counts and license.
 
+### 27. `disks/usage`: path first, then size
+**Now**: text output is du's layout, size then path (`79519744	/var/log`) - see https://nucleusv.github.io/linux-mcp-daemon/next/mcp-api/tools/disks/usage.
+**Do** (user, 2026-09-26): print the path first and the size after it, in the code; then recapture the docs page (and the linuxctl command reference's `disks usage` example).
+
 ## Explicitly not recommended (from `plan/linux-admin-roadmap.md`, reaffirmed by this investigation)
 
 Disk partitioning (write) and firewall rules (write) both remain correctly deferred pending the dry-run/confirmation governance design — nothing in this investigation's live testing changed that assessment; if anything, the real, currently-full disk found in `disk-storage.md` makes it *more* important that any future write-capable disk tool ships with strong safeguards from day one, not less.
