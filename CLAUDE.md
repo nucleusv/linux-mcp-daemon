@@ -42,7 +42,7 @@ Before giving any ops instruction (install, users, tokens, grants, TLS, reload),
 ## Releasing vX.Y.Z - in this order
 1. Every fix tested and redeployed to local k8s, VPS systemd (9091) and VPS Docker (9092).
 2. Docs current for everything since the last tag (`git log <last-tag>..HEAD`): tool pages with live output, `configuration/*`, `linuxctl/*`, man pages, README, ARCHITECTURE.md; `bash scripts/check_docs.sh` and `bash scripts/check_readmes.sh` pass.
-3. Version bumped everywhere it's written by hand: install commands in `docs/website/docs/installation.md`, `docs/release-notes/vX.Y.Z.md`, and `"version"` in `server.json`.
+3. Version bumped everywhere it's written by hand: install commands in `docs/website/docs/installation.md`, `"version"` in `server.json`. Release notes written twice: `docs/release-notes/vX.Y.Z.md` (becomes the GitHub release text) and a new `## X.Y.Z` section at the top of `docs/website/docs/release-notes.md` (the docs site's Release Notes page).
 4. Push to main; verify https://nucleusv.github.io/linux-mcp-daemon/next/ live.
 5. Tag `vX.Y.Z` and push the tag (release.yml: GoReleaser binaries, .deb/.rpm, GHCR image). Verify the release assets, the docs root, `/vX.Y.Z/` and `versions.json`.
 6. Publish to the official MCP Registry: `mcp-publisher publish` from the repo root (log in first with `mcp-publisher login github` if the token expired - the owner confirms the device code). Verify: `curl "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.nucleusv/linux-mcp-daemon"` shows the new version, status active. Glama, PulseMCP and others pick it up from the registry/repo.
