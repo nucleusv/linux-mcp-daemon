@@ -45,7 +45,7 @@ export default function VersionSwitcher({mobile}) {
     : '';
   const href = (v) => siteRoot + (v === latest ? '' : `${v}/`) + page;
   const label = (v) =>
-    v === 'next' ? 'next (main)' : v === latest ? `current (${v})` : v;
+    v === 'next' ? 'next (main)' : v === latest ? `${v} (current)` : v;
 
   const links = versions.map((v) => (
     <li key={v}>
