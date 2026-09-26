@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/imgs/mcpd-badge.png" alt="mcpd: a penguin in sunglasses" width="260"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/docs/imgs/mcpd-badge.png" alt="mcpd: a penguin in sunglasses" width="260"></p>
 
 # Linux MCPd
 
@@ -29,7 +29,7 @@ An AI agent that helps run a server needs to see it - load, memory, disks, proce
 ## How It Works
 
 <p align="center">
-  <img src="docs/imgs/linux-mcp-daemon-architecture.svg" alt="linux-mcp-daemon architecture: clients call the mcpd master over JSON-RPC; the master authenticates, rate-limits, routes and checks mcp-sudo.yaml, then spawns an ephemeral worker under the caller's OS user that acts on /proc, /sys, DBus/systemd and the filesystem" width="860">
+  <img src="https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/docs/imgs/linux-mcp-daemon-architecture.svg" alt="linux-mcp-daemon architecture: clients call the mcpd master over JSON-RPC; the master authenticates, rate-limits, routes and checks mcp-sudo.yaml, then spawns an ephemeral worker under the caller's OS user that acts on /proc, /sys, DBus/systemd and the filesystem" width="860">
 </p>
 
 - **Every tool/resource call spawns a fresh worker process and exits.** There's no long-lived state per call - `internal/worker/spawner.go` re-execs the `mcpd` binary itself in `worker` mode (arguments on stdin, never argv), with `syscall.Credential{Uid, Gid, Groups}` set to a real OS account resolved via `user.Lookup()`. This is the actual privilege isolation, not a config flag: an unprivileged user's worker process is a genuinely different Linux UID than a privileged one's.
