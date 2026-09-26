@@ -35,6 +35,8 @@ curl -s --cacert mcpd.crt -X POST "https://localhost:9091/message?session_id=<fr
 
 This is exactly what `linuxctl` does under the hood for every single command - it's a thin, schema-driven client over this same protocol, not a separate API. Each tool/resource/template page in this section shows both forms side by side.
 
+What the daemon offers - the tool list with each tool's arguments, the resources, the server's protocol version - comes from `initialize`, `tools/list`, `resources/list` and `resources/templates/list`; see [Protocol Methods](./protocol) for their full responses.
+
 ## The two JSON-RPC methods you'll use most
 
 - **`tools/call`** - `{"name": "<group>/<command>", "arguments": {...}}`. Used by every page under **Tools**.
