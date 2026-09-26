@@ -1,0 +1,32 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.nucleusv/linux-mcp-daemon",
+  "title": "Linux MCP daemon (mcpd)",
+  "description": "Self-hosted Linux admin over MCP: 38 tools, per-user workers, root per tool within path limits",
+  "repository": {
+    "url": "https://github.com/nucleusv/linux-mcp-daemon",
+    "source": "github"
+  },
+  "websiteUrl": "https://nucleusv.github.io/linux-mcp-daemon/",
+  "version": "0.3.4",
+  "remotes": [
+    {
+      "type": "sse",
+      "url": "https://{host}:9091/sse",
+      "variables": {
+        "host": {
+          "description": "Hostname or IP address of your own mcpd server",
+          "isRequired": true
+        }
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer <token> printed by `linuxctl create mcpd user`",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

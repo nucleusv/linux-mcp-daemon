@@ -136,6 +136,38 @@ Carry structured fields (`user`, `session`, `tool`, `privileged`, `duration_ms`,
 **Now**: text output is du's layout, size then path (`79519744	/var/log`) - see https://nucleusv.github.io/linux-mcp-daemon/next/mcp-api/tools/disks/usage.
 **Do** (user, 2026-09-26): print the path first and the size after it, in the code; then recapture the docs page (and the linuxctl command reference's `disks usage` example).
 
+## From the Habr prod-debug MCP article (2026-09-26)
+
+Source: https://habr.com/ru/articles/1049782/ - a NestJS read-only MCP server (5 tools over Docker logs) with 7 "layers" of protection. What it has that mcpd lacks, ranked.
+
+### 28. Redact secrets in tool output
+**Now**: `logToolCall` (`internal/rpc/tools.go`) redacts only the *arguments* in our own log. Tool output - `logs/journal-control`, `logs/dmesg`, `files/read` - reaches the agent as is, tokens and passwords included.
+**Do**: before returning, mask `Bearer …`, `Authorization:`, `Cookie:`, `password=`/`token=`/`api_key=` values (the article also masks e-mails as `u***@domain`). On by default for the log tools; an opt-out argument or config switch for users who need raw output.
+**Test plan**: `logger "Authorization: Bearer abc123"`, then `logs/journal-control` and confirm `[REDACTED]`; same for a file under /var/log via `files/read`.
+
+### 29. Upper bounds on size arguments
+**Now**: `logs/journal-control` `lines` defaults to 100 but has no upper cap (`lines: 10000000` passes). `network/curl` already caps `max_body` (1 MiB, at most 10 MiB) - the pattern to copy.
+**Do**: clamp every count/size/window argument (journal `lines`, `logs/logins` `limit`, `files/read` `limit`, `files/find` results) to a documented maximum, and state it in the schema description.
+**Test plan**: call with a huge value, confirm the result is capped and says so.
+
+### 30. `instructions` in the `initialize` response
+**Now**: `HandleInitialize` (`internal/rpc/rpc.go`) returns `protocolVersion: "2024-11-05"`, capabilities and serverInfo only. `instructions` (a server-wide usage note clients put into the model's system prompt) exists since spec 2025-03-26.
+**Do**: add 5-10 lines - start with read-only tools; call mutating tools only when the user asks; ask for `privileged: true` only after a permission error, and check `auth/sudo-rules` first; sizes are bytes, `human_readable` for people. Bump `protocolVersion` to at least 2025-03-26 - check first what else the newer version expects of a server.
+**Test plan**: connect Claude Code and confirm the text shows up as this server's instructions.
+
+### 31. Machine-readable errors
+**Now**: tool errors are free text.
+**Do**: a stable `code` (`NOT_AUTHORIZED`, `PATH_NOT_ALLOWED`, `RATE_LIMITED`, `TIMEOUT`, `NOT_FOUND`, …) plus a `next_action` hint (e.g. "retry with privileged: true", "check auth/sudo-rules"), so an agent can act without asking the user.
+**Test plan**: provoke each code once and confirm the structure.
+
+### 32. Audit notifications (optional)
+**Now**: mutating calls and config reloads are logged with `audit=true` at any level - to stderr, i.e. journald / `docker logs` / pod logs. Nothing leaves the host.
+**Do**: an optional webhook (Telegram, Slack, generic POST) for audit lines and denied privileged calls. A feature, not a security fix - a root attacker can still clean the local journal, which a remote notification would at least record.
+
+### 33. Per-user quotas (low)
+**Now**: one token bucket, 50 rps / burst 100 - protects against floods, doesn't bound volume.
+**Do**: optional daily call limits per user (and per tool) in `mcp-sudo.yaml`. Only if a real need shows up.
+
 ## Explicitly not recommended (from `plan/linux-admin-roadmap.md`, reaffirmed by this investigation)
 
 Disk partitioning (write) and firewall rules (write) both remain correctly deferred pending the dry-run/confirmation governance design — nothing in this investigation's live testing changed that assessment; if anything, the real, currently-full disk found in `disk-storage.md` makes it *more* important that any future write-capable disk tool ships with strong safeguards from day one, not less.
