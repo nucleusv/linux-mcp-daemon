@@ -23,10 +23,11 @@ Candidates come from the daemon's **live registry** (`tools/list`, `resources/li
 
 Completion runs `linuxctl` itself on every `Tab`, so:
 
-1. **`linuxctl` must be on your `PATH`** (or invoked by path, e.g. `./executables/linuxctl`). Build it with `scripts/build-cli.sh`, which writes `executables/linuxctl`.
+1. **`linuxctl` must be on your `PATH`.** A release install (`install.sh`, `.deb`/`.rpm`) puts it there; built from source with `scripts/build-cli.sh`, it is in the repo's `executables/` - add that directory to `PATH`.
 2. **Point it at your daemon with environment variables, not an alias.** Completion can't see through a shell alias like `alias linuxctl="linuxctl -server ..."` - use `MCP_SERVER` (default for `-server`) and `MCP_TOKEN` instead.
 
 ```bash
+# built from source only - a release install is already on PATH
 export PATH="$HOME/path/to/linux-mcp-daemon/executables:$PATH"
 export MCP_SERVER="https://my-host:9091"
 export MCP_TOKEN="your_token_here"
@@ -70,6 +71,7 @@ The script calls `compinit` itself if it hasn't been loaded yet.
 
 ```zsh
 # linuxctl (linux-mcp-daemon CLI)
+# built from source only - a release install is already on PATH
 export PATH="$HOME/path/to/linux-mcp-daemon/executables:$PATH"
 export MCP_SERVER='https://my-host:9091'
 [[ -r ~/.config/linuxctl/token ]] && export MCP_TOKEN="$(<~/.config/linuxctl/token)"

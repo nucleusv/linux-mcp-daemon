@@ -97,8 +97,11 @@ Full guide: [Installation](https://nucleusv.github.io/linux-mcp-daemon/installat
 You can build the CLI client directly on your host machine (e.g. macOS):
 
 ```bash
-./scripts/build-cli.sh
+./scripts/build-cli.sh                  # writes executables/linuxctl
+export PATH="$PWD/executables:$PATH"   # so the examples below run as written
 ```
+
+Installed from a release (`install.sh`, `.deb`/`.rpm`), `linuxctl` is already on your `PATH`.
 
 ### 3. Usage (local development)
 
@@ -109,7 +112,7 @@ The daemon runs on port `9091`. You can connect via your AI client using SSE, or
 export MCP_TOKEN="your_token_here"
 
 # Ping the daemon
-./executables/linuxctl ping
+linuxctl ping
 ```
 
 `linuxctl` speaks a small verb/group grammar (`linuxctl <verb> <group> [target-keyword] [args]`, design in [`plan/linuxctl-redesign.md`](plan/linuxctl-redesign.md)) and dynamically discovers every tool and resource from the running daemon - there's no separate client-side command list to keep in sync. Full reference: [linuxctl docs](docs/website/docs/linuxctl/overview.md) or `man linuxctl`. Every example below shows both forms: `linuxctl`, and the raw MCP JSON-RPC `curl` call it resolves to - the full per-tool/resource reference with these side by side for every single one lives at [MCP API docs](docs/website/docs/mcp-api/overview.md).
@@ -138,7 +141,7 @@ Every example below follows this exact pattern - only the `-d` payload changes.
 
 ```bash
 # List a directory, as a table (get is the sole read verb - one result or many, same as kubectl)
-$ ./executables/linuxctl get files list /var/log --output table
+$ linuxctl get files list /var/log --output table
 MODIFIED              NAME               SIZE     IS_DIR
 2026-09-22 18:38:14   alternatives.log   6522     false
 2026-09-22 18:38:10   apt                4096     true
@@ -151,7 +154,7 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 
 ```bash
 # Read a single file's contents (bare - no keyword needed, files' only other read candidate)
-./executables/linuxctl get files /etc/hosts
+linuxctl get files /etc/hosts
 ```
 ```bash
 curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Type: application/json" \
@@ -162,7 +165,7 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 
 ```bash
 # Read a static resource directly by URI (resource URIs always use scheme://path)
-$ ./executables/linuxctl resource os://uname
+$ linuxctl resource os://uname
 Sysname: Linux
 Nodename: desktop-control-plane
 Release: 7.0.12-linuxkit
@@ -177,7 +180,7 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 
 ```bash
 # Native partition geometry - parsed from /sys/class/block, no fdisk dependency
-./executables/linuxctl get disks partitions vda --output json
+linuxctl get disks partitions vda --output json
 ```
 ```bash
 curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Type: application/json" \
@@ -186,7 +189,7 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 
 ```bash
 # Run a privileged tool (requires a root rule in configs/mcp-sudo.yaml)
-./executables/linuxctl get disks free / --privileged true
+linuxctl get disks free / --privileged true
 ```
 ```bash
 curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Type: application/json" \
@@ -197,8 +200,8 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 
 ```bash
 # Same underlying tool - bare form lists many, a specific PID filters to one
-./executables/linuxctl get processes --sort_by mem --limit 5
-./executables/linuxctl get processes 1234
+linuxctl get processes --sort_by mem --limit 5
+linuxctl get processes 1234
 ```
 ```bash
 curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Type: application/json" \
@@ -207,7 +210,7 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 
 ```bash
 # Rich aggregated detail (combines several reads, excludes secret-shaped data like environ)
-./executables/linuxctl describe processes 1234
+linuxctl describe processes 1234
 ```
 ```bash
 # describe aggregates multiple resources/read calls client-side - e.g. one of them:
@@ -219,7 +222,7 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 
 ```bash
 # journalctl only exists on the host, never in this daemon's own image
-./executables/linuxctl get logs journal --unit kubelet.service --boot true --privileged true
+linuxctl get logs journal --unit kubelet.service --boot true --privileged true
 ```
 ```bash
 curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Type: application/json" \
@@ -229,8 +232,8 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 ### Mutations (services, kernel)
 
 ```bash
-./executables/linuxctl restart system services nginx.service --privileged true
-./executables/linuxctl update  kernel sysctl net.ipv4.ip_forward 1 --privileged true
+linuxctl restart system services nginx.service --privileged true
+linuxctl update  kernel sysctl net.ipv4.ip_forward 1 --privileged true
 ```
 ```bash
 curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Type: application/json" \
@@ -240,10 +243,10 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 ### Introspecting the MCP protocol itself
 
 ```bash
-./executables/linuxctl get mcp-api info      # raw initialize response: protocol version + declared capabilities
-./executables/linuxctl get mcp-api tools     # every tool, by literal name
-./executables/linuxctl get mcp-api resources # every static resource + template
-./executables/linuxctl get mcp-api prompts   # reports plainly that mcpd doesn't implement this MCP capability
+linuxctl get mcp-api info      # raw initialize response: protocol version + declared capabilities
+linuxctl get mcp-api tools     # every tool, by literal name
+linuxctl get mcp-api resources # every static resource + template
+linuxctl get mcp-api prompts   # reports plainly that mcpd doesn't implement this MCP capability
 ```
 ```bash
 curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Type: application/json" \
@@ -253,7 +256,7 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 ### Direct-by-name escape hatches (bypassing the verb grammar)
 
 ```bash
-./executables/linuxctl tool files/list --path /tmp   # symmetric with `resource <uri>` above
+linuxctl tool files/list --path /tmp   # symmetric with `resource <uri>` above
 ```
 ```bash
 curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Type: application/json" \
@@ -263,8 +266,8 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
 ### Daemon user/token administration (local-only, no network call at all)
 
 ```bash
-./executables/linuxctl create mcpd user alice   # generates a token, prints it once, writes to configs/*.yaml directly
-./executables/linuxctl list mcpd users
+linuxctl create mcpd user alice   # generates a token, prints it once, writes to configs/*.yaml directly
+linuxctl list mcpd users
 ```
 There's no curl equivalent for this group - see [Daemon User Administration](docs/website/docs/linuxctl/mcpd-admin.md) for why it's deliberately kept off the network entirely.
 
