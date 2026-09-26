@@ -6,7 +6,8 @@
 #   /linux-mcp-daemon/            the latest release
 #   /linux-mcp-daemon/vX.Y.Z/     each release
 #   /linux-mcp-daemon/next/       main, on every push that changes the docs
-#   /linux-mcp-daemon/versions.json   the list the version menu reads at runtime
+#   /linux-mcp-daemon/versions.json   every version and its URL, in menu order;
+#                                     the version menu reads it at runtime
 #
 # A release tag publishes /vX.Y.Z/ and, when it is the newest version, the
 # root; versions.json is the only thing shared between the sites.
@@ -85,7 +86,7 @@ jobs:
           v = os.environ["V"]
           key = lambda s: tuple(int(p) for p in s.lstrip("v").split("."))
           try:
-              known = json.load(open("site/versions.json")).get("versions", [])
+              known = [e["version"] for e in json.load(open("site/versions.json"))["versions"] if e["version"] != "next"]
           except FileNotFoundError:
               known = []
           print("root=%s" % str(v != "next" and all(key(v) >= key(k) for k in known)).lower())
@@ -123,20 +124,28 @@ jobs:
             cp -a out/root/. site/
           fi
           touch site/.nojekyll
+          # versions.json lists every version with its URL, in menu order:
+          # releases newest first (the current one at the root), then main.
           python3 - <<'EOF'
           import json, os
           v, root = os.environ["V"], os.environ["ROOT"] == "true"
+          base = "https://nucleusv.github.io/linux-mcp-daemon/"
           key = lambda s: tuple(int(p) for p in s.lstrip("v").split("."))
           try:
-              index = json.load(open("site/versions.json"))
+              old = json.load(open("site/versions.json"))
           except FileNotFoundError:
-              index = {"latest": None, "versions": [], "next": False}
-          if v == "next":
-              index["next"] = True
-          else:
-              index["versions"] = sorted(set(index["versions"]) | {v}, key=key, reverse=True)
-              if root:
-                  index["latest"] = v
+              old = {"current": None, "versions": []}
+          names = {e["version"] for e in old["versions"]}
+          current = old["current"]
+          names.add(v)
+          if root:
+              current = v
+          releases = sorted(names - {"next"}, key=key, reverse=True)
+          index = {
+              "current": current,
+              "versions": [{"version": r, "url": base + ("" if r == current else r + "/")} for r in releases]
+                          + ([{"version": "next", "url": base + "next/"}] if "next" in names else []),
+          }
           json.dump(index, open("site/versions.json", "w"), indent=2)
           print(json.dumps(index))
           EOF

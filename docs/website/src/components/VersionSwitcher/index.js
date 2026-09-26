@@ -9,7 +9,8 @@ import {useLocation} from '@docusaurus/router';
 // of them - and is read here at runtime, so a site published once lists the
 // versions released after it without ever being rebuilt.
 //
-// versions.json: {"latest": "v0.3.3", "versions": ["v0.3.3", ...], "next": true}
+// versions.json, in menu order (the release workflow keeps it):
+// {"current": "v0.3.3", "versions": [{"version": "v0.3.3", "url": "https://.../"}, ...]}
 
 function useVersionIndex(siteRoot) {
   const [index, setIndex] = useState(null);
@@ -28,29 +29,23 @@ export default function VersionSwitcher({mobile}) {
   const {pathname} = useLocation();
   const index = useVersionIndex(siteRoot);
 
-  const latest = index?.latest;
-  // The current release first, then older ones (newest first), main last.
-  const releases = index?.versions ?? [];
-  const versions = [
-    ...releases.filter((v) => v === latest),
-    ...releases.filter((v) => v !== latest),
-    ...(index?.next ? ['next'] : []),
-  ];
-  if (!versions.includes(docsVersion)) {
-    versions.unshift(docsVersion); // a local build, or a list not fetched yet
+  const current = index?.current;
+  const versions = [...(index?.versions ?? [])];
+  if (!versions.some((v) => v.version === docsVersion)) {
+    // a local build, or the list not fetched yet
+    versions.unshift({version: docsVersion, url: siteConfig.baseUrl});
   }
   // The same page in the other version (a page it lacks shows the 404 page).
   const page = pathname.startsWith(siteConfig.baseUrl)
     ? pathname.slice(siteConfig.baseUrl.length)
     : '';
-  const href = (v) => siteRoot + (v === latest ? '' : `${v}/`) + page;
   const label = (v) =>
-    v === 'next' ? 'next (main)' : v === latest ? `${v} (current)` : v;
+    v === 'next' ? 'next (main)' : v === current ? `${v} (current)` : v;
 
-  const links = versions.map((v) => (
+  const links = versions.map(({version: v, url}) => (
     <li key={v}>
       <a
-        href={href(v)}
+        href={url + page}
         className={clsx(
           mobile ? 'menu__link' : 'dropdown__link',
           v === docsVersion &&
