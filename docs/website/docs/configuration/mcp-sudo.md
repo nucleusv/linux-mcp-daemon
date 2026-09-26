@@ -362,11 +362,14 @@ without privileged:  PRETTY_NAME="Ubuntu 24.04.5 LTS"   <- the container image
 with privileged:     PRETTY_NAME="Ubuntu 24.04 LTS"     <- the host
 ```
 
-Switching to the host needs the container started with **`--privileged --pid host`** (see [the container install](../installation#container-image)); the image sets `worker.containerized: true`, which turns the switch on. Without those Docker flags a grant here still passes, but the call fails instead of running - it doesn't quietly read the container instead:
+Switching to the host needs the container started with **`--privileged --pid host`** (see [the container install](../installation#container-image)); the image sets `worker.containerized: true`, which turns the switch on. What a privileged call does, by how the container was started (captured live):
 
-```text
-$ linuxctl get files /root/.bashrc --privileged true
-failed to join host mount namespace: unshare(CLONE_FS): operation not permitted
-```
+| Container started with | A call with `privileged: true` |
+|---|---|
+| `--privileged --pid host` | runs as root **on the host** |
+| `--pid host`, no `--privileged` | fails: `cannot switch to the host's filesystem - is the mcpd container running with --privileged --pid host? (unshare(CLONE_FS): operation not permitted)` |
+| neither | ⚠️ runs as root **inside the container**, without an error: it sees the image (`Ubuntu 24.04.5 LTS`, the image's `/root`), not the host. mcpd only logs a warning at startup (`daemon.yaml sets worker.containerized: true, but this process does not appear to be in a separate mount namespace...`) |
+
+So start the container exactly as the install shows, and check once that a privileged call reports the host: `linuxctl get system os-release --privileged true`.
 
 When mcpd runs directly on the host (systemd), there's nothing to switch to: `privileged: true` simply runs the call as root.
