@@ -422,10 +422,20 @@ if [ -n "$TOKEN_MSG" ]; then
 
 EOF
 fi
-cat <<EOF
-  Security: TLS is on by default (a self-signed certificate in $CONF_DIR/tls/;
+if [ "$SCHEME" = https ]; then
+    cat <<EOF
+  Security: TLS is on (a self-signed certificate in $CONF_DIR/tls/;
   its fingerprint: linuxctl describe mcpd tls). Plain HTTP (server.http in
   daemon.yaml) is off - tokens would cross the network in clear text.
+EOF
+else
+    cat <<EOF
+  Security: mcpd serves plain HTTP - tokens cross the network in clear text.
+  Keep port $PORT to a trusted network, or enable TLS (server.tls in
+  $CONF_DIR/daemon.yaml, then systemctl restart mcpd).
+EOF
+fi
+cat <<EOF
   Root access for tools is granted per user in $CONF_DIR/mcp-sudo.yaml.
   Docs: https://nucleusv.github.io/linux-mcp-daemon/
 EOF
