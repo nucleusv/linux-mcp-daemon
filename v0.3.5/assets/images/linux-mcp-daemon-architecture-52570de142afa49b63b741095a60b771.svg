@@ -1,0 +1,210 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 850" width="100%" height="100%">
+  <defs>
+    <!-- Arrow marker -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#475569"/>
+    </marker>
+
+    <!-- Subtle drop shadow -->
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.06"/>
+    </filter>
+
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 20px; font-weight: 700; fill: #0f172a; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+      .box-pipeline { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 1.2; }
+      .box-config { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.2; }
+      .box-card-stack { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.5; }
+      .box-host { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 1.2; }
+      .badge { fill: #fee2e2; }
+
+      .label { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 12px; font-weight: 700; fill: #64748b; letter-spacing: 0.05em; }
+      .text-heading { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; font-weight: 600; fill: #0f172a; }
+      .text-body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 12.5px; fill: #334155; }
+      .text-muted { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11.5px; fill: #64748b; }
+      .text-code { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; fill: #0f172a; }
+      .text-code-muted { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; fill: #475569; }
+      .text-accent { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; font-weight: 700; fill: #dc2626; letter-spacing: 0.05em; }
+
+      .wire { stroke: #64748b; stroke-width: 1.2; fill: none; }
+      .wire-boundary { stroke: #dc2626; stroke-width: 1.5; stroke-dasharray: 6 4; }
+      .dot { fill: #ef4444; }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #0b0f19; }
+        .title { fill: #f8fafc; }
+        .box { fill: #111827; stroke: #374151; }
+        .box-pipeline { fill: #1f2937; stroke: #4b5563; }
+        .box-config { fill: #1e293b; stroke: #475569; }
+        .box-card-stack { fill: #161e2e; stroke: #374151; }
+        .box-host { fill: #1f2937; stroke: #4b5563; }
+        .badge { fill: #3f1d1d; }
+        .label { fill: #94a3b8; }
+        .text-heading { fill: #f3f4f6; }
+        .text-body { fill: #cbd5e1; }
+        .text-muted { fill: #94a3b8; }
+        .text-code { fill: #e2e8f0; }
+        .text-code-muted { fill: #94a3b8; }
+        .text-accent { fill: #f87171; }
+        .wire { stroke: #64748b; }
+      }
+    </style>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect width="100%" height="100%" class="bg" rx="12"/>
+
+  <!-- Top Title -->
+  <text x="480" y="38" text-anchor="middle" class="title">linux-mcp-daemon</text>
+
+  <!-- ==================== 1. CLIENTS ROW ==================== -->
+  <text x="100" y="82" text-anchor="end" class="label">CLIENTS</text>
+  <g id="clients" transform="translate(140, 56)">
+    <rect x="0" y="0" width="310" height="42" rx="8" class="box" filter="url(#shadow)"/>
+    <text x="155" y="26" text-anchor="middle" class="text-heading">AI agent <tspan class="text-muted">(Claude, any MCP client)</tspan></text>
+
+    <rect x="330" y="0" width="180" height="42" rx="8" class="box" filter="url(#shadow)"/>
+    <text x="420" y="26" text-anchor="middle" class="text-code">linuxctl CLI</text>
+
+    <rect x="530" y="0" width="150" height="42" rx="8" class="box" filter="url(#shadow)"/>
+    <text x="605" y="26" text-anchor="middle" class="text-code">curl</text>
+  </g>
+
+  <!-- Connectors from clients to the master -->
+  <path d="M 295 98 L 295 116 L 745 116" class="wire"/>
+  <line x1="560" y1="98" x2="560" y2="116" class="wire"/>
+  <line x1="745" y1="98" x2="745" y2="116" class="wire"/>
+  <line x1="480" y1="116" x2="480" y2="168" class="wire" marker-end="url(#arrow)"/>
+  <rect x="240" y="129" width="480" height="20" rx="4" class="bg"/>
+  <text x="480" y="143" text-anchor="middle" class="text-code-muted">JSON-RPC over HTTP + SSE · Bearer token · port 9091</text>
+
+  <!-- ==================== 2. MCPD MASTER ==================== -->
+  <g id="mcpd-master" transform="translate(100, 172)">
+    <rect x="0" y="0" width="760" height="280" rx="10" class="box" filter="url(#shadow)"/>
+
+    <!-- Header, then the two guarantees underneath it, in their own column -->
+    <text x="24" y="34" class="text-heading" font-size="16">mcpd master</text>
+    <text x="24" y="52" class="text-code-muted" font-size="12">runs as root</text>
+
+    <g transform="translate(24, 84)">
+      <circle cx="5" cy="-4" r="2.5" class="dot"/>
+      <text x="14" y="0" class="text-muted">never reads</text>
+      <text x="14" y="16" class="text-muted"><tspan class="text-code">/proc</tspan> or <tspan class="text-code">/sys</tspan></text>
+
+      <circle cx="5" cy="40" r="2.5" class="dot"/>
+      <text x="14" y="44" class="text-muted">never execs</text>
+      <text x="14" y="60" class="text-muted">tools itself</text>
+
+      <circle cx="5" cy="84" r="2.5" class="dot"/>
+      <text x="14" y="88" class="text-muted">only decides</text>
+      <text x="14" y="104" class="text-muted">whether a call</text>
+      <text x="14" y="120" class="text-muted">is allowed</text>
+    </g>
+
+    <!-- Request pipeline -->
+    <g id="pipeline" transform="translate(185, 20)">
+      <rect x="0" y="0" width="290" height="42" rx="6" class="box-pipeline"/>
+      <text x="145" y="26" text-anchor="middle" class="text-body">Auth <tspan class="text-muted">(salted SHA-256 token hashes)</tspan></text>
+      <line x1="145" y1="42" x2="145" y2="64" class="wire" marker-end="url(#arrow)"/>
+
+      <rect x="0" y="66" width="290" height="42" rx="6" class="box-pipeline"/>
+      <text x="145" y="92" text-anchor="middle" class="text-body">Rate limiter <tspan class="text-muted">(token bucket)</tspan></text>
+      <line x1="145" y1="108" x2="145" y2="130" class="wire" marker-end="url(#arrow)"/>
+
+      <rect x="0" y="132" width="290" height="42" rx="6" class="box-pipeline"/>
+      <text x="145" y="157" text-anchor="middle" class="text-body">Router <tspan class="text-code-muted">(tools/call, resources/read)</tspan></text>
+      <line x1="145" y1="174" x2="145" y2="196" class="wire" marker-end="url(#arrow)"/>
+
+      <rect x="0" y="198" width="290" height="42" rx="6" class="box-pipeline"/>
+      <text x="145" y="223" text-anchor="middle" class="text-body">Policy check <tspan class="text-code-muted">(mcp-sudo.yaml)</tspan></text>
+    </g>
+
+    <!-- Policy check reads the config card -->
+    <line x1="475" y1="239" x2="485" y2="239" class="wire"/>
+
+    <g id="config-card" transform="translate(485, 112)">
+      <rect x="0" y="0" width="264" height="148" rx="6" class="box-config" stroke-dasharray="3 3"/>
+      <rect x="0" y="0" width="264" height="28" rx="6" class="box-pipeline" stroke-width="0"/>
+      <text x="14" y="18" class="text-code" font-size="11.5" font-weight="700">mcp-sudo.yaml</text>
+
+      <text x="14" y="46" class="text-code-muted" font-size="10.5">per user · per tool:</text>
+      <text x="14" y="66" class="text-muted">• <tspan class="text-body">allowed</tspan> <tspan class="text-code-muted">(may run as root)</tspan></text>
+      <text x="14" y="86" class="text-muted">• <tspan class="text-body">paths</tspan> <tspan class="text-code-muted">(file tools)</tspan></text>
+      <text x="14" y="106" class="text-muted">• <tspan class="text-body">network</tspan> <tspan class="text-code-muted">(deny_private/allow/deny)</tspan></text>
+      <text x="14" y="126" class="text-muted">• <tspan class="text-body">sysctl</tspan> <tspan class="text-code-muted">(write_keys)</tspan></text>
+    </g>
+  </g>
+
+  <!-- ==================== 3. PRIVILEGE BOUNDARY ==================== -->
+  <rect x="60" y="488" width="170" height="20" rx="3" class="badge"/>
+  <text x="145" y="502" text-anchor="middle" class="text-accent">PRIVILEGE BOUNDARY</text>
+  <line x1="236" y1="498" x2="900" y2="498" class="wire-boundary"/>
+
+  <!-- Spawn arrow, crossing the boundary -->
+  <line x1="370" y1="452" x2="370" y2="538" class="wire" marker-end="url(#arrow)"/>
+  <rect x="250" y="463" width="240" height="20" rx="4" class="bg"/>
+  <text x="370" y="477" text-anchor="middle" class="text-code" font-size="11.5">spawn: mcpd worker &lt;tool&gt;</text>
+  <rect x="290" y="509" width="160" height="18" rx="4" class="bg"/>
+  <text x="370" y="522" text-anchor="middle" class="text-muted">args via stdin</text>
+
+  <!-- ==================== 4. EPHEMERAL WORKER ==================== -->
+  <g id="worker-stack" transform="translate(100, 546)">
+    <!-- stacked cards: one short-lived process per call -->
+    <rect x="16" y="16" width="510" height="120" rx="10" class="box-card-stack"/>
+    <rect x="8" y="8" width="510" height="120" rx="10" class="box-card-stack"/>
+    <rect x="0" y="0" width="510" height="120" rx="10" class="box" filter="url(#shadow)"/>
+
+    <text x="24" y="30" class="text-heading" font-size="15">Ephemeral worker <tspan class="text-muted">· one per call</tspan></text>
+    <text x="24" y="52" class="text-muted">runs as the caller's OS user <tspan class="text-code-muted">(uid + gid + groups)</tspan>,</text>
+    <text x="24" y="68" class="text-muted">or as root only where <tspan class="text-code-muted">mcp-sudo.yaml</tspan> allows</text>
+
+    <line x1="24" y1="84" x2="486" y2="84" stroke="#94a3b8" stroke-opacity="0.35" stroke-width="1"/>
+    <text x="255" y="106" text-anchor="middle" class="text-code" font-size="13" font-weight="600">does the work → returns output → exits</text>
+  </g>
+
+  <!-- ==================== 6. CONTAINERIZED MODE (side panel) ==================== -->
+  <g id="containerized" transform="translate(660, 546)">
+    <rect x="0" y="0" width="200" height="136" rx="8" class="box-config" stroke-dasharray="3 3"/>
+    <rect x="0" y="0" width="200" height="28" rx="8" class="box-pipeline" stroke-width="0"/>
+    <text x="14" y="18" class="text-heading" font-size="12.5">Containerized mode</text>
+    <text x="14" y="50" class="text-muted">privileged workers join</text>
+    <text x="14" y="66" class="text-muted">the host mount namespace</text>
+    <text x="14" y="84" class="text-code-muted">setns /proc/1/ns/mnt</text>
+    <text x="14" y="108" class="text-muted">root means root on the</text>
+    <text x="14" y="124" class="text-muted">real host, not the container</text>
+  </g>
+  <line x1="642" y1="614" x2="658" y2="614" class="wire" stroke-dasharray="3 3"/>
+
+  <!-- ==================== 5. HOST ROW ==================== -->
+  <!-- bus from the worker to the four things it acts on -->
+  <line x1="355" y1="682" x2="355" y2="712" class="wire"/>
+  <line x1="190" y1="712" x2="790" y2="712" class="wire"/>
+  <line x1="190" y1="712" x2="190" y2="736" class="wire" marker-end="url(#arrow)"/>
+  <line x1="390" y1="712" x2="390" y2="736" class="wire" marker-end="url(#arrow)"/>
+  <line x1="590" y1="712" x2="590" y2="736" class="wire" marker-end="url(#arrow)"/>
+  <line x1="790" y1="712" x2="790" y2="736" class="wire" marker-end="url(#arrow)"/>
+
+  <text x="90" y="770" text-anchor="end" class="label">HOST</text>
+  <g id="host" transform="translate(100, 740)">
+    <rect x="0" y="0" width="180" height="56" rx="8" class="box-host"/>
+    <text x="90" y="24" text-anchor="middle" class="text-code">/proc · /sys</text>
+    <text x="90" y="42" text-anchor="middle" class="text-muted">kernel state</text>
+
+    <rect x="200" y="0" width="180" height="56" rx="8" class="box-host"/>
+    <text x="290" y="24" text-anchor="middle" class="text-body">DBus / systemd</text>
+    <text x="290" y="42" text-anchor="middle" class="text-muted">services, units</text>
+
+    <rect x="400" y="0" width="180" height="56" rx="8" class="box-host"/>
+    <text x="490" y="24" text-anchor="middle" class="text-body">filesystem</text>
+    <text x="490" y="42" text-anchor="middle" class="text-muted">files, logs, configs</text>
+
+    <rect x="600" y="0" width="180" height="56" rx="8" class="box-host"/>
+    <text x="690" y="24" text-anchor="middle" class="text-body">a few wrapped tools</text>
+    <text x="690" y="42" text-anchor="middle" class="text-code-muted" font-size="10">smartctl traceroute ss …</text>
+  </g>
+
+  <text x="480" y="828" text-anchor="middle" class="text-muted" font-size="11">everything else is read natively - no shelling out</text>
+</svg>
