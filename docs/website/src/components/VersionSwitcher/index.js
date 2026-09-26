@@ -29,7 +29,13 @@ export default function VersionSwitcher({mobile}) {
   const index = useVersionIndex(siteRoot);
 
   const latest = index?.latest;
-  const versions = [...(index?.next ? ['next'] : []), ...(index?.versions ?? [])];
+  // The current release first, then older ones (newest first), main last.
+  const releases = index?.versions ?? [];
+  const versions = [
+    ...releases.filter((v) => v === latest),
+    ...releases.filter((v) => v !== latest),
+    ...(index?.next ? ['next'] : []),
+  ];
   if (!versions.includes(docsVersion)) {
     versions.unshift(docsVersion); // a local build, or a list not fetched yet
   }
@@ -39,7 +45,7 @@ export default function VersionSwitcher({mobile}) {
     : '';
   const href = (v) => siteRoot + (v === latest ? '' : `${v}/`) + page;
   const label = (v) =>
-    v === 'next' ? 'next (main)' : v === latest ? `${v} (current)` : v;
+    v === 'next' ? 'next (main)' : v === latest ? `current (${v})` : v;
 
   const links = versions.map((v) => (
     <li key={v}>
