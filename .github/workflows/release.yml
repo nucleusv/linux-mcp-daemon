@@ -43,11 +43,18 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      # Notes for this release (upgrade steps, breaking changes), if any,
+      # go under the changelog.
+      - name: Release notes
+        id: notes
+        run: |
+          f="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$f" ]; then echo "args=--release-footer=$f" >> "$GITHUB_OUTPUT"; fi
       - uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean ${{ steps.notes.outputs.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
