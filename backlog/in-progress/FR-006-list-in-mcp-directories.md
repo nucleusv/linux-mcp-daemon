@@ -18,7 +18,7 @@ Pitch used everywhere: "Self-hosted Linux admin over MCP: remote over HTTPS, a s
 - [x] `server.json` (remote, SSE, `host` variable, secret `Authorization` header) and `glama.json` (maintainer `nucleusv`) in the repo root, valid JSON.
 - [x] Both files committed and pushed (0b6ff7a).
 - [x] Published to the official MCP Registry with `mcp-publisher` (GitHub login by the owner); visible at registry.modelcontextprotocol.io.
-- [ ] Listed on Glama (owner's account, repo claimed).
+- [x] Listed on Glama (owner's account, repo claimed).
 - [ ] Submitted to mcp.so and PulseMCP.
 - [ ] Pull request to punkpeye/awesome-mcp-servers opened (owner's OK).
 - [ ] Each listing's URL recorded below.
@@ -29,7 +29,7 @@ Pitch used everywhere: "Self-hosted Linux admin over MCP: remote over HTTPS, a s
 |---|---|---|---|---|---|
 | T1 | Files valid | `python3 -c json.load` on both; `mcp-publisher validate` | valid | 2026-09-26, local | ✅ json ok; `mcp-publisher 1.8.1 validate`: "server.json is valid" |
 | T2 | Registry | `curl https://registry.modelcontextprotocol.io/v0/servers?search=io.github.nucleusv/linux-mcp-daemon` | our entry, version 0.3.4 | 2026-09-26 | ✅ `io.github.nucleusv/linux-mcp-daemon 0.3.4`, status active, remote `https://{host}:9091/sse` |
-| T3 | Glama | glama.ai search `linux-mcp-daemon` | listing present, maintainer nucleusv | 2026-09-26 | ⏳ submitted for review; not indexed yet |
+| T3 | Glama | glama.ai listing + release | listing present, maintainer nucleusv | 2026-09-27 | ✅ claimed, build test passed (mcpd stdio), release 0.3.5, TDQS A |
 | T4 | mcp.so / PulseMCP | site search | listing present | | |
 | T5 | awesome list | PR link | open or merged | | |
 
@@ -41,3 +41,4 @@ Pitch used everywhere: "Self-hosted Linux admin over MCP: remote over HTTPS, a s
 - 2026-09-26 - official MCP Registry: owner authorized the GitHub device login (`mcp-publisher login github`), then `mcp-publisher publish`: "Successfully published io.github.nucleusv/linux-mcp-daemon version 0.3.4" at 19:53:47Z; the registry API returns it as active. Listing: https://registry.modelcontextprotocol.io/v0/servers?search=io.github.nucleusv/linux-mcp-daemon
 - 2026-09-26 - owner asked to keep the registry entry current: added "Releasing vX.Y.Z" to CLAUDE.md - bump `server.json` version with the others, then `mcp-publisher publish` after the tag and verify via the registry API.
 - 2026-09-26 - Glama: owner claimed the server; added card (end of README) and score (top badge row) badges to README. Dockerfile config with mcpd over HTTP + `mcp-remote` worked locally (37 tools via mcp-proxy) but Glama rejects `mcp-remote` ("must build and run the server locally, not proxy"). Not using another bridge to get around that rule; native stdio mode is FR-007, Glama's build waits for it. Registry description changed in server.json (not yet republished): "AI agent access to Linux servers without SSH: scoped tools, per-call isolation, root only if granted".
+- 2026-09-27 - registry at 0.3.5 with the new description; Glama release 0.3.5 and README images fixed for Glama. Left: mcp.so, PulseMCP (may pick up from the registry), awesome-mcp-servers PR (needs the owner's OK).
