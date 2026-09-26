@@ -20,7 +20,7 @@ Pitch used everywhere: "Self-hosted Linux admin over MCP: remote over HTTPS, a s
 - [x] Published to the official MCP Registry with `mcp-publisher` (GitHub login by the owner); visible at registry.modelcontextprotocol.io.
 - [x] Listed on Glama (owner's account, repo claimed).
 - [ ] Submitted to mcp.so and PulseMCP.
-- [ ] Pull request to punkpeye/awesome-mcp-servers opened (owner's OK).
+- [x] Pull request to punkpeye/awesome-mcp-servers opened (owner's OK): #15197.
 - [ ] Each listing's URL recorded below.
 
 ## Tests
@@ -31,7 +31,7 @@ Pitch used everywhere: "Self-hosted Linux admin over MCP: remote over HTTPS, a s
 | T2 | Registry | `curl https://registry.modelcontextprotocol.io/v0/servers?search=io.github.nucleusv/linux-mcp-daemon` | our entry, version 0.3.4 | 2026-09-26 | ✅ `io.github.nucleusv/linux-mcp-daemon 0.3.4`, status active, remote `https://{host}:9091/sse` |
 | T3 | Glama | glama.ai listing + release | listing present, maintainer nucleusv | 2026-09-27 | ✅ claimed, build test passed (mcpd stdio), release 0.3.5, TDQS A |
 | T4 | mcp.so / PulseMCP | site search | listing present | | |
-| T5 | awesome list | PR link | open or merged | | |
+| T5 | awesome list | PR link | open or merged | 2026-09-27 | ✅ opened #15197 |
 
 ## Comments
 
@@ -42,3 +42,4 @@ Pitch used everywhere: "Self-hosted Linux admin over MCP: remote over HTTPS, a s
 - 2026-09-26 - owner asked to keep the registry entry current: added "Releasing vX.Y.Z" to CLAUDE.md - bump `server.json` version with the others, then `mcp-publisher publish` after the tag and verify via the registry API.
 - 2026-09-26 - Glama: owner claimed the server; added card (end of README) and score (top badge row) badges to README. Dockerfile config with mcpd over HTTP + `mcp-remote` worked locally (37 tools via mcp-proxy) but Glama rejects `mcp-remote` ("must build and run the server locally, not proxy"). Not using another bridge to get around that rule; native stdio mode is FR-007, Glama's build waits for it. Registry description changed in server.json (not yet republished): "AI agent access to Linux servers without SSH: scoped tools, per-call isolation, root only if granted".
 - 2026-09-27 - registry at 0.3.5 with the new description; Glama release 0.3.5 and README images fixed for Glama. Left: mcp.so, PulseMCP (may pick up from the registry), awesome-mcp-servers PR (needs the owner's OK).
+- 2026-09-27 - awesome-remote-mcp-servers checked and skipped: it lists hosted endpoints only ("no install, no local process"; an entry must answer `initialize` at a public URL) and itself points self-hosted servers to awesome-mcp-servers. Opened https://github.com/punkpeye/awesome-mcp-servers/pull/15197 (owner's OK): one line in "Command Line", alphabetical, 🏎️ 🏠 🐧 + Glama badge, from branch nucleusv:add-linux-mcp-daemon. The CONTRIBUTING fast-track marker `🤖🤖🤖` was not added to the title (owner didn't ask for it); the PR body carries the Claude Code line.
