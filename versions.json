@@ -1,9 +1,13 @@
 {
-  "current": "v0.3.3",
+  "current": "v0.3.4",
   "versions": [
     {
-      "version": "v0.3.3",
+      "version": "v0.3.4",
       "url": "https://nucleusv.github.io/linux-mcp-daemon/"
+    },
+    {
+      "version": "v0.3.3",
+      "url": "https://nucleusv.github.io/linux-mcp-daemon/v0.3.3/"
     },
     {
       "version": "v0.3.2",
