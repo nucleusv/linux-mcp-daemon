@@ -118,6 +118,20 @@ Carry structured fields (`user`, `session`, `tool`, `privileged`, `duration_ms`,
 
 **Do**: list each one's tools and resources, how it reaches the host (shell commands vs `/proc`/`/sys`), how it limits what an agent may do (auth, root, per-tool grants), and transport. Note tools they have that we lack (containers/Docker is our open item 10) and anything worth borrowing; also how they are listed and described on these directories - input for publishing mcpd there and for the Habr article.
 
+**Findings (2026-09-26, read-only review of both repos):**
+- **os-mcp** (Rust, stdio): two tools - `get_system_info` and `execute_command`, i.e. a remote shell. `sh -c` with an allowlist checked on the first word only (`ls; rm -rf ~` passes), 227 allowed commands incl. `env`, `awk`, `curl`, `systemctl`, root via `pkexec sh -c` (needs a desktop). No auth, no releases, 4 stars.
+- **Mohabdo21/linux-mcp** (Go, stdio): 69 read-only `get_*` tools + 19 resources via gopsutil, `/proc`, the Docker SDK and `exec` without a shell. No auth, no root model (runs as the client). Tool disable list + SIGHUP reload. Publishes to the MCP Registry (`server.json`) and Glama (`glama.json`). One tool calls ip-api.com.
+- **Neither** has authentication, network transport, per-user identity, per-call privilege drop, per-tool root grants, path/network limits, or CI running tests - what sets mcpd apart.
+
+**Worth adding, ranked:**
+1. Read-only Docker group (open item 10): containers, logs (tail), stats, inspect with secret redaction, disk usage, and one `docker/snapshot` that returns partial results with an `errors[]` field instead of failing.
+2. A one-call system health summary (load, memory, disks, failed units, recent errors) - saves an agent many round-trips.
+3. A security audit tool: SUID and world-writable files, firewall, sshd config, SELinux/AppArmor, failed logins - root only where granted.
+4. Boot analysis (blame, critical chain) from systemd over D-Bus.
+5. Smaller: cron jobs and timers, available package updates, process tree and open files, largest files, CPU temperature.
+
+**Listing mcpd:** add `glama.json` and an MCP Registry `server.json`; tagline naming the difference (remote over HTTPS, per-user privilege-isolated workers, per-tool root grants); categories Monitoring, System Administration, Security; tool/resource counts and license.
+
 ## Explicitly not recommended (from `plan/linux-admin-roadmap.md`, reaffirmed by this investigation)
 
 Disk partitioning (write) and firewall rules (write) both remain correctly deferred pending the dry-run/confirmation governance design — nothing in this investigation's live testing changed that assessment; if anything, the real, currently-full disk found in `disk-storage.md` makes it *more* important that any future write-capable disk tool ships with strong safeguards from day one, not less.
