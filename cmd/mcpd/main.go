@@ -212,7 +212,7 @@ func main() {
 		logging.Warn("could not determine whether this process is actually containerized (comparing /proc/self/ns/mnt vs /proc/1/ns/mnt)", "err", err)
 	} else if actual != daemonConfig.Worker.Containerized {
 		if daemonConfig.Worker.Containerized {
-			logging.Warn("daemon.yaml sets worker.containerized: true, but this process does not appear to be in a separate mount namespace from its own PID 1 - there may be no real container boundary to cross. This is harmless on its own (JoinHostMountNamespace no-ops when the namespace already matches), but if mcpd actually runs directly on the host, set worker.containerized: false to skip the redundant check on every privileged call.")
+			logging.Warn("daemon.yaml sets worker.containerized: true, but this process shares its mount namespace with its own PID 1 - no host is in view, so privileged calls will fail. In a container, start it with --privileged --pid host; if mcpd runs directly on the host, set worker.containerized: false.")
 		} else {
 			logging.Warn("daemon.yaml sets worker.containerized: false, but this process appears to be running in its own mount namespace, separate from its own PID 1 - privileged tools like system/packages or services/manage will only see this container's own filesystem, not the real host's. If mcpd is deployed containerized (e.g. Kubernetes, Docker) and should administer the real host, set worker.containerized: true.")
 		}

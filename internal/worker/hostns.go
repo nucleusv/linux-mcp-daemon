@@ -62,13 +62,14 @@ func IsContainerized() (bool, error) {
 // privileged securityContext) and hostPID: true at the pod level, so
 // /proc/1 is the host's real init rather than a namespaced view of it.
 func JoinHostMountNamespace() error {
-	// If this worker's mount namespace already is PID 1's (bare-metal mcpd,
-	// or a misconfigured worker.containerized: true on a non-containerized
-	// host), setns/chroot would be redundant work that still demands
-	// CAP_SYS_ADMIN/CAP_SYS_CHROOT for no benefit. Skip it - already at the
-	// host root is success, not a case to fail on.
+	// Our mount namespace already being PID 1's means there's no host in
+	// view: a container started without --pid host sees its own PID 1, so a
+	// privileged call would silently run as root inside the container while
+	// the caller believes it acts on the host. Refuse instead. (mcpd running
+	// directly on the host with worker.containerized: true lands here too -
+	// the fix there is the config.)
 	if same, err := sameNamespace("/proc/self/ns/mnt", "/proc/1/ns/mnt"); err == nil && same {
-		return nil
+		return fmt.Errorf("no host in view - PID 1 is in this process's own mount namespace; if mcpd runs directly on the host, set worker.containerized: false")
 	}
 
 	runtime.LockOSThread() // setns/chroot are per-thread; deliberately never unlocked.
