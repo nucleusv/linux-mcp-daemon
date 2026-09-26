@@ -1,9 +1,9 @@
 {
-  "current": null,
+  "current": "v0.3.2",
   "versions": [
     {
       "version": "v0.3.2",
-      "url": "https://nucleusv.github.io/linux-mcp-daemon/v0.3.2/"
+      "url": "https://nucleusv.github.io/linux-mcp-daemon/"
     },
     {
       "version": "v0.3.1",
