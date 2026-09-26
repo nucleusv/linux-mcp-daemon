@@ -1,6 +1,10 @@
-# Linux MCPd
+<div align="center">
 
 ![mcpd: a penguin in sunglasses](https://raw.githubusercontent.com/nucleusv/linux-mcp-daemon/main/docs/imgs/mcpd-badge-256.png)
+
+</div>
+
+# Linux MCPd
 
 [![Docs](https://img.shields.io/badge/docs-nucleusv.github.io-blue)](https://nucleusv.github.io/linux-mcp-daemon/)
 [![Release](https://img.shields.io/github/v/release/nucleusv/linux-mcp-daemon)](https://github.com/nucleusv/linux-mcp-daemon/releases)
