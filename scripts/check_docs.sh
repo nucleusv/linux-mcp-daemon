@@ -130,11 +130,22 @@ stale "$tmp/valid_res" "$tmp/sudo_res" "privileged resource grants for resources
 cat "$tmp/code_tools" "$tmp/need_tool_grants" | sort -u > "$tmp/valid_tools"
 stale "$tmp/valid_tools" "$tmp/sudo_tools" "privileged tool grants for tools that no longer exist"
 
+echo "== reference example on the mcp-sudo page"
+# configuration/mcp-sudo.md shows the privileged block of configs/mcp-sudo.yaml
+# verbatim, between two marker comments; it must match the file.
+awk '/^  privileged:$/{p=1; print "users:"} p&&/^  [a-z]/&&!/^  privileged:$/{p=0} p' configs/mcp-sudo.yaml > "$tmp/ref_cfg"
+awk '/reference-privileged:start/{p=1; next} /reference-privileged:end/{p=0} p' docs/website/docs/configuration/mcp-sudo.md | sed '/^```/d' > "$tmp/ref_doc"
+if ! cmp -s "$tmp/ref_cfg" "$tmp/ref_doc"; then
+    echo "   the privileged block in docs/website/docs/configuration/mcp-sudo.md differs from configs/mcp-sudo.yaml - copy it over:"
+    diff "$tmp/ref_doc" "$tmp/ref_cfg" | head -20 | sed 's/^/     /'
+    fail=1
+fi
+
 if grep -q '"prompts/list"' internal/rpc/*.go 2>/dev/null; then
     echo "note: prompts/list is implemented - extend this script to check prompts too"
 fi
 
 if [ "$fail" -eq 0 ]; then
-    echo "✅ Every tool, resource and resource template has a docs page and an overview entry, every grant a privileged read needs is in the reference config, and nothing listed is stale."
+    echo "✅ Every tool, resource and resource template has a docs page and an overview entry, every grant a privileged read needs is in the reference config, the mcp-sudo page shows that config as it is, and nothing listed is stale."
 fi
 exit "$fail"

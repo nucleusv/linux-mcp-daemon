@@ -166,6 +166,183 @@ Changes:
 
 The daemon's own `configs/mcp-sudo.yaml` includes a `privileged` user with every tool and every resource this daemon currently exposes granted. It isn't meant to represent a real least-privilege user (see `admin`/`testuser`/`unpriviliged` in that same file for that) - it exists purely as living documentation of the complete authorization surface, and is kept in sync with `internal/rpc/tools.go`/`resources.go` whenever a tool or resource is added, renamed, or removed.
 
+It grants every tool as root, the whole filesystem to the path tools (`paths: ["/"]`) and every resource - **full root on the host**: a list of names to copy from, not a set of grants to give anyone (see [Permissions and Risks](./permissions-and-risks)). `scripts/check_docs.sh` fails when this copy and the file differ.
+
+<details>
+<summary><b>The <code>privileged</code> block of <code>configs/mcp-sudo.yaml</code></b> - every tool and resource</summary>
+
+{/* reference-privileged:start */}
+```yaml
+users:
+  privileged:
+    privileged:
+      tools:
+        auth/sudo-rules:
+          allowed: true
+        daemon/reload-config:
+          allowed: true
+        cpu/list:
+          allowed: true
+        cpu/load-average:
+          allowed: true
+        disks/free:
+          allowed: true
+          paths:
+            - /
+        disks/health:
+          allowed: true
+        disks/list:
+          allowed: true
+        disks/mounts:
+          allowed: true
+        disks/partitions:
+          allowed: true
+        disks/performance:
+          allowed: true
+        disks/usage:
+          allowed: true
+          paths:
+            - /
+        files/create:
+          allowed: true
+          paths:
+            - /
+        files/filetype:
+          allowed: true
+          paths:
+            - /
+        files/chmod:
+          allowed: true
+          paths:
+            - /
+        files/chown:
+          allowed: true
+          paths:
+            - /
+        files/find:
+          allowed: true
+          paths:
+            - /
+        files/list:
+          allowed: true
+          paths:
+            - /
+        files/read:
+          allowed: true
+          paths:
+            - /
+        files/update:
+          allowed: true
+          paths:
+            - /
+        kernel/system-control:
+          allowed: true
+          # Optional write restrictions (checked before any worker runs).
+          # Absent = unrestricted. Example:
+          # sysctl:
+          #   write_keys: ["net.ipv4.ip_forward", "vm.*"]  # only these keys
+        logs/dmesg:
+          allowed: true
+        logs/logins:
+          allowed: true
+        logs/journal-control:
+          allowed: true
+        memory/usage:
+          allowed: true
+        network/arp:
+          allowed: true
+        network/connections:
+          allowed: true
+        network/curl:
+          allowed: true
+          # Optional per-tool destination restrictions (network/curl and
+          # network/ping). Unlike `allowed` (root only), `network:` applies
+          # to every call of the tool. Absent = unrestricted. Example:
+          # network:
+          #   deny_private: true        # loopback, 10/8, 172.16/12, 192.168/16, 169.254/16, CGNAT, ULA, ...
+          #   allow: ["10.0.5.0/24", "intranet.example.com", "*.corp.example.com"]
+          #   deny: ["10.0.5.66"]       # always wins over allow
+        network/nslookup:
+          allowed: true
+        network/ping:
+          allowed: true
+        network/trace-path:
+          allowed: true
+        processes/delete:
+          allowed: true
+        processes/list:
+          allowed: true
+        processes/top:
+          allowed: true
+        services/list:
+          allowed: true
+        services/manage:
+          allowed: true
+        # These three are never callable directly via tools/call (they're
+        # not in tools.go's schema/standardWorkers) - they're the internal
+        # worker names behind service://, file://, and process:// resource
+        # templates. SpawnWorker independently re-checks CanRunAsRoot()
+        # against this exact name whenever a resource template requests
+        # privileged access, so these entries are required for privileged
+        # reads of those resources to work, even though the name itself is
+        # never a valid tools/call target.
+        services/status:
+          allowed: true
+        files/content:
+          allowed: true
+        # Worker behind file:///{path}/stat - a privileged file:// read needs
+        # both the resource grant and this one (see ARCHITECTURE.md).
+        files/stat:
+          allowed: true
+        processes/read:
+          allowed: true
+        system/os-release:
+          allowed: true
+        system/packages:
+          allowed: true
+        users/list:
+          allowed: true
+      resources:
+        os://uname:
+          - "*"
+        os://release:
+          - "*"
+        system://hostname:
+          - "*"
+        system://timezone:
+          - "*"
+        system://locale:
+          - "*"
+        network://interfaces:
+          - "*"
+        network://routes:
+          - "*"
+        devices://usb:
+          - "*"
+        devices://pci:
+          - "*"
+        devices://dmi:
+          - "*"
+        kernel://modules:
+          - "*"
+        # Unlike the exact-match resources above (where the code always
+        # compares against the literal sentinel "*"), these are genuinely
+        # prefix-matched against a real value (a path, a service name, a
+        # PID) - so "grant everything" means an empty-string prefix, which
+        # every value starts with. A literal "*" here would only grant
+        # access to a resource actually named "*", never allowing any real
+        # value through.
+        file://:
+          - ""
+        service://:
+          - ""
+        process://:
+          - ""
+```
+{/* reference-privileged:end */}
+
+</details>
+
 ## Host filesystem access
 
 When this daemon runs containerized (see [Master Daemon Configuration](./daemon.md)'s `worker.containerized` setting), `privileged: true` means more than root-in-container: every privileged worker call automatically also joins the real host's mount namespace and chroots into it, so tools like `system/packages` or `services/manage` see the actual host filesystem and the actual host's systemd, not the daemon's own container image. This is entirely a daemon-startup setting - there's nothing to configure per-tool here, and no second flag alongside `privileged: true` to authorize. If `mcpd` runs directly on the host instead (no container boundary), the same `privileged: true` grant just runs as root normally, since there's nothing else to cross into.
