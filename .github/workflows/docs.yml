@@ -5,7 +5,9 @@
 #
 #   /linux-mcp-daemon/            the latest release
 #   /linux-mcp-daemon/vX.Y.Z/     each release
-#   /linux-mcp-daemon/next/       main, on every push that changes the docs
+#   /linux-mcp-daemon/next/       main, on every push that changes the docs -
+#                                 for checking docs before a release; not in
+#                                 the version menu
 #   /linux-mcp-daemon/versions.json   every version and its URL, in menu order;
 #                                     the version menu reads it at runtime
 #
@@ -124,8 +126,8 @@ jobs:
             cp -a out/root/. site/
           fi
           touch site/.nojekyll
-          # versions.json lists every version with its URL, in menu order:
-          # releases newest first (the current one at the root), then main.
+          # versions.json lists every release with its URL, in menu order:
+          # newest first, the current one at the root. /next/ isn't listed.
           python3 - <<'EOF'
           import json, os
           v, root = os.environ["V"], os.environ["ROOT"] == "true"
@@ -135,16 +137,16 @@ jobs:
               old = json.load(open("site/versions.json"))
           except FileNotFoundError:
               old = {"current": None, "versions": []}
-          names = {e["version"] for e in old["versions"]}
+          names = {e["version"] for e in old["versions"]} - {"next"}
           current = old["current"]
-          names.add(v)
+          if v != "next":
+              names.add(v)
           if root:
               current = v
-          releases = sorted(names - {"next"}, key=key, reverse=True)
+          releases = sorted(names, key=key, reverse=True)
           index = {
               "current": current,
-              "versions": [{"version": r, "url": base + ("" if r == current else r + "/")} for r in releases]
-                          + ([{"version": "next", "url": base + "next/"}] if "next" in names else []),
+              "versions": [{"version": r, "url": base + ("" if r == current else r + "/")} for r in releases],
           }
           json.dump(index, open("site/versions.json", "w"), indent=2)
           print(json.dumps(index))
