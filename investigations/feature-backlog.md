@@ -109,6 +109,15 @@ Carry structured fields (`user`, `session`, `tool`, `privileged`, `duration_ms`,
 **Now**: plain HTTP unless `server.tls` is configured by hand with an existing certificate; bearer tokens travel in clear text.
 **Build**: TLS enabled by default: install.sh / the packages / the container generate a self-signed certificate (or take a provided one / ACME) on first install; `linuxctl` trusts it via a pinned CA or fingerprint; plain HTTP only when explicitly enabled (e.g. behind a TLS-terminating proxy). In progress (2026-09-24).
 
+## To investigate: similar projects
+
+### 26. Compare with other Linux MCP servers
+**Links** (from the user, 2026-09-25):
+- [marcos2872/os-mcp](https://lobehub.com/zh/mcp/marcos2872-os-mcp#1) (LobeHub)
+- [Mohabdo21/linux-mcp](https://glama.ai/mcp/servers/Mohabdo21/linux-mcp#get_docker_system_snapshot) (Glama) - note its `get_docker_system_snapshot` tool
+
+**Do**: list each one's tools and resources, how it reaches the host (shell commands vs `/proc`/`/sys`), how it limits what an agent may do (auth, root, per-tool grants), and transport. Note tools they have that we lack (containers/Docker is our open item 10) and anything worth borrowing; also how they are listed and described on these directories - input for publishing mcpd there and for the Habr article.
+
 ## Explicitly not recommended (from `plan/linux-admin-roadmap.md`, reaffirmed by this investigation)
 
 Disk partitioning (write) and firewall rules (write) both remain correctly deferred pending the dry-run/confirmation governance design — nothing in this investigation's live testing changed that assessment; if anything, the real, currently-full disk found in `disk-storage.md` makes it *more* important that any future write-capable disk tool ships with strong safeguards from day one, not less.
