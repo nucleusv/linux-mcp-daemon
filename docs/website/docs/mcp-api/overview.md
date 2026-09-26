@@ -80,8 +80,8 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 - [`files/chown`](./tools/files/chown) - Changes owner and/or group; never follows symlinks.
 
 **disks**
-- [`disks/free`](./tools/disks/free) - Returns disk space statistics (df -h).
-- [`disks/usage`](./tools/disks/usage) - Calculates the total disk space utilized by a specific directory (du -sh).
+- [`disks/free`](./tools/disks/free) - Returns disk space statistics of the filesystem holding a path, like df - in bytes, or like df -h with human_readable.
+- [`disks/usage`](./tools/disks/usage) - Calculates the disk space used by a directory, like du -s - in bytes, or like du -sh with human_readable.
 - [`disks/list`](./tools/disks/list) - Lists block devices and partitions.
 - [`disks/mounts`](./tools/disks/mounts) - Lists mounted filesystems (device, mount point, type, options) - equivalent to `mount`/`findmnt`'s basic view.
 - [`disks/performance`](./tools/disks/performance) - Retrieves granular block device I/O performance metrics (equivalent to iostat).

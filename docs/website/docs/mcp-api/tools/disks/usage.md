@@ -2,7 +2,7 @@
 
 **Tool Name**: `disks/usage`
 
-Calculates the total disk space utilized by a specific directory (du -sh). Use disks/free for overall partition stats.
+Calculates the disk space used by a directory, like du -s - in bytes, or like du -sh with human_readable. Use disks/free for overall partition stats.
 
 | Parameter | Description |
 |---|---|

@@ -23,12 +23,12 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 		listDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
 	}
 
-	dfDesc := "Returns disk space statistics (df -h). Use disks/list to see all block devices."
+	dfDesc := "Returns disk space statistics of the filesystem holding a path, like df - in bytes, or like df -h with human_readable. Use disks/list to see all block devices."
 	if sudoCfg.CanRunAsRoot(session.User, "disks/free") {
 		dfDesc += " (Authorized for 'privileged: true')"
 	}
 
-	duDesc := "Calculates the total disk space utilized by a specific directory (du -sh). Use disks/free for overall partition stats."
+	duDesc := "Calculates the disk space used by a directory, like du -s - in bytes, or like du -sh with human_readable. Use disks/free for overall partition stats."
 	if sudoCfg.CanRunAsRoot(session.User, "disks/usage") {
 		duDesc += " (Authorized for 'privileged: true' to traverse protected subdirectories)"
 	}
@@ -72,7 +72,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"path":           map[string]interface{}{"type": "string", "description": "Directory path to list"},
 						"all":            map[string]interface{}{"type": "boolean", "description": "Include dotfiles, . and .. (ls -a)"},
 						"long":           map[string]interface{}{"type": "boolean", "description": "Long listing like ls -l: type+permissions, links, owner, group, size, date, symlink target. Default true; false lists names only"},
-						"human_readable": map[string]interface{}{"type": "boolean", "description": "Sizes like 4.0K, 1.5M (ls -h)"},
+						"human_readable": map[string]interface{}{"type": "boolean", "description": "Sizes like 4.0K, 1.5M (ls -h); default is bytes"},
 						"sort":           map[string]interface{}{"type": "string", "enum": []string{"name", "size", "time"}, "description": "Sort by name (default), size (largest first) or time (newest first)"},
 						"reverse":        map[string]interface{}{"type": "boolean", "description": "Reverse the sort order (ls -r)"},
 						"dirs_first":     map[string]interface{}{"type": "boolean", "description": "List directories before files"},
@@ -211,7 +211,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"output_format":  map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
 						"path":           map[string]interface{}{"type": "string", "description": "Absolute path to check"},
 						"inodes":         map[string]interface{}{"type": "boolean", "description": "List inode information instead of block usage (-i)"},
-						"human_readable": map[string]interface{}{"type": "boolean", "description": "Print sizes in powers of 1024 (-h)"},
+						"human_readable": map[string]interface{}{"type": "boolean", "description": "Sizes like 53.2 GiB (df -h); default is bytes"},
 						"privileged":     map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
 					},
 					"required": []string{"path"},

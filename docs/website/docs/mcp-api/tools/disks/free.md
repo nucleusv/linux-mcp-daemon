@@ -2,7 +2,7 @@
 
 **Tool Name**: `disks/free`
 
-Returns disk space statistics (df -h). Use disks/list to see all block devices.
+Returns disk space statistics of the filesystem holding a path, like df - in bytes, or like df -h with human_readable. Use disks/list to see all block devices.
 
 | Parameter | Description |
 |---|---|
