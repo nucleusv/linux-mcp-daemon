@@ -1,29 +1,64 @@
 # Builds the documentation site (Docusaurus, docs/website) and publishes it
 # to the gh-pages branch, which GitHub Pages serves at
-# https://nucleusv.github.io/linux-mcp-daemon/ - on every push to main that
-# changes the docs, so the site never lags behind the code.
+# https://nucleusv.github.io/linux-mcp-daemon/. Every version is its own
+# static site, published once and never rebuilt:
+#
+#   /linux-mcp-daemon/            the latest release
+#   /linux-mcp-daemon/vX.Y.Z/     each release
+#   /linux-mcp-daemon/next/       main, on every push that changes the docs
+#   /linux-mcp-daemon/versions.json   the list the version menu reads at runtime
+#
+# A release tag publishes /vX.Y.Z/ and, when it is the newest version, the
+# root; versions.json is the only thing shared between the sites.
 name: docs
 
 on:
   push:
     branches: [main]
+    # Path filters apply to branch pushes only; a tag push always runs.
     paths:
       - "docs/**"
       - ".github/workflows/docs.yml"
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to (re)publish, e.g. v0.3.3 - empty publishes main as /next/"
+        required: false
 
 permissions:
   contents: write # push to gh-pages
 
 concurrency:
   group: docs
-  cancel-in-progress: true
+  cancel-in-progress: false # never drop a release publish for a main one
 
 jobs:
   deploy:
     runs-on: ubuntu-24.04
     steps:
+      - name: Which version
+        id: which
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            v="$GITHUB_REF_NAME"
+          else
+            v="$INPUT_VERSION"
+          fi
+          if [ -n "$v" ]; then
+            [[ "$v" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release tag: $v"; exit 1; }
+            echo "version=$v" >> "$GITHUB_OUTPUT"
+            echo "ref=refs/tags/$v" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=next" >> "$GITHUB_OUTPUT"
+            echo "ref=$GITHUB_REF" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.which.outputs.ref }}
 
       - uses: actions/setup-node@v7
         with:
@@ -31,26 +66,80 @@ jobs:
           cache: npm
           cache-dependency-path: docs/website/package-lock.json
 
-      - name: Build
-        working-directory: docs/website
-        run: |
-          npm ci
-          npm run build
-
-      # Same result as `docusaurus deploy`: the build replaces the branch's
-      # contents in a new commit on top of its history.
-      - name: Publish to gh-pages
+      - name: Check out gh-pages
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git clone --depth 1 --branch gh-pages \
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" site
-          find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -a docs/website/build/. site/
-          touch site/.nojekyll
+
+      - name: Is it the newest release
+        id: newest
+        env:
+          V: ${{ steps.which.outputs.version }}
+        run: |
+          # The root shows the newest release; republishing an older one
+          # (workflow_dispatch) only replaces its own /vX.Y.Z/.
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json, os
+          v = os.environ["V"]
+          key = lambda s: tuple(int(p) for p in s.lstrip("v").split("."))
+          try:
+              known = json.load(open("site/versions.json")).get("versions", [])
+          except FileNotFoundError:
+              known = []
+          print("root=%s" % str(v != "next" and all(key(v) >= key(k) for k in known)).lower())
+          EOF
+
+      - name: Build
+        working-directory: docs/website
+        env:
+          V: ${{ steps.which.outputs.version }}
+          ROOT: ${{ steps.newest.outputs.root }}
+        run: |
+          npm ci
+          if [ "$V" = next ]; then
+            DOCS_BASE_URL=/linux-mcp-daemon/next/ DOCS_VERSION=next npx docusaurus build --out-dir ../../out/next
+          else
+            DOCS_BASE_URL=/linux-mcp-daemon/$V/ DOCS_VERSION=$V npx docusaurus build --out-dir ../../out/$V
+            if [ "$ROOT" = true ]; then
+              DOCS_BASE_URL=/linux-mcp-daemon/ DOCS_VERSION=$V npx docusaurus build --out-dir ../../out/root
+            fi
+          fi
+
+      - name: Publish to gh-pages
+        env:
+          V: ${{ steps.which.outputs.version }}
+          ROOT: ${{ steps.newest.outputs.root }}
+        run: |
           # Refuse to publish a build made for another baseUrl.
-          grep -q 'href="/linux-mcp-daemon/' site/index.html || grep -q 'href=/linux-mcp-daemon/' site/index.html \
-            || { echo "build is not for /linux-mcp-daemon/ - not publishing"; exit 1; }
+          check() { grep -qE "href=\"?$2" "$1/index.html" || { echo "$1 is not built for $2 - not publishing"; exit 1; }; }
+          check "out/$V" "/linux-mcp-daemon/$V/"
+          rm -rf "site/$V" && cp -a "out/$V" "site/$V"
+          if [ "$ROOT" = true ]; then
+            check out/root /linux-mcp-daemon/
+            # Replace the root site, keeping the other versions and the list.
+            find site -mindepth 1 -maxdepth 1 ! -name .git ! -name next ! -name 'v[0-9]*' ! -name versions.json -exec rm -rf {} +
+            cp -a out/root/. site/
+          fi
+          touch site/.nojekyll
+          python3 - <<'EOF'
+          import json, os
+          v, root = os.environ["V"], os.environ["ROOT"] == "true"
+          key = lambda s: tuple(int(p) for p in s.lstrip("v").split("."))
+          try:
+              index = json.load(open("site/versions.json"))
+          except FileNotFoundError:
+              index = {"latest": None, "versions": [], "next": False}
+          if v == "next":
+              index["next"] = True
+          else:
+              index["versions"] = sorted(set(index["versions"]) | {v}, key=key, reverse=True)
+              if root:
+                  index["latest"] = v
+          json.dump(index, open("site/versions.json", "w"), indent=2)
+          print(json.dumps(index))
+          EOF
           cd site
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -59,5 +148,5 @@ jobs:
             echo "Site unchanged."
             exit 0
           fi
-          git commit -m "Deploy website - based on ${GITHUB_SHA}"
+          git commit -m "Deploy docs $V - based on ${GITHUB_SHA}"
           git push origin gh-pages

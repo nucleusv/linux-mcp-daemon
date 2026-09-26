@@ -8,6 +8,13 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+// Every published version is its own site under the GitHub Pages root: the
+// latest release at the root, each release under /vX.Y.Z/, main under /next/
+// (see .github/workflows/docs.yml). The build says which one it is.
+const siteRoot = '/linux-mcp-daemon/';
+const baseUrl = process.env.DOCS_BASE_URL || siteRoot;
+const docsVersion = process.env.DOCS_VERSION || 'next';
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Linux MCPd',
@@ -22,8 +29,8 @@ const config = {
   // Set the production url of your site here
   url: 'https://nucleusv.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
-  // GitHub Pages serves the gh-pages branch at the repo's path.
-  baseUrl: '/linux-mcp-daemon/',
+  baseUrl,
+  customFields: {siteRoot, docsVersion},
 
   // docs/imgs holds images shared with the repo README (e.g. the
   // architecture diagram), served from here too so there's one copy.
@@ -86,6 +93,13 @@ const config = {
       colorMode: {
         respectPrefersColorScheme: true,
       },
+      ...(docsVersion === 'next' && {
+        announcementBar: {
+          id: 'next-docs',
+          content: `These are the docs of the unreleased <code>main</code> branch. For the latest release, see <a href="${siteRoot}">the release docs</a>.`,
+          isCloseable: false,
+        },
+      }),
       navbar: {
         title: 'Linux MCPd',
         logo: {
@@ -98,6 +112,10 @@ const config = {
             sidebarId: 'tutorialSidebar',
             position: 'left',
             label: 'Documentation',
+          },
+          {
+            type: 'custom-versionSwitcher',
+            position: 'right',
           },
           {
             href: 'https://github.com/nucleusv/linux-mcp-daemon',
