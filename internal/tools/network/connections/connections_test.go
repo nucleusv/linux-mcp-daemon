@@ -88,42 +88,50 @@ func TestMatchesSS(t *testing.T) {
 		defer u.Close()
 	}
 
-	out, err := exec.Command("ss", "-tuanH").Output()
-	if err != nil {
-		t.Skip(err)
-	}
-	var want []string
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		f := strings.Fields(line)
-		if len(f) >= 6 {
-			// ss prints a dual-stack (not IPV6_V6ONLY) wildcard socket as
-			// "*:port"; /proc/net doesn't carry that flag, so we print the
-			// socket's actual address, "[::]:port".
-			// It also appends "%iface" for sockets bound to a device
-			// (SO_BINDTODEVICE), which only netlink reports.
-			for i := 4; i <= 5; i++ {
-				if strings.HasPrefix(f[i], "*:") {
-					f[i] = "[::]" + f[i][1:]
-				}
-				if pct := strings.IndexByte(f[i], '%'); pct >= 0 {
-					if colon := strings.LastIndexByte(f[i], ':'); colon > pct {
-						f[i] = f[i][:pct] + f[i][colon:]
+	// ss and our read are two snapshots of a live system: a short-lived
+	// socket (a DNS query) can show up in one only. Retry until they agree -
+	// a real difference in how we read or print sockets never does.
+	var got, want []string
+	for try := 0; try < 5; try++ {
+		got, want = nil, nil
+		out, err := exec.Command("ss", "-tuanH").Output()
+		if err != nil {
+			t.Skip(err)
+		}
+		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+			f := strings.Fields(line)
+			if len(f) >= 6 {
+				// ss prints a dual-stack (not IPV6_V6ONLY) wildcard socket as
+				// "*:port"; /proc/net doesn't carry that flag, so we print the
+				// socket's actual address, "[::]:port".
+				// It also appends "%iface" for sockets bound to a device
+				// (SO_BINDTODEVICE), which only netlink reports.
+				for i := 4; i <= 5; i++ {
+					if strings.HasPrefix(f[i], "*:") {
+						f[i] = "[::]" + f[i][1:]
+					}
+					if pct := strings.IndexByte(f[i], '%'); pct >= 0 {
+						if colon := strings.LastIndexByte(f[i], ':'); colon > pct {
+							f[i] = f[i][:pct] + f[i][colon:]
+						}
 					}
 				}
+				want = append(want, strings.Join([]string{f[0], f[1], f[4], f[5]}, " "))
 			}
-			want = append(want, strings.Join([]string{f[0], f[1], f[4], f[5]}, " "))
+		}
+		socks, err := kernel.ReadSockets("/proc")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, s := range socks {
+			got = append(got, strings.Join([]string{s.Netid, s.State, s.Endpoint(true), s.Endpoint(false)}, " "))
+		}
+		sort.Strings(want)
+		sort.Strings(got)
+		if strings.Join(got, "\n") == strings.Join(want, "\n") {
+			break
 		}
 	}
-	socks, err := kernel.ReadSockets("/proc")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got []string
-	for _, s := range socks {
-		got = append(got, strings.Join([]string{s.Netid, s.State, s.Endpoint(true), s.Endpoint(false)}, " "))
-	}
-	sort.Strings(want)
-	sort.Strings(got)
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("sockets differ from ss -tuan\nours:\n%s\nss:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
