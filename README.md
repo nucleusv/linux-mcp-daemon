@@ -4,7 +4,7 @@
 
 </div>
 
-# Linux MCPd
+# Linux MCP Daemon
 
 [![Docs](https://img.shields.io/badge/docs-nucleusv.github.io-blue)](https://nucleusv.github.io/linux-mcp-daemon/)
 [![Release](https://img.shields.io/github/v/release/nucleusv/linux-mcp-daemon)](https://github.com/nucleusv/linux-mcp-daemon/releases)
