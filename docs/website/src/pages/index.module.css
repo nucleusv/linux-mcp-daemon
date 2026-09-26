@@ -3,6 +3,25 @@
   text-align: center;
   position: relative;
   overflow: hidden;
+  /* The logo's own navy, lit from behind the badge. */
+  background: radial-gradient(circle at 50% 32%, #1e3a5f 0%, #0f172a 48%, #020617 100%);
+  color: #e2e8f0;
+}
+
+.heroBanner :global(.hero__subtitle) {
+  color: #94a3b8;
+}
+
+.cta {
+  background: var(--mcpd-orange);
+  border-color: var(--mcpd-orange);
+  color: #0f172a;
+}
+
+.cta:hover {
+  background: #fb923c;
+  border-color: #fb923c;
+  color: #0f172a;
 }
 
 @media screen and (max-width: 996px) {
