@@ -96,7 +96,7 @@ func main() {
 
 		if os.Getenv("MCPD_HOST_ROOT") == "1" {
 			if err := worker.JoinHostMountNamespace(); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to join host mount namespace: %v\n", err)
+				fmt.Fprintf(os.Stderr, "cannot switch to the host's filesystem - is the mcpd container running with --privileged --pid host? (%v)\n", err)
 				os.Exit(1)
 			}
 		}

@@ -104,7 +104,7 @@ func SpawnWorker(username, toolName string, toolArgs []byte, privileged bool, su
 		// ("no such file", "invalid mode"): pass the message on as it is.
 		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 && stderr != "" {
 			if !privileged && looksLikePermissionError(stderr) && sudoCfg != nil && sudoCfg.CanRunAsRoot(username, toolName) {
-				stderr += " (you may run this tool as root: retry with privileged: true)"
+				stderr += fmt.Sprintf(" (%s is granted to you as root in mcp-sudo.yaml: retry with privileged: true)", toolName)
 			}
 			return "", errors.New(stderr)
 		}
