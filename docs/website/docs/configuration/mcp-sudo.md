@@ -344,6 +344,29 @@ users:
 
 </details>
 
-## Host filesystem access
+## Host filesystem access (containers)
 
-When this daemon runs containerized (see [Master Daemon Configuration](./daemon.md)'s `worker.containerized` setting), `privileged: true` means more than root-in-container: every privileged worker call automatically also joins the real host's mount namespace and chroots into it, so tools like `system/packages` or `services/manage` see the actual host filesystem and the actual host's systemd, not the daemon's own container image. This is entirely a daemon-startup setting - there's nothing to configure per-tool here, and no second flag alongside `privileged: true` to authorize. If `mcpd` runs directly on the host instead (no container boundary), the same `privileged: true` grant just runs as root normally, since there's nothing else to cross into.
+Two different things are called "privileged" - don't mix them up:
+
+| | Docker's `--privileged` | `privileged: true` in a call |
+|---|---|---|
+| Where | `docker run`, once, when the container starts | the arguments of a `tools/call` (`--privileged true` in `linuxctl`) |
+| Set by | whoever installs mcpd | the agent or user making the call |
+| Means | give the container kernel capabilities (switch namespaces, chroot) | "run this call as root" |
+| Checked | no - a Docker flag | yes - against this file, per user and tool |
+
+When mcpd runs in a container, its own filesystem is the image's: its `/etc`, its packages, its `/etc/os-release`. A call made with `privileged: true` - by a user granted that tool here - runs as root **and switches to the host**: the worker joins the mount namespace of the host's PID 1 and chroots into its root, so it reads the host's files and talks to the host's systemd. A call without it stays in the container, as the user's own account. On the test host:
+
+```text
+without privileged:  PRETTY_NAME="Ubuntu 24.04.5 LTS"   <- the container image
+with privileged:     PRETTY_NAME="Ubuntu 24.04 LTS"     <- the host
+```
+
+Switching to the host needs the container started with **`--privileged --pid host`** (see [the container install](../installation#container-image)); the image sets `worker.containerized: true`, which turns the switch on. Without those Docker flags a grant here still passes, but the call fails instead of running - it doesn't quietly read the container instead:
+
+```text
+$ linuxctl get files /root/.bashrc --privileged true
+failed to join host mount namespace: unshare(CLONE_FS): operation not permitted
+```
+
+When mcpd runs directly on the host (systemd), there's nothing to switch to: `privileged: true` simply runs the call as root.
