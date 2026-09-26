@@ -5,6 +5,7 @@
 [![Docs](https://img.shields.io/badge/docs-nucleusv.github.io-blue)](https://nucleusv.github.io/linux-mcp-daemon/)
 [![Release](https://img.shields.io/github/v/release/nucleusv/linux-mcp-daemon)](https://github.com/nucleusv/linux-mcp-daemon/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![Linux MCP daemon MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/nucleusv/linux-mcp-daemon/badges/score.svg)](https://glama.ai/mcp/servers/nucleusv/linux-mcp-daemon)
 
 A high-performance, Go-based Model Context Protocol (MCP) daemon (`mcpd`) designed to securely bridge AI agents directly with the Linux operating system.
 
@@ -290,3 +291,5 @@ Pushing a SemVer tag (`git tag -a v0.1.0 -m v0.1.0 && git push origin v0.1.0`) r
 ## License
 
 [Apache License 2.0](LICENSE) - see also [NOTICE](NOTICE).
+
+[![Linux MCP daemon MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/nucleusv/linux-mcp-daemon/badges/card.svg)](https://glama.ai/mcp/servers/nucleusv/linux-mcp-daemon)

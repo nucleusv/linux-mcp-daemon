@@ -16,8 +16,8 @@ Pitch used everywhere: "Self-hosted Linux admin over MCP: remote over HTTPS, a s
 ## Acceptance criteria
 
 - [x] `server.json` (remote, SSE, `host` variable, secret `Authorization` header) and `glama.json` (maintainer `nucleusv`) in the repo root, valid JSON.
-- [ ] Both files committed and pushed.
-- [ ] Published to the official MCP Registry with `mcp-publisher` (GitHub login by the owner); visible at registry.modelcontextprotocol.io.
+- [x] Both files committed and pushed (0b6ff7a).
+- [x] Published to the official MCP Registry with `mcp-publisher` (GitHub login by the owner); visible at registry.modelcontextprotocol.io.
 - [ ] Listed on Glama (owner's account, repo claimed).
 - [ ] Submitted to mcp.so and PulseMCP.
 - [ ] Pull request to punkpeye/awesome-mcp-servers opened (owner's OK).
@@ -27,12 +27,17 @@ Pitch used everywhere: "Self-hosted Linux admin over MCP: remote over HTTPS, a s
 
 | # | Checks | How | Expected | Run | Result |
 |---|---|---|---|---|---|
-| T1 | Files valid | `python3 -c json.load` on both; `mcp-publisher validate` if available | valid | 2026-09-26, local | ✅ json ok (description 94 chars) |
-| T2 | Registry | `curl https://registry.modelcontextprotocol.io/v0/servers?search=linux-mcp-daemon` | our entry, version 0.3.4 | | |
-| T3 | Glama | glama.ai search `linux-mcp-daemon` | listing present, maintainer nucleusv | 2026-09-26 | ❌ not indexed yet (baseline) |
+| T1 | Files valid | `python3 -c json.load` on both; `mcp-publisher validate` | valid | 2026-09-26, local | ✅ json ok; `mcp-publisher 1.8.1 validate`: "server.json is valid" |
+| T2 | Registry | `curl https://registry.modelcontextprotocol.io/v0/servers?search=io.github.nucleusv/linux-mcp-daemon` | our entry, version 0.3.4 | 2026-09-26 | ✅ `io.github.nucleusv/linux-mcp-daemon 0.3.4`, status active, remote `https://{host}:9091/sse` |
+| T3 | Glama | glama.ai search `linux-mcp-daemon` | listing present, maintainer nucleusv | 2026-09-26 | ⏳ submitted for review; not indexed yet |
 | T4 | mcp.so / PulseMCP | site search | listing present | | |
 | T5 | awesome list | PR link | open or merged | | |
 
 ## Comments
 
 - 2026-09-26 - created, in progress. Opened the catalog pages in the owner's browser. Glama's "Add Server" asks for an account (sign-up with captcha) - owner signs up, preferably with GitHub. Glama search for `linux-mcp-daemon` finds nothing yet.
+- 2026-09-26 - committed and pushed server.json + glama.json (0b6ff7a, VPS address removed from FR-003 before commit). Installed mcp-publisher 1.8.1 (brew); `mcp-publisher validate` against registry.modelcontextprotocol.io: valid. Next: owner runs `mcp-publisher login github`.
+- 2026-09-26 - Glama: owner signed in and submitted "Runs from source" (name "Linux MCP daemon", repo github.com/nucleusv/linux-mcp-daemon, description as in the pitch). Pending review; Glama then emails instructions for a Dockerfile used by its automated safety/quality checks - only servers passing them are indexed for search.
+- 2026-09-26 - official MCP Registry: owner authorized the GitHub device login (`mcp-publisher login github`), then `mcp-publisher publish`: "Successfully published io.github.nucleusv/linux-mcp-daemon version 0.3.4" at 19:53:47Z; the registry API returns it as active. Listing: https://registry.modelcontextprotocol.io/v0/servers?search=io.github.nucleusv/linux-mcp-daemon
+- 2026-09-26 - owner asked to keep the registry entry current: added "Releasing vX.Y.Z" to CLAUDE.md - bump `server.json` version with the others, then `mcp-publisher publish` after the tag and verify via the registry API.
+- 2026-09-26 - Glama: owner claimed the server; added card (end of README) and score (top badge row) badges to README. Dockerfile config with mcpd over HTTP + `mcp-remote` worked locally (37 tools via mcp-proxy) but Glama rejects `mcp-remote` ("must build and run the server locally, not proxy"). Not using another bridge to get around that rule; native stdio mode is FR-007, Glama's build waits for it. Registry description changed in server.json (not yet republished): "AI agent access to Linux servers without SSH: scoped tools, per-call isolation, root only if granted".

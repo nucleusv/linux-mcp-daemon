@@ -32,12 +32,20 @@ Every idea or task from the owner becomes a ticket `backlog/<status>/FR-NNN-name
 
 ## Operating mcpd - use the project's own commands
 Before giving any ops instruction (install, users, tokens, grants, TLS, reload), use what already exists - never a `journalctl | grep` / hand-edited-YAML workaround:
-- mcpd itself: `mcpd [--config-dir DIR]` (default `configs/` relative to the working dir; systemd unit: `WorkingDirectory=/etc/mcpd`), `mcpd --version`, `mcpd worker <tool> <json>` (internal - spawned per call, never run by hand). Configs: `daemon.yaml` (listen, TLS, logging, `worker.containerized`), `users.yaml`, `mcp-sudo.yaml`; live reload via the `daemon/reload-config` tool. It logs its version, listen address and TLS fingerprint at startup.
+- mcpd itself: `mcpd [--config-dir DIR]` (default `configs/` relative to the working dir; systemd unit: `WorkingDirectory=/etc/mcpd`), `mcpd --version`, `mcpd worker <tool> <json>` (internal - spawned per call, never run by hand), `mcpd stdio [--user NAME] [--config-dir DIR]` (MCP over stdin/stdout for local, `ssh host mcpd stdio` or `docker exec -i` clients; runs as the caller, never root - `privileged` refused, mcp-sudo.yaml unused; see `docs/website/docs/configuration/stdio-mode.md`). Configs: `daemon.yaml` (listen, TLS, logging, `worker.containerized`), `users.yaml`, `mcp-sudo.yaml`; live reload via the `daemon/reload-config` tool. It logs its version, listen address and TLS fingerprint at startup.
 - Users & grants: `linuxctl create|delete|update mcpd user <name> [--grant TOOL,...] [--set-token V] [--config-path DIR]`, `linuxctl list mcpd users`, `linuxctl describe mcpd user <name>` - they edit `users.yaml`/`mcp-sudo.yaml` atomically and reload the daemon.
 - Config by hand: `linuxctl edit mcpd config sudo|users|daemon` (validates, then reloads); apply: `linuxctl reload daemon`.
 - TLS: `linuxctl describe mcpd tls --config-path DIR` prints the fingerprint and a ready `export MCP_SERVER=… MCP_TLS_FINGERPRINT=…` line. As root on the mcpd host no fingerprint is needed - linuxctl trusts the cert file directly.
 - Client env: `MCP_SERVER`, `MCP_TOKEN`, `MCP_TLS_FINGERPRINT` (or `MCP_CA_CERT`); shell completion: `linuxctl completion bash|zsh`.
 - Install: `scripts/install.sh` (`--uninstall` keeps configs), `.deb`/`.rpm` (postinstall prints the next steps; `apt purge` deletes `/etc/mcpd`). Details: `docs/website/docs/installation.md`, `docs/website/docs/linuxctl/`.
+
+## Releasing vX.Y.Z - in this order
+1. Every fix tested and redeployed to local k8s, VPS systemd (9091) and VPS Docker (9092).
+2. Docs current for everything since the last tag (`git log <last-tag>..HEAD`): tool pages with live output, `configuration/*`, `linuxctl/*`, man pages, README, ARCHITECTURE.md; `bash scripts/check_docs.sh` and `bash scripts/check_readmes.sh` pass.
+3. Version bumped everywhere it's written by hand: install commands in `docs/website/docs/installation.md`, `docs/release-notes/vX.Y.Z.md`, and `"version"` in `server.json`.
+4. Push to main; verify https://nucleusv.github.io/linux-mcp-daemon/next/ live.
+5. Tag `vX.Y.Z` and push the tag (release.yml: GoReleaser binaries, .deb/.rpm, GHCR image). Verify the release assets, the docs root, `/vX.Y.Z/` and `versions.json`.
+6. Publish to the official MCP Registry: `mcp-publisher publish` from the repo root (log in first with `mcp-publisher login github` if the token expired - the owner confirms the device code). Verify: `curl "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.nucleusv/linux-mcp-daemon"` shows the new version, status active. Glama, PulseMCP and others pick it up from the registry/repo.
 
 ## Naming rules (GUIDELINES.md has full detail)
 - Tool names: `<group>/<command>` (`files/list`, not `list_files`). No intermediate verb directories (`get/`, `read/`).

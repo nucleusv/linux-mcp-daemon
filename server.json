@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.nucleusv/linux-mcp-daemon",
   "title": "Linux MCP daemon (mcpd)",
-  "description": "Self-hosted Linux admin over MCP: 38 tools, per-user workers, root per tool within path limits",
+  "description": "AI agent access to Linux servers without SSH: scoped tools, per-call isolation, root only if granted",
   "repository": {
     "url": "https://github.com/nucleusv/linux-mcp-daemon",
     "source": "github"
