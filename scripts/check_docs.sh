@@ -92,7 +92,7 @@ sudo_keys() { # sudo_keys tools|resources
         inuser && /^      tools:/     { block="tools"; next }
         inuser && /^      resources:/ { block="resources"; next }
         inuser && block==want && /^        [^ #]/ {
-            key=$0; sub(/^ +/, "", key); sub(/:[ ]*$/, "", key); gsub(/"/, "", key); print key
+            key=$0; sub(/^ +/, "", key); sub(/[ ]+#.*$/, "", key); sub(/:[ ]*$/, "", key); gsub(/"/, "", key); print key
         }
     ' configs/mcp-sudo.yaml | sort -u
 }

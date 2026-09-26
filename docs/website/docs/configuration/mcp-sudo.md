@@ -177,83 +177,84 @@ users:
   privileged:
     privileged:
       tools:
-        auth/sudo-rules:
+        # What privileged: true adds per tool. ⚠ = amounts to full root on the host.
+        auth/sudo-rules:  # read the host's sudoers rules
           allowed: true
-        daemon/reload-config:
+        daemon/reload-config:  # not root: the permission to call it at all (re-reads the configs)
           allowed: true
-        cpu/list:
+        cpu/list:  # root adds little: readable by any user
           allowed: true
-        cpu/load-average:
+        cpu/load-average:  # root adds little: readable by any user
           allowed: true
-        disks/free:
-          allowed: true
-          paths:
-            - /
-        disks/health:
-          allowed: true
-        disks/list:
-          allowed: true
-        disks/mounts:
-          allowed: true
-        disks/partitions:
-          allowed: true
-        disks/performance:
-          allowed: true
-        disks/usage:
+        disks/free:  # statfs any path under paths
           allowed: true
           paths:
             - /
-        files/create:
+        disks/health:  # SMART data (smartctl needs root)
+          allowed: true
+        disks/list:  # containerized: the host's mount points
+          allowed: true
+        disks/mounts:  # containerized: the host's mount table
+          allowed: true
+        disks/partitions:  # partition tables of the host's disks
+          allowed: true
+        disks/performance:  # root adds little: /proc/diskstats is readable by any user
+          allowed: true
+        disks/usage:  # measure directories other users can't read
           allowed: true
           paths:
             - /
-        files/filetype:
+        files/create:  # ⚠ create any file under paths - full root if they cover /etc, /root, /usr
           allowed: true
           paths:
             - /
-        files/chmod:
+        files/filetype:  # inspect files other users can't read
           allowed: true
           paths:
             - /
-        files/chown:
+        files/chmod:  # ⚠ change any mode under paths (setuid, /etc/shadow)
           allowed: true
           paths:
             - /
-        files/find:
+        files/chown:  # ⚠ change any owner under paths
           allowed: true
           paths:
             - /
-        files/list:
+        files/find:  # search directories other users can't read
           allowed: true
           paths:
             - /
-        files/read:
+        files/list:  # list directories other users can't read
           allowed: true
           paths:
             - /
-        files/update:
+        files/read:  # ⚠ read any file under paths (/etc/shadow, keys, mcpd's TLS key)
           allowed: true
           paths:
             - /
-        kernel/system-control:
+        files/update:  # ⚠ overwrite or append to any file under paths - full root if they cover /etc
+          allowed: true
+          paths:
+            - /
+        kernel/system-control:  # ⚠ write any kernel parameter unless sysctl.write_keys limits it
           allowed: true
           # Optional write restrictions (checked before any worker runs).
           # Absent = unrestricted. Example:
           # sysctl:
           #   write_keys: ["net.ipv4.ip_forward", "vm.*"]  # only these keys
-        logs/dmesg:
+        logs/dmesg:  # the kernel log, if dmesg is restricted to root
           allowed: true
-        logs/logins:
+        logs/logins:  # login records (wtmp/btmp)
           allowed: true
-        logs/journal-control:
+        logs/journal-control:  # every unit's journal
           allowed: true
-        memory/usage:
+        memory/usage:  # root adds little: readable by any user
           allowed: true
-        network/arp:
+        network/arp:  # root adds little: readable by any user
           allowed: true
-        network/connections:
+        network/connections:  # the owning process of every socket
           allowed: true
-        network/curl:
+        network/curl:  # root doesn't change what it can reach - limit that with network:
           allowed: true
           # Optional per-tool destination restrictions (network/curl and
           # network/ping). Unlike `allowed` (root only), `network:` applies
@@ -262,21 +263,21 @@ users:
           #   deny_private: true        # loopback, 10/8, 172.16/12, 192.168/16, 169.254/16, CGNAT, ULA, ...
           #   allow: ["10.0.5.0/24", "intranet.example.com", "*.corp.example.com"]
           #   deny: ["10.0.5.66"]       # always wins over allow
-        network/nslookup:
+        network/nslookup:  # root adds little
           allowed: true
-        network/ping:
+        network/ping:  # root doesn't change what it can reach - limit that with network:
           allowed: true
-        network/trace-path:
+        network/trace-path:  # traceroute as root
           allowed: true
-        processes/delete:
+        processes/delete:  # ⚠ signal any process: sshd, mcpd, PID 1
           allowed: true
-        processes/list:
+        processes/list:  # every user's processes in full
           allowed: true
-        processes/top:
+        processes/top:  # every user's processes in full
           allowed: true
-        services/list:
+        services/list:  # systemd's private socket instead of the system bus
           allowed: true
-        services/manage:
+        services/manage:  # ⚠ start, stop, restart, enable any unit
           allowed: true
         # These three are never callable directly via tools/call (they're
         # not in tools.go's schema/standardWorkers) - they're the internal
@@ -286,21 +287,21 @@ users:
         # privileged access, so these entries are required for privileged
         # reads of those resources to work, even though the name itself is
         # never a valid tools/call target.
-        services/status:
+        services/status:  # internal: the worker behind service://
           allowed: true
-        files/content:
+        files/content:  # internal: the worker behind file://
           allowed: true
         # Worker behind file:///{path}/stat - a privileged file:// read needs
         # both the resource grant and this one (see ARCHITECTURE.md).
-        files/stat:
+        files/stat:  # internal: the worker behind file:///{path}/stat
           allowed: true
-        processes/read:
+        processes/read:  # internal: the worker behind process://
           allowed: true
-        system/os-release:
+        system/os-release:  # containerized: the host's OS, not the image's
           allowed: true
-        system/packages:
+        system/packages:  # containerized: the host's packages
           allowed: true
-        users/list:
+        users/list:  # containerized: the host's users
           allowed: true
       resources:
         os://uname:
@@ -332,7 +333,7 @@ users:
         # every value starts with. A literal "*" here would only grant
         # access to a resource actually named "*", never allowing any real
         # value through.
-        file://:
+        file://:  # ⚠ "" = read any file as root
           - ""
         service://:
           - ""
