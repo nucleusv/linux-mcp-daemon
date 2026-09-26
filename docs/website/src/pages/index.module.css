@@ -13,15 +13,16 @@
 }
 
 .cta {
-  background: var(--mcpd-orange);
-  border-color: var(--mcpd-orange);
-  color: #0f172a;
+  /* The blue-grey of the logo's shading, with its light-blue outline. */
+  background: #475569;
+  border-color: #7dd3fc;
+  color: #f1f5f9;
 }
 
 .cta:hover {
-  background: #fb923c;
-  border-color: #fb923c;
-  color: #0f172a;
+  background: #64748b;
+  border-color: #bae6fd;
+  color: #ffffff;
 }
 
 @media screen and (max-width: 996px) {

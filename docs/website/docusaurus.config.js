@@ -97,6 +97,8 @@ const config = {
         announcementBar: {
           id: 'next-docs',
           content: `These are the docs of the unreleased <code>main</code> branch. For the latest release, see <a href="${siteRoot}">the release docs</a>.`,
+          backgroundColor: '#1e293b',
+          textColor: '#e2e8f0',
           isCloseable: false,
         },
       }),
