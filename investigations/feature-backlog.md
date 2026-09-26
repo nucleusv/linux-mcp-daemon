@@ -101,7 +101,7 @@ Carry structured fields (`user`, `session`, `tool`, `privileged`, `duration_ms`,
 **Now**: `configuration/mcp-sudo.md` describes the options; the defaults and their consequences are spread over it.
 **Build**: a dedicated page - what a user can do with no entry, with `allowed` only, with `paths`, `network`, `sysctl` (the defaults table), each shown on a concrete config and the calls it allows/refuses. Then the risks, bluntly: which grants amount to full root (`files/update`/`create` on `/`, `files/chmod`/`chown` on `/`, `services/manage`, `kernel/system-control` without `write_keys` - e.g. `kernel.core_pattern`, `processes/delete`, `file://` `""` reads `/etc/shadow`), least-privilege recipes for common roles (read-only diagnostics, log reader, web-server operator), and a checklist before granting. The same warning, short, in README and installation.
 
-### 24. Docs: tool and linuxctl output captured on a systemd host
+### 24. ~~Docs: tool and linuxctl output captured on a systemd host~~ — done (recaptured on an Ubuntu 24.04 VPS, 2026-09-26)
 **Now**: most MCP API and linuxctl pages show output captured in the Kubernetes dev node (a minimal LinuxKit VM: no DMI, no `last`, container paths).
 **Build**: recapture every tool page's linuxctl and raw JSON-RPC output on a real systemd host (the VPS), without secrets (no /etc/shadow, no client IPs, no tokens), and note the host once per page.
 
