@@ -27,6 +27,16 @@ type PrivilegedConfig struct {
 type ToolPrivilege struct {
 	Allowed bool     `yaml:"allowed"`
 	Paths   []string `yaml:"paths"`
+	// Containers restricts which containers a docker/* tool that names one
+	// may touch (name or ID globs). It is per-tool, like Paths, so a
+	// docker/exec grant and a docker/manage grant for the same user name
+	// different containers. Absent on an allowed grant = refuse everything;
+	// containers: ["*"] is the explicit everywhere, like paths: ["/"].
+	//
+	// Unlike Paths, this is the *only* gate: the docker socket is
+	// all-or-nothing, the Engine API has no per-container authorization, and
+	// the worker is root - so there is no kernel check behind this list.
+	Containers []string `yaml:"containers,omitempty"`
 	// Network restricts where an outbound network tool (network/curl,
 	// network/ping) may connect. Unlike Allowed, which only governs
 	// running as root, it applies to every call of the tool - network
@@ -150,6 +160,12 @@ func ParseSudoConfig(data []byte, strict bool) (*SudoConfig, error) {
 			if len(privs.Paths) > 0 && !PathTools[toolName] && strict {
 				return nil, fmt.Errorf("user '%s', tool '%s': paths has no effect - %s takes no path argument (paths can limit: %s)", username, toolName, toolName, strings.Join(sortedPathTools(), ", "))
 			}
+			if ContainerTools[toolName] && privs.Allowed && len(privs.Containers) == 0 && strict {
+				return nil, fmt.Errorf("user '%s', tool '%s': allowed without containers - as root it could only be refused; list the containers it may touch (name or ID globs), or containers: [\"*\"] for all of them", username, toolName)
+			}
+			if len(privs.Containers) > 0 && !ContainerTools[toolName] && strict {
+				return nil, fmt.Errorf("user '%s', tool '%s': containers has no effect - %s names no container (containers can limit: %s)", username, toolName, toolName, strings.Join(sortedContainerTools(), ", "))
+			}
 		}
 	}
 
@@ -192,6 +208,41 @@ func (c *SudoConfig) GetAllowedPaths(username, toolName string) []string {
 	if userSudo, ok := c.Users[username]; ok {
 		if privs, ok := userSudo.Privileged.Tools[toolName]; ok {
 			return privs.Paths
+		}
+	}
+	return nil
+}
+
+// DockerTools are every tool reaching the Docker Engine API. The socket is
+// root-owned and all-or-nothing, so each of these runs as root or not at all:
+// the daemon forces `privileged: true` and refuses the call outright when
+// `allowed: true` is missing from the grant. ContainerTools below is the
+// subset that also needs a `containers:` list.
+var DockerTools = map[string]bool{
+	"docker/containers": true, "docker/manage": true, "docker/logs": true,
+	"docker/exec": true, "docker/images": true, "docker/volumes": true,
+	"docker/networks": true, "docker/inspect": true,
+}
+
+// ContainerTools are the docker/* tools that name one container. Each needs
+// `containers:` in its grant; the plural listings (docker/containers,
+// docker/images, docker/volumes, docker/networks) name none, so `containers:`
+// on those is a config error rather than a silent no-op.
+//
+// docker/inspect is the internal worker behind the container:// templates, so
+// its grant is what scopes those reads.
+var ContainerTools = map[string]bool{
+	"docker/manage": true, "docker/logs": true, "docker/exec": true, "docker/inspect": true,
+}
+
+// GetAllowedContainers returns the container globs this user may touch with
+// toolName. An empty result refuses everything - the runtime counterpart of
+// the strict check above, so a grant missing `containers:` is inert rather
+// than permissive.
+func (c *SudoConfig) GetAllowedContainers(username, toolName string) []string {
+	if userSudo, ok := c.Users[username]; ok {
+		if privs, ok := userSudo.Privileged.Tools[toolName]; ok {
+			return privs.Containers
 		}
 	}
 	return nil
@@ -287,6 +338,15 @@ func (c *SudoConfig) CanReadResourceAsRoot(username, scheme, resourcePath string
 func sortedPathTools() []string {
 	names := make([]string, 0, len(PathTools))
 	for n := range PathTools {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func sortedContainerTools() []string {
+	names := make([]string, 0, len(ContainerTools))
+	for n := range ContainerTools {
 		names = append(names, n)
 	}
 	sort.Strings(names)

@@ -130,6 +130,15 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 **auth**
 - [`auth/sudo-rules`](./tools/auth/sudo-rules) - Returns your authorized tools and privileges from mcp-sudo.
 
+**docker**
+- [`docker/containers`](./tools/docker/containers) - Lists Docker containers with image, state, status and ports, read straight from the Engine API socket.
+- [`docker/manage`](./tools/docker/manage) - Container lifecycle: start, stop, restart, kill, pause, unpause, remove - what services/manage is for systemd units.
+- [`docker/logs`](./tools/docker/logs) - Reads one container's logs - the shape logs/journal-control has for systemd units.
+- [`docker/exec`](./tools/docker/exec) - Runs one command inside a running container and returns its stdout, stderr and exit code.
+- [`docker/images`](./tools/docker/images) - Lists Docker images with tags, size and creation time. Read-only by construction: no pull, no build, no remove.
+- [`docker/volumes`](./tools/docker/volumes) - Lists Docker volumes with driver, mountpoint and the containers currently mounting each.
+- [`docker/networks`](./tools/docker/networks) - Lists Docker networks with driver, scope, subnet, gateway and the containers attached to each. Read-only by construction: no create, no remove, no connect.
+
 **daemon**
 - [`daemon/reload-config`](./tools/daemon/reload-config) - Re-reads mcpd's config files and applies them without a restart (only for users granted it).
 
@@ -152,3 +161,9 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 
 **processes**
 - [`process://{pid}/{target}`](./resource-templates/Process Introspection) - Reads process metadata from procfs.
+
+**docker**
+- [`container://{name}/{view}`](./resource-templates/Docker Container Introspection) - One Docker container's own view of itself (status, inspect, stats, top).
+- [`image://{name}/inspect`](./resource-templates/Docker Image Inspect) - Full configuration of one Docker image (layers, env, entrypoint, labels, digests).
+- [`volume://{name}/inspect`](./resource-templates/Docker Volume Inspect) - Driver, mountpoint, options and labels of one Docker volume.
+- [`docker-network://{name}/inspect`](./resource-templates/Docker Network Inspect) - IPAM, options, labels and every attached container's address and MAC for one Docker network. Prefixed on purpose: `network://` is the host's own networking.

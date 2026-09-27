@@ -47,6 +47,10 @@ func reloadConfig(byUser string) (string, error) {
 	// their current values until a restart.
 	next.Server = prev.Server
 	next.Worker.Containerized = prev.Worker.Containerized
+	// docker.SocketPath is read by the master when it prepares a docker call;
+	// it's set once at startup, so keep the running value here too rather than
+	// letting daemonConfig and that package var disagree.
+	next.Worker.DockerSocket = prev.Worker.DockerSocket
 	daemonConfig = next
 	usersPath = nextUsersPath
 	// Users and grants switch together, never one without the other.
@@ -179,6 +183,9 @@ func grantDetail(t config.ToolPrivilege) string {
 	if len(t.Paths) > 0 {
 		parts = append(parts, fmt.Sprintf("paths %v", t.Paths))
 	}
+	if len(t.Containers) > 0 {
+		parts = append(parts, fmt.Sprintf("containers %v", t.Containers))
+	}
 	if t.Network != nil {
 		parts = append(parts, "network policy")
 	}
@@ -203,6 +210,9 @@ func restartOnlyChanges(running, onDisk Config) []string {
 	}
 	if onDisk.Worker.Containerized != running.Worker.Containerized {
 		out = append(out, fmt.Sprintf("worker.containerized: %t -> %t", running.Worker.Containerized, onDisk.Worker.Containerized))
+	}
+	if onDisk.Worker.DockerSocket != running.Worker.DockerSocket {
+		out = append(out, fmt.Sprintf("worker.docker_socket: %q -> %q", running.Worker.DockerSocket, onDisk.Worker.DockerSocket))
 	}
 	return out
 }

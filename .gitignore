@@ -38,3 +38,6 @@ docs/website/.docusaurus/
 
 # GoReleaser output
 /dist/
+
+# Local backlog viewer (machine-local paths, not part of the product)
+/backlog-site/

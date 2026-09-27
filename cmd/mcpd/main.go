@@ -14,6 +14,7 @@ import (
 
 	"github.com/nucleusv/linux-mcp-daemon/internal/auth"
 	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/docker"
 	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/devices/dmi"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/devices/pci"
@@ -32,6 +33,14 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon/internal/tools/disks/partitions"
 	"github.com/nucleusv/linux-mcp-daemon/internal/tools/disks/performance"
 	disk_usage "github.com/nucleusv/linux-mcp-daemon/internal/tools/disks/usage"
+	dockercontainers "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/containers"
+	dockerexec "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/exec"
+	dockerimages "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/images"
+	dockerinspect "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/inspect"
+	dockerlogs "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/logs"
+	dockermanage "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/manage"
+	dockernetworks "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/networks"
+	dockervolumes "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/volumes"
 	chmodfile "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/chmod"
 	chownfile "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/chown"
 	content "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/content"
@@ -151,6 +160,16 @@ func main() {
 			"logs/dmesg":            dmesg.Dmesg,
 			"kernel/system-control": system_control.SystemControl,
 			"processes/read":        process_read.Read,
+			"docker/containers":     dockercontainers.List,
+			"docker/manage":         dockermanage.Manage,
+			"docker/logs":           dockerlogs.Logs,
+			"docker/exec":           dockerexec.Exec,
+			"docker/images":         dockerimages.List,
+			"docker/volumes":        dockervolumes.List,
+			"docker/networks":       dockernetworks.List,
+			// docker/inspect is not a callable tool: it is the single worker
+			// behind the container://, image:// and volume:// templates.
+			"docker/inspect": dockerinspect.Inspect,
 		}
 
 		if handler, exists := handlers[toolName]; exists {
@@ -216,6 +235,10 @@ func main() {
 	}
 
 	worker.Containerized = daemonConfig.Worker.Containerized
+	// Where the docker/* tools reach the Engine API. Set here, not carried in
+	// the RPC handler's reloadable settings, because worker mode never loads
+	// daemon.yaml - the master injects this path into every docker call.
+	docker.SocketPath = daemonConfig.Worker.DockerSocket
 	if actual, err := worker.IsContainerized(); err != nil {
 		logging.Warn("could not determine whether this process is actually containerized (comparing /proc/self/ns/mnt vs /proc/1/ns/mnt)", "err", err)
 	} else if actual != daemonConfig.Worker.Containerized {

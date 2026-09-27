@@ -15,6 +15,11 @@ worker:
   # also joins the real host's mount namespace, so "privileged: true" means
   # root on the actual host, not just root inside this container's image.
   containerized: true
+  # Where the docker/* tools reach the Engine API. Empty (the default) means
+  # /var/run/docker.sock. In a containerized deployment the socket must be
+  # mounted into this pod, or the privileged worker must reach the host's
+  # (containerized: true above). A restart applies a change here, not a reload.
+  docker_socket: ""
 logging:
   # error | warn | info | debug. info: one line per tool call; debug adds
   # every JSON-RPC request and SSE session. Calls that change the host are

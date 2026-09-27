@@ -636,6 +636,11 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			},
 		},
 	}
+	// Same reason as daemon/reload-config below: a docker tool without its
+	// grant can't work at all (the socket is root-owned), so it isn't listed.
+	if dt := dockerTools(sudoCfg, session.User); len(dt) > 0 {
+		toolsList["tools"] = append(toolsList["tools"].([]interface{}), dt...)
+	}
 	// Shown only to users granted it: everyone else couldn't call it anyway.
 	if sudoCfg.CanRunAsRoot(session.User, "daemon/reload-config") {
 		toolsList["tools"] = append(toolsList["tools"].([]interface{}), map[string]interface{}{
@@ -752,6 +757,13 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"system/os-release":     true,
 			"system/packages":       true,
 			"users/list":            true,
+			"docker/containers":     true,
+			"docker/manage":         true,
+			"docker/logs":           true,
+			"docker/exec":           true,
+			"docker/images":         true,
+			"docker/volumes":        true,
+			"docker/networks":       true,
 		}
 
 		if params.Name == "daemon/reload-config" {
@@ -776,6 +788,13 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 				Path       string `json:"path"`
 			}
 			_ = json.Unmarshal(params.Arguments, &baseArgs)
+
+			// Docker tools are root or nothing, and the daemon - not the
+			// caller - supplies the socket path and the containers allowlist.
+			if config.DockerTools[params.Name] {
+				baseArgs.Privileged = true
+				params.Arguments, execErr = prepareDockerCall(sudoCfg, session.User, params.Name, params.Arguments)
+			}
 
 			// Paths are absolute: a relative one would be resolved against
 			// the worker's working directory, which no one intends.
@@ -928,6 +947,9 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 var mutatingTools = map[string]bool{
 	"files/create": true, "files/update": true, "files/chmod": true, "files/chown": true,
 	"processes/delete": true, "services/manage": true,
+	// docker/exec runs arbitrary code inside a container, so it is audited
+	// whether or not the command it ran changed anything.
+	"docker/manage": true, "docker/exec": true,
 }
 
 // logToolCall writes one line per tool call: an audit line for calls that

@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -79,5 +80,74 @@ func TestPositionalFillsRequiredFields(t *testing.T) {
 	rest := mapPositionalArgs(schema, args, []string{"/srv/app", "0755"})
 	if args["path"] != "/srv/app" || args["mode"] != "0755" || len(rest) != 0 {
 		t.Errorf("args %v, leftover %v", args, rest)
+	}
+}
+
+// A unix timestamp is a valid value for docker/logs `since`, declared string.
+// The flag parser reads it as a number before the schema is known, so the
+// coercion has to put it back - and must leave a genuine integer field alone.
+func TestCoerceFlagTypes(t *testing.T) {
+	schema := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"since": map[string]interface{}{"type": "string"},
+			"lines": map[string]interface{}{"type": "integer"},
+		},
+	}
+	args := map[string]interface{}{"since": 1759005000, "lines": 50, "unknown": 7}
+	coerceFlagTypes(schema, args)
+	if args["since"] != "1759005000" {
+		t.Errorf("since = %#v, want the string", args["since"])
+	}
+	if args["lines"] != 50 || args["unknown"] != 7 {
+		t.Errorf("non-string fields should be untouched, got %v", args)
+	}
+}
+
+// An array parameter (docker/exec command) has no flag syntax of its own, so
+// it arrives as text: JSON, or a bare token meaning a one-element argv.
+func TestCoerceFlagTypesArray(t *testing.T) {
+	schema := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"command": map[string]interface{}{"type": "array"},
+		},
+	}
+	args := map[string]interface{}{"command": `["sh","-c","ls /app"]`}
+	coerceFlagTypes(schema, args)
+	if want := []interface{}{"sh", "-c", "ls /app"}; !reflect.DeepEqual(args["command"], want) {
+		t.Errorf("command = %#v, want %#v", args["command"], want)
+	}
+
+	bare := map[string]interface{}{"command": "hostname"}
+	coerceFlagTypes(schema, bare)
+	if want := []interface{}{"hostname"}; !reflect.DeepEqual(bare["command"], want) {
+		t.Errorf("bare command = %#v, want %#v", bare["command"], want)
+	}
+}
+
+// The same array parameter, filled positionally. Bare words are the argv;
+// a lone JSON array is that array - which used to be passed on as one literal
+// word, so `exec docker fr011-probe '["hostname"]'` ran a program actually
+// named `["hostname"]` and exited 127.
+func TestPositionalArrayTakesJSONOrWords(t *testing.T) {
+	schema := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"container": map[string]interface{}{"type": "string"},
+			"command":   map[string]interface{}{"type": "array"},
+		},
+		"required": []interface{}{"container", "command"},
+	}
+	for _, tc := range []struct {
+		positional []string
+		want       []interface{}
+	}{
+		{[]string{"web-1", "sh", "-c", "ls /app"}, []interface{}{"sh", "-c", "ls /app"}},
+		{[]string{"web-1", `["sh","-c","ls /app"]`}, []interface{}{"sh", "-c", "ls /app"}},
+		{[]string{"web-1", "hostname"}, []interface{}{"hostname"}},
+	} {
+		args := map[string]interface{}{}
+		mapPositionalArgs(schema, args, tc.positional)
+		if args["container"] != "web-1" || !reflect.DeepEqual(args["command"], tc.want) {
+			t.Errorf("%v -> %#v, want command %#v", tc.positional, args, tc.want)
+		}
 	}
 }

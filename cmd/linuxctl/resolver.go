@@ -12,6 +12,7 @@ package main
 // way an MCP-speaking AI client can call it the moment it exists.
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -408,6 +409,13 @@ func mapPositionalArgs(schema map[string]interface{}, args map[string]interface{
 			continue
 		}
 		prop, _ := props[field].(map[string]interface{})
+		if str(prop, "type") == "array" {
+			// A required array takes every remaining word, which is what an
+			// argv is: `linuxctl exec docker web-1 sh -c "ls /app"` fills
+			// docker/exec's command with ["sh", "-c", "ls /app"].
+			args[field] = toArray(positional)
+			return nil
+		}
 		if str(prop, "type") == "integer" {
 			if n, err := strconv.Atoi(positional[0]); err == nil {
 				args[field] = n
@@ -419,6 +427,55 @@ func mapPositionalArgs(schema map[string]interface{}, args map[string]interface{
 		positional = positional[1:]
 	}
 	return positional
+}
+
+// coerceFlagTypes fixes flag values the parser had to guess at. It reads
+// `--lines 100` as an int and `--stderr false` as a bool without knowing the
+// schema, which is right for almost everything - but a string parameter whose
+// value happens to look like a number then arrives as a number and the tool
+// refuses to unmarshal it (docker/logs `--since 1759005000`: a unix timestamp
+// is a perfectly good value for a `string` field). The schema is only
+// available once the tool is resolved, so the correction happens here.
+func coerceFlagTypes(schema map[string]interface{}, args map[string]interface{}) {
+	props, _ := schema["properties"].(map[string]interface{})
+	for field, v := range args {
+		prop, _ := props[field].(map[string]interface{})
+		switch str(prop, "type") {
+		case "string":
+			switch v.(type) {
+			case string, nil:
+			default:
+				args[field] = fmt.Sprint(v)
+			}
+		case "array":
+			// An array parameter has no flag syntax of its own, so it is
+			// written as JSON: docker/exec --command '["sh","-c","ls /app"]'.
+			// A single bare token is the one-element array it obviously means.
+			if s, ok := v.(string); ok {
+				args[field] = toArray([]string{s})
+			}
+		}
+	}
+}
+
+// toArray builds an array parameter's value from the words given for it: the
+// words themselves, unless a lone word is a JSON array - then it is that
+// array. Both forms are needed. Bare words are how an argv reads
+// (`exec docker web-1 sh -c "ls /app"`), and JSON is the form every tool
+// description shows and the only one that survives a flag (`--command
+// '["sh","-c","ls /app"]'`), where there is no second word to take.
+func toArray(words []string) []interface{} {
+	if len(words) == 1 {
+		var parsed []interface{}
+		if json.Unmarshal([]byte(words[0]), &parsed) == nil {
+			return parsed
+		}
+	}
+	out := make([]interface{}, len(words))
+	for i, w := range words {
+		out[i] = w
+	}
+	return out
 }
 
 // groupExists reports whether any tool, resource or template in reg - what

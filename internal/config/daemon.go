@@ -59,6 +59,13 @@ type DaemonConfig struct {
 		// internal/worker/hostns.go. Set false when mcpd runs directly on
 		// the host.
 		Containerized bool `yaml:"containerized"`
+		// DockerSocket is where the docker/* tools reach the Docker Engine
+		// API. Empty means /var/run/docker.sock. Set it for a non-standard
+		// install or a rootless-Docker socket
+		// (/run/user/<uid>/docker.sock). mcpd never installs Docker; if
+		// this socket is absent, every docker/* tool fails with an error
+		// naming the path.
+		DockerSocket string `yaml:"docker_socket,omitempty"`
 	} `yaml:"worker"`
 	Tools ToolsConfig `yaml:"tools"`
 	// Logging sets the log level and format; see internal/logging.

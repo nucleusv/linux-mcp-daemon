@@ -55,6 +55,18 @@ func buildDescribeURIs(tpl TemplateDef, positional []string) []string {
 		}
 		return uris
 
+	case "container://{name}/{view}":
+		// Two placeholders, usually one argument: default to the computed
+		// summary, which is what "describe" means everywhere else.
+		name, view := "", "status"
+		if len(positional) > 0 {
+			name = positional[0]
+		}
+		if len(positional) > 1 {
+			view = positional[1]
+		}
+		return []string{fillTemplate(tpl.URITemplate, []string{name, view})}
+
 	case "service://{name}/status":
 		name := ""
 		if len(positional) > 0 {

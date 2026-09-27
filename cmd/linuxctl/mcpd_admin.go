@@ -366,6 +366,19 @@ func mcpdCreateUser(usersPath, sudoPath, username, setToken string, grants []str
 	fmt.Printf("Created mcpd user %q.\n", username)
 	if len(grants) > 0 {
 		fmt.Printf("Granted as root: %s\n", strings.Join(grants, ", "))
+		// --grant writes `allowed: true` and nothing else, which for these
+		// tools is inert: they refuse everything until the grant also says
+		// what they may touch, and a later `linuxctl edit mcpd config sudo`
+		// refuses to save it. Say it here rather than let that be the
+		// messenger.
+		for _, g := range grants {
+			if config.PathTools[g] {
+				fmt.Printf("  %s also needs a paths: list in %s - until then it is refused (paths: [\"/\"] means everywhere)\n", g, sudoPath)
+			}
+			if config.ContainerTools[g] {
+				fmt.Printf("  %s also needs a containers: list in %s - until then it is refused (containers: [\"*\"] means every container)\n", g, sudoPath)
+			}
+		}
 	}
 	if generated {
 		fmt.Printf("\nToken (shown once - not stored in plaintext anywhere, save it now):\n  %s\n\n", token)

@@ -12,6 +12,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/system/locale"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/system/timezone"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/templates/disks"
+	dockertemplates "github.com/nucleusv/linux-mcp-daemon/internal/resources/templates/docker"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/templates/file"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/templates/process"
 	"github.com/nucleusv/linux-mcp-daemon/internal/resources/templates/service"
@@ -167,6 +168,41 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
+				"uriTemplate":   "container://{name}/{view}",
+				"name":          "Docker Container Introspection",
+				"group":         "docker",
+				"linuxctl_verb": "container",
+				"description":   "One Docker container's own view of itself. Valid views: status (computed summary - state, health, exit code, restart count, uptime, image, ports, limits), inspect (Docker's full raw config), stats (one CPU/memory/network/IO snapshot, not a stream), top (the processes running inside it). Hint: list containers with the docker/containers tool first.",
+				"mimeType":      "application/json",
+			},
+			map[string]interface{}{
+				"uriTemplate":   "image://{name}/inspect",
+				"name":          "Docker Image Inspect",
+				"group":         "docker",
+				"linuxctl_verb": "image",
+				"description":   "Full configuration of one Docker image (layers, env, entrypoint, labels, digests). The name may be a tag (nginx:alpine), a repository path (ghcr.io/org/api:v1) or an image ID. Hint: list images with the docker/images tool.",
+				"mimeType":      "application/json",
+			},
+			map[string]interface{}{
+				"uriTemplate":   "volume://{name}/inspect",
+				"name":          "Docker Volume Inspect",
+				"group":         "docker",
+				"linuxctl_verb": "volume",
+				"description":   "Driver, mountpoint, options and labels of one Docker volume. Hint: list volumes - with the containers mounting each - using the docker/volumes tool.",
+				"mimeType":      "application/json",
+			},
+			map[string]interface{}{
+				"uriTemplate":   "docker-network://{name}/inspect",
+				"name":          "Docker Network Inspect",
+				"group":         "docker",
+				// The keyword is resolved inside the docker group, so the plain
+				// noun is unambiguous here even though the URI scheme cannot be:
+				// `linuxctl get docker network backend`.
+				"linuxctl_verb": "network",
+				"description":   "Full configuration of one Docker network: driver, scope, IPAM (subnets, gateways, IP ranges), options, labels and every attached container's name, IPv4/IPv6 address and MAC. Read-only - nothing here connects, disconnects or removes. The scheme is deliberately prefixed: network:// is the host's own networking (network://interfaces, network://routes), so a Docker network cannot use the bare noun. Hint: list networks with the docker/networks tool.",
+				"mimeType":      "application/json",
+			},
+			map[string]interface{}{
 				"uriTemplate": "process://{pid}/{target}",
 				"name":        "Process Introspection",
 				"group":       "processes",
@@ -249,6 +285,14 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 			content, mimeType, readErr = file.Handle(params.URI, session.User, sudoCfg)
 		case strings.HasPrefix(params.URI, "service://") && strings.HasSuffix(params.URI, "/status"):
 			content, mimeType, readErr = service.Handle(params.URI, session.User, sudoCfg)
+		case strings.HasPrefix(params.URI, "container://"),
+			strings.HasPrefix(params.URI, "image://"),
+			strings.HasPrefix(params.URI, "volume://"),
+			// Prefixed, and listed after network://interfaces above, so the
+			// host's networking keeps the bare scheme - see the docker
+			// templates package for why the asymmetry is deliberate.
+			strings.HasPrefix(params.URI, "docker-network://"):
+			content, mimeType, readErr = dockertemplates.Handle(params.URI, session.User, sudoCfg)
 		case strings.HasPrefix(params.URI, "process://"):
 			content, mimeType, readErr = process.Handle(params.URI, session.User, sudoCfg)
 		case params.URI == "devices://usb":

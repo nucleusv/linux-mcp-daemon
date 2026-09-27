@@ -140,6 +140,41 @@ users:
 
 Without a `sysctl:` block, writes are unrestricted - the default, unchanged. (An earlier `read_only` option was removed as redundant with not granting `allowed`; a leftover `read_only` key makes the config fail to load rather than being silently ignored.) The check runs in the daemon itself, before any worker is spawned, against the key in its normalized dotted form (so `net/ipv4/ip_forward` and `net.ipv4.ip_forward` are the same key). Invalid `write_keys` patterns stop the config from loading.
 
+## Limiting containers (`containers:`)
+
+Every `docker/*` tool is root or nothing - the Docker socket is root-owned and all-or-nothing - so the daemon forces `privileged: true` on the call and refuses it outright without `allowed: true` here. A `docker` tool without its grant is not even listed in `tools/list`, the way `daemon/reload-config` isn't.
+
+The tools that name one container (`docker/manage`, `docker/logs`, `docker/exec`, and `docker/inspect`, the internal worker behind `container://`) take a `containers:` list of name or ID globs. It is matched in the worker, against both the name given and the resolved full ID, before anything is sent to the socket:
+
+```yaml
+users:
+  agent-web:
+    privileged:
+      tools:
+        docker/containers:            # listing names no container - no containers:
+          allowed: true
+        docker/logs:
+          allowed: true
+          containers:
+            - "web-*"
+        docker/manage:                # ⚠ start, stop, restart, kill, pause, remove
+          allowed: true
+          containers:
+            - "web-*"
+```
+
+`["*"]` means every container; a grant with **no** `containers:` list refuses everything rather than allowing it. Each tool has its own list on purpose: `docker/exec` runs arbitrary code inside a container as whatever user the image runs as - usually root - so its list should be shorter than `docker/manage`'s, and reading a container's full `inspect` (env vars, mounts, labels) is why `docker/inspect` is granted separately from `docker/containers`.
+
+:::warning `containers: ["*"]` includes mcpd's own container
+
+When mcpd itself runs as a container on the same Docker daemon, `["*"]` matches it: a granted user can `stop` or `remove` the container serving the call, which succeeds and takes the answer with it. `docker/exec` into it is worse - it is a shell as root inside mcpd, next to its configs. List the containers the user is meant to manage, or a glob that cannot match mcpd's own name.
+
+:::
+
+Granting any of these to a user who can reach a container that runs as root or mounts the host's filesystem is host root by another route - see [Permissions and risks](./permissions-and-risks.md).
+
+**Containerized mcpd.** The worker dials the socket path from `worker.docker_socket` in [`daemon.yaml`](./daemon.md), which defaults to `/var/run/docker.sock`. In a container, mount the host's socket there (`-v /var/run/docker.sock:/var/run/docker.sock`) or point the setting at wherever it is mounted. With `worker.containerized: true` the path is still written as the *host* path: a privileged worker joins the host mount namespace and the client rewrites the socket through `/proc/1/root` before dialling, so `/var/run/docker.sock` resolves to the host's socket from either namespace. Don't write that prefix yourself - a path already under `/proc/1/root/` is left alone, but the plain host path is the one to configure.
+
 ## Applying config changes (`daemon/reload-config`)
 
 [`daemon/reload-config`](../mcp-api/tools/daemon/reload-config) makes the running daemon re-read `daemon.yaml`, `users.yaml` and this file, without a restart. It's the one tool whose `allowed: true` is not about running as root: it's the permission to call it at all. Users without the grant don't see it in `tools/list`.
@@ -204,6 +239,34 @@ users:
           allowed: true
           paths:
             - /
+        # Every docker/* tool is root or nothing: the socket is root-owned and
+        # all-or-nothing, so the daemon forces privileged: true and refuses the
+        # call outright without `allowed: true` here. The tools that name one
+        # container need `containers:` too - name or ID globs, ["*"] for all of
+        # them, and a missing list refuses everything rather than allowing it.
+        # Granting any of these to a user who can reach a container that runs
+        # as root, or mounts the host's filesystem, is host root by another
+        # route (see docs/configuration/permissions-and-risks.md).
+        docker/containers:  # list containers (names no container: no containers:)
+          allowed: true
+        docker/exec:  # ⚠ run arbitrary code inside the containers listed here
+          allowed: true
+          containers:
+            - "*"
+        docker/images:  # list images (read-only: no pull, build or remove)
+          allowed: true
+        docker/logs:  # read the logs of the containers listed here
+          allowed: true
+          containers:
+            - "*"
+        docker/manage:  # ⚠ start, stop, restart, kill, pause, remove those containers
+          allowed: true
+          containers:
+            - "*"
+        docker/networks:  # list networks (read-only: no create, remove or connect)
+          allowed: true
+        docker/volumes:  # list volumes (read-only)
+          allowed: true
         files/create:  # ⚠ create any file under paths - full root if they cover /etc, /root, /usr
           allowed: true
           paths:
@@ -297,6 +360,15 @@ users:
           allowed: true
         processes/read:  # internal: the worker behind process://
           allowed: true
+        # Worker behind container://, image://, volume:// and docker-network://.
+        # Its containers: list scopes container:// reads exactly as
+        # docker/manage's scopes that tool - reading one container's full
+        # inspect is not nothing (env vars, mounts, labels), so it is granted
+        # separately from docker/containers.
+        docker/inspect:  # internal: the worker behind the docker templates
+          allowed: true
+          containers:
+            - "*"
         system/os-release:  # containerized: the host's OS, not the image's
           allowed: true
         system/packages:  # containerized: the host's packages
@@ -338,6 +410,20 @@ users:
         service://:
           - ""
         process://:
+          - ""
+        # The docker templates. "" grants every name; which containers a
+        # container:// read may actually reach is then decided by the
+        # docker/inspect grant's containers: list above - a privileged read
+        # needs both grants, as for file:// and service://.
+        container://:
+          - ""
+        image://:
+          - ""
+        volume://:
+          - ""
+        # Prefixed on purpose: network:// above is the host's own networking,
+        # so a Docker network cannot have the bare scheme.
+        docker-network://:
           - ""
 ```
 {/* reference-privileged:end */}

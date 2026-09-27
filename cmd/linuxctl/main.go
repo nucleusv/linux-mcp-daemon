@@ -54,6 +54,12 @@ var (
 	responseChans = make(map[string]chan JSONRPCResponse)
 	chanMutex     sync.Mutex
 	idCounter     int
+	// sessionEnded is closed when the SSE stream stops, so a call waiting for
+	// its answer gives up instead of blocking forever. Without it the Go
+	// runtime kills the client with "all goroutines are asleep - deadlock!"
+	// whenever mcpd goes away mid-call - which a `stop docker <mcpd's own
+	// container>` does on purpose.
+	sessionEnded chan struct{}
 )
 
 func nextID() string {
@@ -267,6 +273,7 @@ func main() {
 		for k, v := range flagArgs {
 			toolArgs[k] = v
 		}
+		coerceFlagTypes(action.Tool.InputSchema, toolArgs)
 		if len(remaining) > 0 {
 			fmt.Fprintf(os.Stderr, "Warning: %d extra argument(s) ignored: %s\n", len(remaining), strings.Join(remaining, " "))
 		}
@@ -430,38 +437,40 @@ func runExplain(reg Registry, args []string) {
 	}
 	group := args[0]
 	found := false
+	// Every line is a runnable invocation, group included: the grammar is
+	// `<verb> <group> [keyword]`, and printing only the verb and keyword sent
+	// readers straight into `no group "container" is available to your user`.
+	line := func(invocation, kind, target, desc string) {
+		found = true
+		fmt.Printf("  %-34s -> %s %-25s %s\n", invocation, kind, target, desc)
+	}
 	for _, t := range reg.Tools {
 		if t.ToolsGroup != group {
 			continue
 		}
-		found = true
 		switch {
 		case isMutationOnly(t):
-			fmt.Printf("  <action>%-13s-> tool %-25s %s\n", "", t.Name, t.Description)
+			line("<action> "+group, "tool", t.Name, t.Description)
+		case t.LinuxctlVerb == "get" || t.LinuxctlVerb == "":
+			line("get "+group, "tool", t.Name, t.Description+" (bare - no keyword needed)")
 		case t.LinuxctlVerb == "create" || t.LinuxctlVerb == "update" || t.LinuxctlVerb == "delete":
-			fmt.Printf("  %-24s -> tool %-25s %s\n", t.LinuxctlVerb, t.Name, t.Description)
-		case t.LinuxctlVerb == "get":
-			fmt.Printf("  get %-20s -> tool %-25s %s (bare - no keyword needed)\n", "", t.Name, t.Description)
-		case t.LinuxctlVerb != "":
-			fmt.Printf("  get %-20s -> tool %-25s %s\n", t.LinuxctlVerb, t.Name, t.Description)
+			line(t.LinuxctlVerb+" "+group, "tool", t.Name, t.Description)
 		default:
-			fmt.Printf("  %-24s -> tool %-25s %s\n", t.LinuxctlVerb, t.Name, t.Description)
+			line("get "+group+" "+t.LinuxctlVerb, "tool", t.Name, t.Description)
 		}
 	}
 	for _, r := range reg.Resources {
 		if r.Group == group {
-			found = true
-			fmt.Printf("  get %-20s -> resource %-25s %s\n", r.LinuxctlVerb, r.URI, r.Description)
+			line("get "+group+" "+r.LinuxctlVerb, "resource", r.URI, r.Description)
 		}
 	}
 	for _, tpl := range reg.Templates {
 		if tpl.Group == group {
-			found = true
 			kw := tpl.LinuxctlVerb
 			if kw == "" {
 				kw = "<name>"
 			}
-			fmt.Printf("  describe %-16s -> template %-25s %s\n", kw, tpl.URITemplate, tpl.Description)
+			line("describe "+group+" "+kw, "template", tpl.URITemplate, tpl.Description)
 		}
 	}
 	if !found {
@@ -495,11 +504,36 @@ func runToolByName(authToken string, args []string) {
 		os.Exit(1)
 	}
 	mapPositionalArgs(tool.InputSchema, flagArgs, positional)
+	coerceFlagTypes(tool.InputSchema, flagArgs)
 	respRPC := callMethod(authToken, nextID(), "tools/call", map[string]interface{}{
 		"name":      tool.Name,
 		"arguments": flagArgs,
 	})
 	renderResponse(respRPC, outputFormat, "content")
+}
+
+// isFlagToken reports whether tok starts a new flag rather than being the
+// previous one's value, so `--all -o table` doesn't read "-o" as all's value.
+// Only "-o" is a short flag here; every other single dash is a value, which
+// keeps negative numbers (`--boot-offset -1`) working.
+func isFlagToken(tok string) bool {
+	return strings.HasPrefix(tok, "--") || tok == "-o"
+}
+
+// flagValue types a flag's text the way JSON needs it: true/false as booleans,
+// digits as a number, anything else as a string. coerceFlagTypes later turns a
+// number back into a string where the tool's schema asks for one.
+func flagValue(val string) interface{} {
+	switch val {
+	case "true":
+		return true
+	case "false":
+		return false
+	}
+	if num, err := strconv.Atoi(val); err == nil {
+		return num
+	}
+	return val
 }
 
 // splitFlagsAndPositional separates --flag value pairs (and the --output/-o
@@ -514,6 +548,17 @@ func splitFlagsAndPositional(args []string) (map[string]interface{}, []string, s
 		arg := args[i]
 		if strings.HasPrefix(arg, "--") {
 			key := strings.TrimPrefix(arg, "--")
+			// --flag=value is the same as --flag value (and the only way to
+			// write a false boolean that reads like one: --stdout=false).
+			if k, v, ok := strings.Cut(key, "="); ok {
+				if k == "output" {
+					outputFormat = v
+					flagArgs["output_format"] = v
+					continue
+				}
+				flagArgs[k] = flagValue(v)
+				continue
+			}
 			if key == "output" {
 				if i+1 < len(args) {
 					outputFormat = args[i+1]
@@ -528,17 +573,8 @@ func splitFlagsAndPositional(args []string) (map[string]interface{}, []string, s
 				}
 				continue
 			}
-			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
-				val := args[i+1]
-				if val == "true" {
-					flagArgs[key] = true
-				} else if val == "false" {
-					flagArgs[key] = false
-				} else if num, err := strconv.Atoi(val); err == nil {
-					flagArgs[key] = num
-				} else {
-					flagArgs[key] = val
-				}
+			if i+1 < len(args) && !isFlagToken(args[i+1]) {
+				flagArgs[key] = flagValue(args[i+1])
 				i++
 			} else {
 				flagArgs[key] = true
@@ -567,6 +603,23 @@ func formatCell(v interface{}) string {
 	}
 	if f, ok := v.(float64); ok && f == math.Trunc(f) {
 		return strconv.FormatFloat(f, 'f', -1, 64)
+	}
+	// A nested object (docker labels, for one) renders as Go's map[k:v], which
+	// reads badly in a cell - k=v, sorted so the column is stable between rows.
+	if m, ok := v.(map[string]interface{}); ok {
+		pairs := make([]string, 0, len(m))
+		for k, val := range m {
+			pairs = append(pairs, k+"="+formatCell(val))
+		}
+		sort.Strings(pairs)
+		return strings.Join(pairs, ",")
+	}
+	if l, ok := v.([]interface{}); ok {
+		parts := make([]string, 0, len(l))
+		for _, e := range l {
+			parts = append(parts, formatCell(e))
+		}
+		return strings.Join(parts, ",")
 	}
 	return fmt.Sprintf("%v", v)
 }
@@ -787,6 +840,7 @@ func connect(authToken, firstWord string) error {
 
 	endpoint := make(chan string, 1)
 	streamEnded := make(chan struct{})
+	sessionEnded = streamEnded
 	go func() {
 		defer close(streamEnded)
 		defer resp.Body.Close()
@@ -888,13 +942,16 @@ func tryCallMethod(authToken string, id string, method string, params interface{
 		return JSONRPCResponse{}, fmt.Errorf("Failed to submit request (HTTP %d): %s", resp.StatusCode, string(b))
 	}
 
-	if timeout == 0 {
-		return <-ch, nil
+	var timedOut <-chan time.Time
+	if timeout > 0 {
+		timedOut = time.After(timeout) // nil channel when there's no timeout: blocks forever
 	}
 	select {
 	case r := <-ch:
 		return r, nil
-	case <-time.After(timeout):
+	case <-sessionEnded:
+		return JSONRPCResponse{}, fmt.Errorf("mcpd closed the connection before answering %s - it was stopped or restarted mid-call", method)
+	case <-timedOut:
 		return JSONRPCResponse{}, fmt.Errorf("no response from mcpd within %s", timeout)
 	}
 }

@@ -7,6 +7,7 @@
 #
 # Sources of truth (code):
 #   tools            "name": "<group>/<command>"   in internal/rpc/tools.go
+#                    and internal/rpc/docker.go (the docker schemas live apart)
 #   resources        "uri": "scheme://..."          in internal/rpc/resources.go
 #   templates        "uriTemplate": "scheme://..."  in internal/rpc/resources.go
 #   template grants  what each template handler in internal/resources/templates/
@@ -40,7 +41,7 @@ missing() { comm -23 "$1" "$2" > "$tmp/x"; report "$3" "$tmp/x"; }  # in $1, not
 stale()   { comm -13 "$1" "$2" > "$tmp/x"; report "$3" "$tmp/x"; }  # in $2, not in $1
 
 # ------------------------------------------------------------------ code
-grep -o '"name": *"[a-z-]*/[a-z-]*"' internal/rpc/tools.go \
+grep -ho '"name": *"[a-z-]*/[a-z-]*"' internal/rpc/tools.go internal/rpc/docker.go \
     | grep -o '[a-z-]*/[a-z-]*' | sort -u > "$tmp/code_tools"
 grep -o '"uri": *"[^"]*"' internal/rpc/resources.go \
     | sed -E 's/.*"uri": *"([^"]*)"/\1/' | sort -u > "$tmp/code_res"
@@ -52,9 +53,11 @@ grep -o '"uriTemplate": *"[^"]*"' internal/rpc/resources.go \
 : > "$tmp/need_res_grants"; : > "$tmp/need_tool_grants"
 for f in internal/resources/templates/*/*.go; do
     case "$f" in *_test.go) continue ;; esac
-    scheme="$(grep -o 'CanReadResourceAsRoot([^,]*, *"[a-z]*://"' "$f" | grep -o '"[a-z]*://"' | tr -d '"' || true)"
-    [ -n "$scheme" ] || continue   # never privileged: needs no grant
-    echo "$scheme" >> "$tmp/need_res_grants"
+    grep -q 'CanReadResourceAsRoot' "$f" || continue   # never privileged: needs no grant
+    # Every scheme literal in a handler that checks a grant. Usually the
+    # scheme is the call's own argument; the docker handler serves three and
+    # keeps them in a map, which this picks up just the same.
+    grep -o '"[a-z][a-z-]*://"' "$f" | tr -d '"' >> "$tmp/need_res_grants"
     # Worker names look like tools: "<group>/<command>" with a real tool
     # group (not imports such as "encoding/json" or MIME types).
     grep -o '"[a-z-]*/[a-z-]*"' "$f" | tr -d '"' \

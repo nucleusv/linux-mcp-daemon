@@ -29,7 +29,7 @@ So the OS account is the first permission, and it matters as much as the grants:
 
 | What the user has | What the agent can do |
 |---|---|
-| A token, **no entry** in `mcp-sudo.yaml` | Call every tool and resource **as its own OS account**: read what that account can read, change what it owns. No root. `daemon/reload-config` and the `devices://`/`kernel://` resources are refused. **`network/curl` and `network/ping` reach any address** - see below. |
+| A token, **no entry** in `mcp-sudo.yaml` | Call every tool and resource **as its own OS account**: read what that account can read, change what it owns. No root. `daemon/reload-config`, every `docker/*` tool and the `devices://`/`kernel://` resources are refused. **`network/curl` and `network/ping` reach any address** - see below. |
 | `allowed: true` on a tool **without a path** (`services/manage`, `processes/delete`, `kernel/system-control`, `logs/*`, ...) | That tool as root, **with any arguments**: any service, any process, any kernel parameter. |
 | `allowed: true` on a **path tool** (`files/*`, `disks/usage`, `disks/free`) | Nothing, and the config is rejected: a path tool must list its `paths:`. `paths: ["/"]` for the whole filesystem - written out, so whoever reads the config sees it. |
 | `allowed: true` + `paths: [/var/log]` | That tool as root **inside `/var/log` only** (`/var/log/../../etc` is judged as `/etc` and refused). Symlinks are not followed there, so one planted in `/var/log` can't lead out of it. |
@@ -91,6 +91,9 @@ Each of these lets an agent turn its grant into unrestricted root - by writing a
 | `services/manage` | Start, stop, restart, enable any unit - stop `ssh` or `mcpd` itself; together with any write to `/etc/systemd`, run any program as root. |
 | `kernel/system-control` **without** `sysctl.write_keys` | `kernel.core_pattern` and `kernel.modprobe` name programs the kernel runs as root; other keys can cut the host off the network. |
 | `processes/delete` | Signal any process: `sshd`, `mcpd`, PID 1, a database mid-write. |
+| `docker/exec` | A command as **root inside** the target container. Anything the container can reach, the agent can reach - and a container started `--privileged`, or with the host's filesystem or Docker socket mounted, is the host. Always give this one a [`containers:`](./mcp-sudo.md#limiting-containers-containers) list. |
+| `docker/manage` **without** `containers:` | Stop, kill or remove any container on the host - including mcpd's own, and a database mid-write. `containers: ["*"]` means the same thing, written out. |
+| Any `docker/*` grant | Talking to the Engine API socket is the docker group, which is [root](#grants-that-amount-to-full-root) - which is why every `docker/*` tool is root-or-nothing and invisible in `tools/list` without the grant. The `containers:` globs, matched against name *and* resolved ID, are the whole boundary. |
 | MCP user whose OS account is in `docker`/`lxd`/`disk` | Root through the group, even with no grant at all (see above). |
 
 ### Also dangerous without any grant

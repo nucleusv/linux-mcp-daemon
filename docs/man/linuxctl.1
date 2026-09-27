@@ -47,7 +47,7 @@ Skip TLS certificate verification, like \fBcurl \-k\fR (or \fBMCP_TLS_INSECURE=1
 .PP
 .B linuxctl <verb> <group> [target-keyword] [name/args]
 .PP
-\fB<group>\fR is always present, always the tool's real \fBtools_group\fR (\fBfiles\fR, \fBdisks\fR, \fBprocesses\fR, \fBnetwork\fR, \fBdevices\fR, \fBkernel\fR, \fBlogs\fR, \fBsystem\fR, \fBusers\fR, \fBcpu\fR, \fBmemory\fR, \fBauth\fR). There is no top-level \fBservices\fR group \- \fBservices/list\fR and \fBservices/manage\fR live under \fBsystem\fR, reached as \fBsystem services\fR.
+\fB<group>\fR is always present, always the tool's real \fBtools_group\fR (\fBfiles\fR, \fBdisks\fR, \fBprocesses\fR, \fBnetwork\fR, \fBdevices\fR, \fBkernel\fR, \fBlogs\fR, \fBsystem\fR, \fBusers\fR, \fBcpu\fR, \fBmemory\fR, \fBauth\fR, \fBdocker\fR). There is no top-level \fBservices\fR group \- \fBservices/list\fR and \fBservices/manage\fR live under \fBsystem\fR, reached as \fBsystem services\fR.
 .PP
 \fB<verb>\fR is one of exactly two universal words for reads-and-detail, plus a tool's own action word for mutations:
 .TP
@@ -83,6 +83,9 @@ Calls a tool directly by its literal name, symmetric with \fBresource <uri>\fR. 
 .TP
 .B <verb> mcpd user <username>
 User/token administration: create, delete, update (rotate token), list, or describe an mcpd bearer-token user. Edits \fBconfigs/users.yaml\fR and \fBconfigs/mcp-sudo.yaml\fR directly on disk (path set by \fB\-\-config\-path\fR, default \fB./configs\fR); there is no MCP tool that edits them. A newly created user's token is printed once, to the terminal only, and is never stored in plaintext - only its salted hash is written to \fBusers.yaml\fR. \fB\-\-grant\fR \fITOOL,...\fR lets a new user run those tools as root. After a change, asks the running daemon to re-read its files (\fBdaemon/reload-config\fR, with \fBMCP_SERVER\fR and \fBMCP_TOKEN\fR); \fB\-\-no\-reload\fR skips that.
+.TP
+.B <verb> docker [images|volumes|networks|logs] [args]
+Docker, over the Engine API socket: \fBget docker\fR lists containers (\fB\-\-all\fR, \fB\-\-state\fR, \fB\-\-name\fR), \fBget docker images\fR, \fBget docker volumes\fR and \fBget docker networks\fR (\fB\-\-pattern\fR, \fB\-\-driver\fR) list those, and \fBget docker logs <name>\fR reads one container's logs (\fB\-\-lines\fR, \fB\-\-timestamps\fR, \fB\-\-since\fR/\fB\-\-until\fR as unix timestamps, \fB\-\-stdout\fR/\fB\-\-stderr\fR). \fBstart\fR, \fBstop\fR, \fBrestart\fR, \fBkill\fR, \fBpause\fR, \fBunpause\fR and \fBremove docker <name>\fR are the lifecycle verbs, and \fBexec docker <name> <argv...>\fR runs one command inside a running container (argv as bare words, or as a single JSON array when it needs a shell). One container's, image's or volume's own view comes from \fBresource container://<name>/<status|inspect|stats|top>\fR, \fBimage://<name>/inspect\fR, \fBvolume://<name>/inspect\fR and \fBdocker\-network://<name>/inspect\fR (prefixed on purpose \- \fBnetwork://\fR is already the host's own networking). Every one of these is root\-or\-nothing: without the grant in \fBmcp\-sudo.yaml\fR (with its \fBcontainers:\fR list) the tools are not offered and these verbs do not resolve.
 .TP
 .B edit mcpd config [sudo|users|daemon]
 Edits one config file like \fBvisudo\fR(8): a copy is opened in \fB$VISUAL\fR or \fB$EDITOR\fR and, on save, checked with the same strict parser mcpd uses; only a valid file replaces the original, and the daemon is then reloaded. An invalid edit can be edited again or discarded.
@@ -175,6 +178,18 @@ One result vs many, same underlying tool:
 Aggregated single-object detail (combines several reads, excludes environ):
 .IP
 .B linuxctl describe processes 1234
+.PP
+List running containers, then restart one and read its runtime summary:
+.IP
+.B linuxctl get docker
+.br
+.B linuxctl restart docker web-1
+.br
+.B linuxctl resource container://web-1/status
+.PP
+Run one command inside a container (argv as a JSON array when it needs a shell):
+.IP
+.B linuxctl exec docker web-1 '["sh","-c","nginx -v 2>&1"]'
 .PP
 Create a new mcpd user (local-only, prints the token once):
 .IP

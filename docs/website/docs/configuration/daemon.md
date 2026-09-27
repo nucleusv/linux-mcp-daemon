@@ -32,6 +32,7 @@ server:
 worker:
   timeout_seconds: 30
   containerized: true
+  # docker_socket: /var/run/docker.sock   # Engine API socket for the docker/* tools
 
 rate_limits:
   default_rps: 5
@@ -49,6 +50,7 @@ tools:
 - **`server.port`**: the setting of configs from before v0.3.3, which have no `server.http` block - they keep serving plain HTTP on `server.port` (and HTTPS on `tls.port`, default 9443, if `tls.enabled`), with the warning. Move to the `tls`/`http` blocks above; the two layouts can't be mixed.
 - **`worker.timeout_seconds`**: The global maximum time an Ephemeral Worker is allowed to run before the Master daemon sends a `SIGKILL`. This prevents runaway processes.
 - **`worker.containerized`**: Set to `true` when `mcpd` itself runs inside a container (e.g. Kubernetes, Docker) with its own private root filesystem, as this daemon's own deployment does (see `k8s/deployment.yaml`). When true, every `privileged: true` tool call also joins the real host's mount namespace before running, so tools like `system/packages` or `services/manage` administer the actual host rather than the daemon's own container image. Set `false` when `mcpd` runs directly on the host with no container boundary to cross - `mcpd` also self-checks this at startup and logs a warning if the configured value doesn't match what it detects about its own environment.
+- **`worker.docker_socket`**: The Docker Engine API socket the [`docker/*` tools](../mcp-api/overview) and the `container://`/`image://`/`volume://` templates dial, default `/var/run/docker.sock`. Set it for a non-standard path (a rootless `/run/user/1000/docker.sock`, a socket mounted somewhere else) - if it doesn't exist, those tools say so instead of failing obscurely. Write the path as the *host* sees it even with `containerized: true`: a privileged worker joins the host mount namespace and the client resolves the socket through `/proc/1/root` itself. Like `worker.containerized`, changing it needs a restart, not a reload.
 - **`rate_limits`**: Global rate limits applied to every authenticated user to prevent an AI from spamming the server and saturating your I/O.
 - **`tools.<name>.timeout_seconds`**: Tool-specific overrides, keyed by the tool's full `<group>/<command>` name. Heavy tools like `disks/usage` can be granted longer execution windows than lightweight tools.
 - **`users`**: no longer here - users and tokens live in [`users.yaml`](./users). Configs from before it that still list `users:` in `daemon.yaml` keep working (mcpd logs a warning); `linuxctl` moves the list to `users.yaml` on its next user change. Users in both files is an error.

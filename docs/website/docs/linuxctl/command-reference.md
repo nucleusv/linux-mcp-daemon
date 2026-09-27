@@ -430,6 +430,136 @@ Your authorized privileged tools:
 ...
 ```
 
+## docker
+
+Every `docker/*` tool is root-or-nothing: without the grant in [`mcp-sudo.yaml`](../configuration/mcp-sudo.md#limiting-containers-containers) the tools aren't in `tools/list` and `linuxctl` won't resolve these verbs at all. Output below is from a Docker-in-Docker test host.
+
+```bash
+$ linuxctl get docker
+[running] db-1 (80d3cf9c8b3c)
+  Image: redis:alpine
+  Status: Up 9 minutes
+  Ports: 6379/tcp
+
+[running] web-1 (e36aeba4369a)
+  Image: nginx:alpine
+  Status: Up 9 minutes
+  Ports: 0.0.0.0:8080->80/tcp, :::8080->80/tcp
+
+[running] logger-1 (b2171b5ad4e6)
+  Image: busybox
+  Status: Up 6 hours
+
+Hint: For one container's runtime summary, read container://<name>/status; for the full config, container://<name>/inspect.
+# --all adds the stopped ones; --state running / --name web filter; -o json adds
+# full_id, image_id, labels, command - "name" is the primary name, "names" every alias
+
+$ linuxctl get docker images
+nginx:alpine
+  ID: df221db836e1 | Size: 89.5 MiB | Created: 2026-09-22 22:09:50 UTC
+
+redis:alpine
+  ID: 3811787313eb | Size: 152.5 MiB | Created: 2026-09-21 17:37:05 UTC
+
+busybox:latest
+  ID: fd7dc98638c8 | Size: 5.9 MiB | Created: 2026-05-13 02:21:49 UTC
+
+Hint: For one image's layers, env and entrypoint, read image://<name>/inspect
+# --pattern 'nginx*' filters; -o json adds digests, labels and how many containers use each
+
+$ linuxctl get docker volumes
+app-data
+  Driver: local | Scope: local
+  Mountpoint: /var/lib/docker/volumes/app-data/_data
+  In use by: web-1
+
+Hint: For one volume's options and labels, read volume://<name>/inspect
+
+$ linuxctl get docker networks
+none (c345b29bca19)
+  Driver: null | Scope: local
+  Attached: (nothing)
+
+host (7e278d4782bd)
+  Driver: host | Scope: local
+  Attached: (nothing)
+
+bridge (105e289e28b8)
+  Driver: bridge | Scope: local
+  Subnet: 172.18.0.0/16 | Gateway: 172.18.0.1
+  Attached: db-1 (172.18.0.4), logger-1 (172.18.0.3), web-1 (172.18.0.2)
+
+appnet (784013297bf8)
+  Driver: bridge | Scope: local
+  Subnet: 10.10.0.0/24 | Gateway: 10.10.0.1
+  Attached: db-1 (10.10.0.3), web-1 (10.10.0.2)
+
+backend (1341d9362901)
+  Driver: bridge | Scope: local | internal, attachable
+  Subnet: 10.20.0.0/24 | Gateway: 10.20.0.1
+  Attached: db-1 (10.20.0.2)
+
+Hint: For one network's IPAM, options and per-container addresses, read docker-network://<name>/inspect
+# --pattern 'app*' and --driver host filter; -o json adds IPAM options, labels and both ids
+# only the flags that are set are printed; stopped containers are listed without an address
+
+$ linuxctl get docker logs logger-1 --lines 6 --timestamps
+2026-09-27T10:20:26.619585554Z warn 10737
+2026-09-27T10:20:26.619601970Z tick 10737
+2026-09-27T10:20:28.623741055Z tick 10738
+2026-09-27T10:20:28.623847388Z warn 10738
+2026-09-27T10:20:30.625042500Z warn 10739
+2026-09-27T10:20:30.625148541Z tick 10739
+# --stdout=false / --stderr=false pick one stream; --since / --until take unix timestamps
+# note: --lines tails first, the stream filter applies after - Docker's own order
+
+$ linuxctl exec docker web-1 ls /usr/share/nginx/html
+Container web-1 (e36aeba4369a): ls /usr/share/nginx/html
+Exit code: 0
+
+--- stdout ---
+50x.html
+data
+index.html
+
+# argv as bare words, or as one JSON array when it needs a shell:
+$ linuxctl exec docker web-1 '["sh","-c","nginx -v 2>&1; id -un"]'
+Container web-1 (e36aeba4369a): sh -c nginx -v 2>&1; id -un
+Exit code: 0
+
+--- stdout ---
+nginx version: nginx/1.31.6
+root
+```
+
+Lifecycle, the same grammar `services` has - `start`, `stop`, `restart`, `kill`, `pause`, `unpause`, `remove`:
+
+```bash
+$ linuxctl restart docker web-1
+Container web-1 (e36aeba4369a): restart succeeded.
+
+$ linuxctl start docker db-1 -o json
+{
+  "action": "start",
+  "container": "db-1",
+  "id": "80d3cf9c8b3c4f5ed7b5a9d52c9f97d9759f585d0e9214f54646725eda7c0363",
+  "result": "ok"
+}
+
+$ linuxctl start docker db-1          # already running
+Container db-1 (80d3cf9c8b3c): start not needed, it is already in that state.
+
+$ linuxctl remove docker web-1        # running
+docker API returned 409: cannot remove container "e36aeba4369a...": container is running: stop the container before removing or force remove - stop or kill it first (this tool never removes a running container by force)
+
+$ linuxctl stop docker db-1           # user granted only containers: ["web-*"]
+not authorized to act on container db-1 (80d3cf9c8b3c): it is not in this tool's containers: list in mcp-sudo.yaml
+```
+
+One container's, image's, volume's or network's own view comes from the resource templates - `linuxctl resource container://web-1/status` (also `/inspect`, `/stats`, `/top`), `image://nginx:alpine/inspect`, `volume://app-data/inspect`, `docker-network://appnet/inspect`.
+
+That last scheme is prefixed on purpose: `network://` is already the host's own networking (`network://interfaces`, `network://routes`), so a Docker network cannot have the bare noun.
+
 ## daemon
 
 Only for users granted `daemon/reload-config` in `mcp-sudo.yaml` - see [daemon/reload-config](../mcp-api/tools/daemon/reload-config).

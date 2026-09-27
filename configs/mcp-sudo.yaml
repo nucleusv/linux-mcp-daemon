@@ -149,6 +149,34 @@ users:
           allowed: true
           paths:
             - /
+        # Every docker/* tool is root or nothing: the socket is root-owned and
+        # all-or-nothing, so the daemon forces privileged: true and refuses the
+        # call outright without `allowed: true` here. The tools that name one
+        # container need `containers:` too - name or ID globs, ["*"] for all of
+        # them, and a missing list refuses everything rather than allowing it.
+        # Granting any of these to a user who can reach a container that runs
+        # as root, or mounts the host's filesystem, is host root by another
+        # route (see docs/configuration/permissions-and-risks.md).
+        docker/containers:  # list containers (names no container: no containers:)
+          allowed: true
+        docker/exec:  # ⚠ run arbitrary code inside the containers listed here
+          allowed: true
+          containers:
+            - "*"
+        docker/images:  # list images (read-only: no pull, build or remove)
+          allowed: true
+        docker/logs:  # read the logs of the containers listed here
+          allowed: true
+          containers:
+            - "*"
+        docker/manage:  # ⚠ start, stop, restart, kill, pause, remove those containers
+          allowed: true
+          containers:
+            - "*"
+        docker/networks:  # list networks (read-only: no create, remove or connect)
+          allowed: true
+        docker/volumes:  # list volumes (read-only)
+          allowed: true
         files/create:  # ⚠ create any file under paths - full root if they cover /etc, /root, /usr
           allowed: true
           paths:
@@ -242,6 +270,15 @@ users:
           allowed: true
         processes/read:  # internal: the worker behind process://
           allowed: true
+        # Worker behind container://, image://, volume:// and docker-network://.
+        # Its containers: list scopes container:// reads exactly as
+        # docker/manage's scopes that tool - reading one container's full
+        # inspect is not nothing (env vars, mounts, labels), so it is granted
+        # separately from docker/containers.
+        docker/inspect:  # internal: the worker behind the docker templates
+          allowed: true
+          containers:
+            - "*"
         system/os-release:  # containerized: the host's OS, not the image's
           allowed: true
         system/packages:  # containerized: the host's packages
@@ -283,4 +320,18 @@ users:
         service://:
           - ""
         process://:
+          - ""
+        # The docker templates. "" grants every name; which containers a
+        # container:// read may actually reach is then decided by the
+        # docker/inspect grant's containers: list above - a privileged read
+        # needs both grants, as for file:// and service://.
+        container://:
+          - ""
+        image://:
+          - ""
+        volume://:
+          - ""
+        # Prefixed on purpose: network:// above is the host's own networking,
+        # so a Docker network cannot have the bare scheme.
+        docker-network://:
           - ""
