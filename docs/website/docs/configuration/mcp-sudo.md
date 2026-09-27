@@ -173,6 +173,24 @@ When mcpd itself runs as a container on the same Docker daemon, `["*"]` matches 
 
 Granting any of these to a user who can reach a container that runs as root or mounts the host's filesystem is host root by another route - see [Permissions and risks](./permissions-and-risks.md).
 
+## Limiting what may be reclaimed (`prune:`)
+
+[`docker/prune`](../mcp-api/tools/docker/prune) is the one docker tool that deletes objects it was never given the names of, so a `containers:` list cannot scope it. It takes a `prune:` list of the *kinds* of unused object it may reclaim instead - the same five words the tool's `targets` parameter accepts:
+
+```yaml
+users:
+  agent-web:
+    privileged:
+      tools:
+        docker/prune:                 # ⚠ deletes unused objects of these kinds
+          allowed: true
+          prune:
+            - images                  # dangling only
+            - build-cache
+```
+
+There is deliberately no `"*"` and no `all`: pruning volumes deletes data nothing can rebuild, so each kind is named or it is refused. `allowed: true` with no `prune:` list is a strict-parse error (`linuxctl edit mcpd config sudo` refuses the save) and inert at startup - it refuses every call rather than allowing any, exactly like a missing `containers:` list. A misspelled target is rejected at load whatever the strictness. A call naming any target outside the list is refused **whole**, before the socket is dialled, so a partly-unauthorized request deletes nothing at all. `prune:` on any other tool is rejected as a no-op.
+
 **Containerized mcpd.** The worker dials the socket path from `worker.docker_socket` in [`daemon.yaml`](./daemon.md), which defaults to `/var/run/docker.sock`. In a container, mount the host's socket there (`-v /var/run/docker.sock:/var/run/docker.sock`) or point the setting at wherever it is mounted. With `worker.containerized: true` the path is still written as the *host* path: a privileged worker joins the host mount namespace and the client rewrites the socket through `/proc/1/root` before dialling, so `/var/run/docker.sock` resolves to the host's socket from either namespace. Don't write that prefix yourself - a path already under `/proc/1/root/` is left alone, but the plain host path is the one to configure.
 
 ## Applying config changes (`daemon/reload-config`)
@@ -265,6 +283,14 @@ users:
             - "*"
         docker/networks:  # list networks (read-only: no create, remove or connect)
           allowed: true
+        docker/prune:  # ⚠ delete unused objects of the kinds listed here (no "all")
+          allowed: true
+          prune:
+            - containers
+            - images
+            - volumes
+            - networks
+            - build-cache
         docker/volumes:  # list volumes (read-only)
           allowed: true
         files/create:  # ⚠ create any file under paths - full root if they cover /etc, /root, /usr

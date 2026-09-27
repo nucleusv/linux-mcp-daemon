@@ -453,7 +453,10 @@ func runExplain(reg Registry, args []string) {
 			line("<action> "+group, "tool", t.Name, t.Description)
 		case t.LinuxctlVerb == "get" || t.LinuxctlVerb == "":
 			line("get "+group, "tool", t.Name, t.Description+" (bare - no keyword needed)")
-		case t.LinuxctlVerb == "create" || t.LinuxctlVerb == "update" || t.LinuxctlVerb == "delete":
+		case verbShaped[t.LinuxctlVerb]:
+			// Its linuxctl_verb is a verb, not a target keyword, so the
+			// runnable form is `<verb> <group>` - "get docker prune" would
+			// resolve, but reads like a read of something called prune.
 			line(t.LinuxctlVerb+" "+group, "tool", t.Name, t.Description)
 		default:
 			line("get "+group+" "+t.LinuxctlVerb, "tool", t.Name, t.Description)

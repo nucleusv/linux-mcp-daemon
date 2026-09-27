@@ -151,6 +151,13 @@ func findEnumParamContaining(schema map[string]interface{}, verb string) (string
 // argument is required" from a plain read. Tools like logs/logins also have
 // an enum ("type": success/failed) but it's optional, not required, so
 // they're correctly left eligible for Case B.
+// verbShaped are the linuxctl_verb values that read as a verb rather than as
+// a target keyword: `exec docker web-1`, not `get docker exec`. Only `explain`
+// needs to tell them apart - resolution accepts either form.
+var verbShaped = map[string]bool{
+	"create": true, "update": true, "delete": true, "exec": true, "prune": true,
+}
+
 func isMutationOnly(t ToolDef) bool {
 	if t.InputSchema == nil {
 		return false

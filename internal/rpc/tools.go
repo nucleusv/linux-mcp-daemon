@@ -718,7 +718,9 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 		toolRes := ToolResult{}
 		var resultText string
 		var execErr error
-		defer func() { logToolCall(session, params, loggedArgs, start, execErr, resp.Error != nil) }()
+		defer func() {
+			logToolCall(session, params, loggedArgs, start, execErr, resp.Error != nil, resultText)
+		}()
 
 		standardWorkers := map[string]bool{
 			"files/list":            true,
@@ -764,6 +766,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"docker/images":         true,
 			"docker/volumes":        true,
 			"docker/networks":       true,
+			"docker/prune":          true,
 		}
 
 		if params.Name == "daemon/reload-config" {
@@ -950,12 +953,15 @@ var mutatingTools = map[string]bool{
 	// docker/exec runs arbitrary code inside a container, so it is audited
 	// whether or not the command it ran changed anything.
 	"docker/manage": true, "docker/exec": true,
+	// docker/prune deletes objects nobody named, so it is audited with the
+	// target list and - uniquely - a one-line summary of what it reclaimed.
+	"docker/prune": true,
 }
 
 // logToolCall writes one line per tool call: an audit line for calls that
 // change something, otherwise an info line (warn when the call was denied).
 // Arguments are redacted; tool output is never logged.
-func logToolCall(session *Session, params CallToolParams, loggedArgs string, start time.Time, execErr error, rpcErr bool) {
+func logToolCall(session *Session, params CallToolParams, loggedArgs string, start time.Time, execErr error, rpcErr bool, resultText string) {
 	var a struct {
 		Privileged bool            `json:"privileged"`
 		Value      json.RawMessage `json:"value"`
@@ -963,6 +969,12 @@ func logToolCall(session *Session, params CallToolParams, loggedArgs string, sta
 	_ = json.Unmarshal(params.Arguments, &a)
 	attrs := []any{"user", session.User, "session", session.ID, "tool", params.Name, "privileged", a.Privileged,
 		"duration_ms", time.Since(start).Milliseconds(), "ok", execErr == nil && !rpcErr, "args", loggedArgs}
+	// The one exception to "tool output is never logged": what a prune
+	// deleted is the whole point of auditing it, and the summary line names
+	// no content - only counts and bytes.
+	if params.Name == "docker/prune" && execErr == nil {
+		attrs = append(attrs, "reclaimed", pruneSummary(resultText))
+	}
 	if execErr != nil {
 		msg := execErr.Error()
 		if len(msg) > 200 {
@@ -980,6 +992,45 @@ func logToolCall(session *Session, params CallToolParams, loggedArgs string, sta
 	default:
 		logging.Info("tool call", attrs...)
 	}
+}
+
+// pruneSummary reduces docker/prune's answer to the one line worth auditing:
+// each target's count, and the total reclaimed.
+func pruneSummary(resultText string) string {
+	// Any structured output_format answers as one JSON line that holds every
+	// deleted object's ID - summarize it from the counts, or the "no content"
+	// promise above holds only for the text format.
+	if strings.HasPrefix(strings.TrimSpace(resultText), "{") {
+		var r struct {
+			Results []struct {
+				Target    string `json:"target"`
+				Count     int    `json:"count"`
+				Reclaimed int64  `json:"space_reclaimed_bytes"`
+				Error     string `json:"error"`
+			} `json:"results"`
+			Total int64 `json:"total_space_reclaimed_bytes"`
+		}
+		if err := json.Unmarshal([]byte(resultText), &r); err == nil {
+			var parts []string
+			for _, t := range r.Results {
+				if t.Error != "" {
+					parts = append(parts, t.Target+": failed")
+					continue
+				}
+				parts = append(parts, fmt.Sprintf("%s: %d removed, %d bytes", t.Target, t.Count, t.Reclaimed))
+			}
+			parts = append(parts, fmt.Sprintf("total %d bytes", r.Total))
+			return strings.Join(parts, "; ")
+		}
+	}
+	var parts []string
+	for _, line := range strings.Split(resultText, "\n") {
+		if strings.HasPrefix(line, " ") || line == "" {
+			continue // the per-object names, not the per-target counts
+		}
+		parts = append(parts, strings.TrimSpace(line))
+	}
+	return strings.Join(parts, "; ")
 }
 
 // withoutKey returns the JSON object args without key (args unchanged if

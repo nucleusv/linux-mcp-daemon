@@ -162,6 +162,27 @@ func dockerTools(sudoCfg *config.SudoConfig, user string) []interface{} {
 		})
 	}
 
+	if granted("docker/prune") {
+		out = append(out, map[string]interface{}{
+			"name":          "docker/prune",
+			"tools_group":   "docker",
+			"linuxctl_verb": "prune",
+			"description":   "Reclaims disk by deleting unused Docker objects: stopped containers, dangling images, anonymous volumes, unused networks, and the build cache. `targets` is required and there is no \"everything\" - name each kind to reclaim. This is the only docker tool that deletes objects it was never given the names of, so it is scoped by kind rather than by container: which kinds this user may reclaim comes from the `prune:` list in their grant, not from the call, and a target outside that list refuses the whole request before anything is deleted. Two Engine API defaults are never overridden: images prunes only *dangling* ones (an image a stopped container still references survives), and volumes only *anonymous* ones (a named volume, the one thing in a Docker install nothing can rebuild, is never touched). Targets are reclaimed in dependency order - containers first, build cache last - whatever order they are given in." + rootNote,
+			"inputSchema": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"targets": map[string]interface{}{
+						"type":        "array",
+						"items":       map[string]interface{}{"type": "string", "enum": docker.PruneTargets},
+						"description": "What to reclaim: one or more of containers (stopped), images (dangling), volumes (anonymous, unused), networks (unused), build-cache",
+					},
+					"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml). Defaults to text"},
+				},
+				"required": []string{"targets"},
+			},
+		})
+	}
+
 	return out
 }
 
@@ -175,10 +196,11 @@ func dockerTools(sudoCfg *config.SudoConfig, user string) []interface{} {
 //     message about `privileged: true` that says nothing about Docker.
 //   - `privileged: true` is forced, in the arguments as well as for the spawn,
 //     so the audit line records what actually ran.
-//   - `_docker_socket` and `_containers` are delete-then-set, so a caller can
-//     never supply either. The socket comes from daemon.yaml, which worker mode
-//     never reads; the allowlist is the whole authorization boundary for the
-//     tools that name a container.
+//   - `_docker_socket`, `_containers` and `_prune` are delete-then-set, so a
+//     caller can never supply any of them. The socket comes from daemon.yaml,
+//     which worker mode never reads; the two allowlists are the whole
+//     authorization boundary for the tools that name a container and for
+//     docker/prune, which names none.
 func prepareDockerCall(sudoCfg *config.SudoConfig, user, tool string, args json.RawMessage) (json.RawMessage, error) {
 	if !sudoCfg.CanRunAsRoot(user, tool) {
 		return args, fmt.Errorf("user %s is not authorized to run %s: the Docker socket is root-owned, so every docker/* tool needs `allowed: true` in its grant in mcp-sudo.yaml (and, for the tools naming one container, a `containers:` list)", user, tool)
@@ -190,6 +212,7 @@ func prepareDockerCall(sudoCfg *config.SudoConfig, user, tool string, args json.
 	}
 	delete(argMap, "_docker_socket")
 	delete(argMap, "_containers")
+	delete(argMap, "_prune")
 	argMap["privileged"] = true
 	if docker.SocketPath != "" {
 		argMap["_docker_socket"] = docker.SocketPath
@@ -198,6 +221,9 @@ func prepareDockerCall(sudoCfg *config.SudoConfig, user, tool string, args json.
 		// Empty (a grant without containers:) refuses everything in the worker,
 		// before it dials the socket - see docker.Authorize.
 		argMap["_containers"] = sudoCfg.GetAllowedContainers(user, tool)
+	}
+	if tool == config.PruneTool {
+		argMap["_prune"] = sudoCfg.GetAllowedPruneTargets(user, tool)
 	}
 	b, err := json.Marshal(argMap)
 	if err != nil {

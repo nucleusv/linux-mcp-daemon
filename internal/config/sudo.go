@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/nucleusv/linux-mcp-daemon/internal/docker"
 	"github.com/nucleusv/linux-mcp-daemon/internal/netpolicy"
 )
 
@@ -37,6 +38,12 @@ type ToolPrivilege struct {
 	// all-or-nothing, the Engine API has no per-container authorization, and
 	// the worker is root - so there is no kernel check behind this list.
 	Containers []string `yaml:"containers,omitempty"`
+	// Prune restricts which kinds of unused object docker/prune may reclaim
+	// (see PruneTargets). Same shape as Containers and for the same reason:
+	// prune names no container, it names a category of garbage, and the
+	// Engine API has no authorization of its own. Absent on an allowed grant
+	// = refuse everything; there is deliberately no "all".
+	Prune []string `yaml:"prune,omitempty"`
 	// Network restricts where an outbound network tool (network/curl,
 	// network/ping) may connect. Unlike Allowed, which only governs
 	// running as root, it applies to every call of the tool - network
@@ -166,6 +173,17 @@ func ParseSudoConfig(data []byte, strict bool) (*SudoConfig, error) {
 			if len(privs.Containers) > 0 && !ContainerTools[toolName] && strict {
 				return nil, fmt.Errorf("user '%s', tool '%s': containers has no effect - %s names no container (containers can limit: %s)", username, toolName, toolName, strings.Join(sortedContainerTools(), ", "))
 			}
+			for _, t := range privs.Prune {
+				if !validPruneTarget(t) {
+					return nil, fmt.Errorf("user '%s', tool '%s': unknown prune target %q (one of: %s)", username, toolName, t, strings.Join(PruneTargets, ", "))
+				}
+			}
+			if toolName == PruneTool && privs.Allowed && len(privs.Prune) == 0 && strict {
+				return nil, fmt.Errorf("user '%s', tool '%s': allowed without prune - as root it could only be refused; list the targets it may reclaim (%s). There is no \"all\" on purpose: pruning volumes deletes data nothing can rebuild", username, toolName, strings.Join(PruneTargets, ", "))
+			}
+			if len(privs.Prune) > 0 && toolName != PruneTool && strict {
+				return nil, fmt.Errorf("user '%s', tool '%s': prune has no effect - only %s reclaims unused objects", username, toolName, PruneTool)
+			}
 		}
 	}
 
@@ -221,7 +239,30 @@ func (c *SudoConfig) GetAllowedPaths(username, toolName string) []string {
 var DockerTools = map[string]bool{
 	"docker/containers": true, "docker/manage": true, "docker/logs": true,
 	"docker/exec": true, "docker/images": true, "docker/volumes": true,
-	"docker/networks": true, "docker/inspect": true,
+	"docker/networks": true, "docker/inspect": true, "docker/prune": true,
+}
+
+// PruneTool is the one tool taking a `prune:` list, and PruneTargets the kinds
+// of unused object it can reclaim - the same relation PathTools has to `paths:`.
+// Kept as a name rather than a map because there is exactly one such tool: a
+// second one would mean a second blast radius nobody asked for.
+const PruneTool = "docker/prune"
+
+// The vocabulary itself lives with the tool that speaks it, so the config
+// loader and the worker can never disagree about what a target is called.
+var PruneTargets = docker.PruneTargets
+
+func validPruneTarget(t string) bool { return docker.PruneAllowed(t, PruneTargets) }
+
+// GetAllowedPruneTargets returns the prune targets this user is granted. An
+// empty result refuses everything, like GetAllowedContainers.
+func (c *SudoConfig) GetAllowedPruneTargets(username, toolName string) []string {
+	if userSudo, ok := c.Users[username]; ok {
+		if privs, ok := userSudo.Privileged.Tools[toolName]; ok {
+			return privs.Prune
+		}
+	}
+	return nil
 }
 
 // ContainerTools are the docker/* tools that name one container. Each needs

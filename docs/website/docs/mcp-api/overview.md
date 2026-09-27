@@ -138,6 +138,7 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 - [`docker/images`](./tools/docker/images) - Lists Docker images with tags, size and creation time. Read-only by construction: no pull, no build, no remove.
 - [`docker/volumes`](./tools/docker/volumes) - Lists Docker volumes with driver, mountpoint and the containers currently mounting each.
 - [`docker/networks`](./tools/docker/networks) - Lists Docker networks with driver, scope, subnet, gateway and the containers attached to each. Read-only by construction: no create, no remove, no connect.
+- [`docker/prune`](./tools/docker/prune) - ⚠ Reclaims disk by deleting unused Docker objects: stopped containers, dangling images, anonymous volumes, unused networks, the build cache. Scoped by a `prune:` list of kinds, not by container name.
 
 **daemon**
 - [`daemon/reload-config`](./tools/daemon/reload-config) - Re-reads mcpd's config files and applies them without a restart (only for users granted it).

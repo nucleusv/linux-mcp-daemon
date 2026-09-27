@@ -40,6 +40,7 @@ import (
 	dockerlogs "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/logs"
 	dockermanage "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/manage"
 	dockernetworks "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/networks"
+	dockerprune "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/prune"
 	dockervolumes "github.com/nucleusv/linux-mcp-daemon/internal/tools/docker/volumes"
 	chmodfile "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/chmod"
 	chownfile "github.com/nucleusv/linux-mcp-daemon/internal/tools/files/chown"
@@ -167,6 +168,7 @@ func main() {
 			"docker/images":         dockerimages.List,
 			"docker/volumes":        dockervolumes.List,
 			"docker/networks":       dockernetworks.List,
+			"docker/prune":          dockerprune.Prune,
 			// docker/inspect is not a callable tool: it is the single worker
 			// behind the container://, image:// and volume:// templates.
 			"docker/inspect": dockerinspect.Inspect,

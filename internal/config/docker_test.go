@@ -87,3 +87,43 @@ func TestShippedDockerGrantsAreExplicit(t *testing.T) {
 		}
 	}
 }
+
+// T4: docker/prune's own allowlist follows the same rule as containers: an
+// allowed grant without a prune: list is a strict-parse error, inert at
+// startup, and prune: on any other tool is rejected as a no-op.
+func TestPruneTargetsRequired(t *testing.T) {
+	doc := "users:\n  a:\n    privileged:\n      tools:\n        docker/prune: {allowed: true}\n"
+	if _, err := ParseSudoConfig([]byte(doc), true); err == nil || !strings.Contains(err.Error(), "allowed without prune") {
+		t.Errorf("prune allowed without targets: err = %v", err)
+	}
+	c, err := ParseSudoConfig([]byte(doc), false)
+	if err != nil {
+		t.Fatalf("lenient (startup) must still load: %v", err)
+	}
+	if got := c.GetAllowedPruneTargets("a", PruneTool); len(got) != 0 {
+		t.Errorf("an inert grant must expose no targets, got %v", got)
+	}
+
+	doc = "users:\n  a:\n    privileged:\n      tools:\n        docker/manage: {allowed: true, containers: [\"*\"], prune: [images]}\n"
+	if _, err := ParseSudoConfig([]byte(doc), true); err == nil || !strings.Contains(err.Error(), "prune has no effect") {
+		t.Errorf("prune on docker/manage accepted: err = %v", err)
+	}
+
+	// A typo'd target fails closed anyway, but loudly beats silently: it is
+	// rejected at both strictness levels, like an invalid sysctl pattern.
+	doc = "users:\n  a:\n    privileged:\n      tools:\n        docker/prune: {allowed: true, prune: [image]}\n"
+	for _, strict := range []bool{true, false} {
+		if _, err := ParseSudoConfig([]byte(doc), strict); err == nil || !strings.Contains(err.Error(), "unknown prune target") {
+			t.Errorf("strict=%v: typo accepted, err = %v", strict, err)
+		}
+	}
+
+	doc = "users:\n  a:\n    privileged:\n      tools:\n        docker/prune: {allowed: true, prune: [images, build-cache]}\n"
+	c, err = ParseSudoConfig([]byte(doc), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(c.GetAllowedPruneTargets("a", PruneTool), ","); got != "images,build-cache" {
+		t.Errorf("got %q", got)
+	}
+}

@@ -175,6 +175,14 @@ users:
             - "*"
         docker/networks:  # list networks (read-only: no create, remove or connect)
           allowed: true
+        docker/prune:  # ⚠ delete unused objects of the kinds listed here (no "all")
+          allowed: true
+          prune:
+            - containers
+            - images
+            - volumes
+            - networks
+            - build-cache
         docker/volumes:  # list volumes (read-only)
           allowed: true
         files/create:  # ⚠ create any file under paths - full root if they cover /etc, /root, /usr

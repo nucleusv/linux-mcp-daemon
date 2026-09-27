@@ -163,6 +163,24 @@ func Authorize(c *Client, ref string, allow []string) (id, name string, err erro
 	return id, name, nil
 }
 
+// PruneTargets are the kinds of unused object docker/prune can reclaim, in
+// the order it reclaims them: containers first (that is what makes their
+// images dangling and their volumes unused), build cache last. A grant's
+// prune: list names a subset of these; there is no "all".
+var PruneTargets = []string{"containers", "images", "volumes", "networks", "build-cache"}
+
+// PruneAllowed reports whether target is in this grant's prune: list. Exact
+// matches only - the targets are five fixed words, so a glob would buy
+// nothing and "*" would be the implicit everything the ticket rules out.
+func PruneAllowed(target string, allow []string) bool {
+	for _, a := range allow {
+		if a == target {
+			return true
+		}
+	}
+	return false
+}
+
 // CommonArgs are the fields the daemon injects into every docker/* worker
 // call. Neither is ever accepted from the caller: the master deletes them
 // from the incoming arguments and sets them itself, the same way

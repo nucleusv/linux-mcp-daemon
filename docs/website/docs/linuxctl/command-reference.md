@@ -556,6 +556,51 @@ $ linuxctl stop docker db-1           # user granted only containers: ["web-*"]
 not authorized to act on container db-1 (80d3cf9c8b3c): it is not in this tool's containers: list in mcp-sudo.yaml
 ```
 
+`prune docker <kinds...>` reclaims disk. The kinds are positional words, since `targets` is a required array - and there is no "everything", naming them is the point. It deletes only *unused* objects, and two Engine API defaults are never overridden: images means **dangling** only, volumes means **anonymous** only, so a named volume is structurally safe. Which kinds a user may reclaim comes from the `prune:` list in their grant, and a kind outside it refuses the whole call before anything is deleted - see [docker/prune](../mcp-api/tools/docker/prune):
+
+```bash
+$ linuxctl prune docker containers images networks
+containers: 3 removed, 20.0 KiB reclaimed
+  7d1dc187b4ff
+  9a6c2228b515
+  28fa44079c42
+images: 2 removed, 18.8 KiB reclaimed
+  untagged sha256:80e09c019f9d
+  sha256:80e09c019f9d
+  untagged sha256:e20b5d678151
+  sha256:e20b5d678151
+networks: 1 removed
+  fr012net
+
+Total reclaimed: 38.8 KiB
+# networks prints no reclaimed figure: that endpoint is the one that reports none
+
+$ linuxctl prune docker volumes -o json
+{
+  "results": [
+    {
+      "target": "volumes",
+      "deleted": [
+        "c5724212278f01cb0b2e4bb36ebc051c2af0c9ba29c652b49062c2b5fbf880cb"
+      ],
+      "count": 1,
+      "space_reclaimed_bytes": 0
+    }
+  ],
+  "total_space_reclaimed_bytes": 0
+}
+# the anonymous volume; the named fr012-named and the in-use app-data are untouched
+
+$ linuxctl prune docker volumes        # user granted prune: [images, build-cache]
+not authorized to prune volumes: it is not in this tool's prune: list in mcp-sudo.yaml (granted: images, build-cache)
+
+$ linuxctl prune docker               # no targets
+targets is required: name what to reclaim (containers, images, volumes, networks, build-cache) - there is no implicit prune-everything
+
+$ linuxctl prune docker image         # typo
+unknown prune target "image": use one or more of containers, images, volumes, networks, build-cache
+```
+
 One container's, image's, volume's or network's own view comes from the resource templates - `linuxctl resource container://web-1/status` (also `/inspect`, `/stats`, `/top`), `image://nginx:alpine/inspect`, `volume://app-data/inspect`, `docker-network://appnet/inspect`.
 
 That last scheme is prefixed on purpose: `network://` is already the host's own networking (`network://interfaces`, `network://routes`), so a Docker network cannot have the bare noun.
