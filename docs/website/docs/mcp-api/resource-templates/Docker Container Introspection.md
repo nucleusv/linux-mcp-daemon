@@ -2,7 +2,16 @@
 
 **URI Template**: `container://{name}/{view}`
 
-One Docker container's own view of itself. Valid views: status (computed summary - state, health, exit code, restart count, uptime, image, ports, limits), inspect (Docker's full raw config), stats (one CPU/memory/network/IO snapshot, not a stream), top (the processes running inside it). Hint: list containers with the docker/containers tool first.
+One Docker container's own view of itself, chosen with `{view}`:
+
+| View | Shows |
+|---|---|
+| `status` | Computed summary - state, health, exit code, restart count, uptime, image, ports, limits |
+| `inspect` | Docker's full raw config - everything `docker inspect` prints |
+| `stats` | One CPU/memory/network/IO snapshot (not a stream) |
+| `top` | The processes running inside the container |
+
+Hint: list containers with the docker/containers tool first.
 
 A read of this template needs two grants in [mcp-sudo.yaml](../../configuration/mcp-sudo.md): the template itself (`container://{name}/{view}`) and the internal worker it spawns (`docker/inspect`). The `containers:` list on the template's grant is enforced the same way `docker/manage`'s is - against the name and the resolved ID, before the socket is dialled.
 
