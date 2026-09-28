@@ -593,9 +593,14 @@ $ linuxctl prune docker image         # typo
 unknown prune target "image": use one of containers, images, volumes, networks, build-cache
 ```
 
-One container's, image's, volume's or network's own view comes from the resource templates - `linuxctl resource container://web-1/status` (also `/inspect`, `/stats`, `/top`), `image://nginx:alpine/inspect`, `volume://app-data/inspect`, `docker-network://appnet/inspect`.
+One container's, image's, volume's or network's own view comes from the resource templates, reachable two ways: the explicit `linuxctl resource container://web-1/status` (also `/inspect`, `/stats`, `/top`), `image://nginx:alpine/inspect`, `volume://app-data/inspect`, `docker-network://appnet/inspect` - or `get docker <keyword> <name> [view]`, which resolves to the same template: `get docker container web-1 status`, `get docker image nginx:alpine`, `get docker volume app-data`, `get docker network appnet`. A keyword that matches nothing in the group - a typo, or a made-up word - is a refusal, never a guess at what you meant:
 
-That last scheme is prefixed on purpose: `network://` is already the host's own networking (`network://interfaces`, `network://routes`), so a Docker network cannot have the bare noun.
+```bash
+$ linuxctl get docker networkz
+Error: no read target "networkz" in group "docker" - try: linuxctl explain docker
+```
+
+That last scheme is prefixed on purpose: `network://` is already the host's own networking (`network://interfaces`, `network://routes`), so a Docker network cannot have the bare noun. `get network interfaces` still reads that host resource, unambiguous with `get docker network <name>` since they're different groups.
 
 ## daemon
 
