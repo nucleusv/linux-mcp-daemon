@@ -208,32 +208,97 @@ func hasOptionalValueField(t ToolDef) bool {
 	return true
 }
 
-// matchToolByLinuxctlVerb finds the tool in group that rest[0] refers to.
-// If rest[0] literally matches some tool's LinuxctlVerb, that tool wins and
-// rest[0] is consumed. Otherwise, the tool in this group whose LinuxctlVerb
-// equals the ambient ubiquitous read verb "get" (the bare-reachable default
-// - see plan/linuxctl-redesign.md's "files/read stays bare" note) is used,
-// and nothing is consumed from rest.
-func matchToolByLinuxctlVerb(reg Registry, group string, rest []string) (ToolDef, []string, bool) {
-	var candidates []ToolDef
+// matchToolExactKeyword finds the tool in group whose LinuxctlVerb literally
+// equals rest[0] - a real, named keyword (`images`, `networks`, `logs`)
+// always wins over the bare-reachable default, no ambiguity. No fallback:
+// see matchBareTool for that half.
+func matchToolExactKeyword(reg Registry, group string, rest []string) (ToolDef, []string, bool) {
+	if len(rest) == 0 {
+		return ToolDef{}, rest, false
+	}
 	for _, t := range reg.Tools {
-		if t.ToolsGroup == group && !isMutationOnly(t) {
-			candidates = append(candidates, t)
-		}
-	}
-	if len(rest) > 0 {
-		for _, t := range candidates {
-			if t.LinuxctlVerb != "" && t.LinuxctlVerb == rest[0] {
-				return t, rest[1:], true
-			}
-		}
-	}
-	for _, t := range candidates {
-		if t.LinuxctlVerb == "get" {
-			return t, rest, true
+		if t.ToolsGroup == group && !isMutationOnly(t) && t.LinuxctlVerb != "" && t.LinuxctlVerb == rest[0] {
+			return t, rest[1:], true
 		}
 	}
 	return ToolDef{}, rest, false
+}
+
+// canConsumePositional reports whether a tool's schema has somewhere to put
+// a leftover positional word - a param in positionalFieldPriority (path,
+// pid, device, ...) or any required field at all. This is what tells
+// `get files /etc/hosts` and `get processes 1234` (the path/pid falls
+// through to the bare tool, exactly as intended) apart from
+// `get docker some-typo'd-word` (docker/containers has no positional slot
+// for it at all, so it was never data - it was a keyword that didn't match
+// anything, and must be refused rather than silently ignored).
+func canConsumePositional(schema map[string]interface{}) bool {
+	if schema == nil {
+		return false
+	}
+	props, _ := schema["properties"].(map[string]interface{})
+	for _, field := range positionalFieldPriority {
+		if _, exists := props[field]; exists {
+			return true
+		}
+	}
+	reqRaw, _ := schema["required"].([]interface{})
+	return len(reqRaw) > 0
+}
+
+// matchBareTool finds the group's bare-reachable ("get"-shaped) tool - used
+// when no keyword was given, the keyword given is just that tool's own
+// command name, or rest[0] isn't a keyword at all but data the tool's own
+// schema can take (see canConsumePositional). Anything else - a word that
+// matches no keyword anywhere in the group and that this tool has no
+// positional slot for - is refused, not silently handed to it as an
+// ignored, warned-about extra argument.
+func matchBareTool(reg Registry, group string, rest []string) (ToolDef, []string, bool) {
+	for _, t := range reg.Tools {
+		if t.ToolsGroup != group || isMutationOnly(t) || t.LinuxctlVerb != "get" {
+			continue
+		}
+		if len(rest) == 0 {
+			return t, rest, true
+		}
+		if _, cmd, _ := strings.Cut(t.Name, "/"); rest[0] == cmd {
+			return t, rest[1:], true
+		}
+		if canConsumePositional(t.InputSchema) {
+			return t, rest, true
+		}
+		return ToolDef{}, rest, false
+	}
+	return ToolDef{}, rest, false
+}
+
+// matchToolByLinuxctlVerb composes the two halves above for callers (the
+// "update" verb) that just need *some* tool match, with none of Case B's
+// stricter "refuse an unmatched keyword" behavior - there's no template or
+// resource competing for update's keyword space the way there is for get.
+func matchToolByLinuxctlVerb(reg Registry, group string, rest []string) (ToolDef, []string, bool) {
+	if t, remaining, ok := matchToolExactKeyword(reg, group, rest); ok {
+		return t, remaining, true
+	}
+	return matchBareTool(reg, group, rest)
+}
+
+// matchTemplateByKeyword finds the template in group whose LinuxctlVerb
+// literally equals rest[0]. Exact match only, unlike findTemplateByTarget's
+// describe-only "one candidate, no keyword needed, or just guess the first"
+// fallback (describe never competes with a same-named tool or resource, so
+// guessing is safe there; get does, so an unmatched keyword must propagate
+// as false here, not silently pick a template).
+func matchTemplateByKeyword(reg Registry, group string, rest []string) (TemplateDef, []string, bool) {
+	if len(rest) == 0 {
+		return TemplateDef{}, rest, false
+	}
+	for _, t := range reg.Templates {
+		if t.Group == group && t.LinuxctlVerb != "" && t.LinuxctlVerb == rest[0] {
+			return t, rest[1:], true
+		}
+	}
+	return TemplateDef{}, rest, false
 }
 
 func findResourceByTarget(reg Registry, group string, rest []string) (ResourceDef, bool) {
@@ -319,12 +384,26 @@ func Resolve(reg Registry, verb, group string, rest []string) (Action, error) {
 	}
 
 	// Case B: get - the sole universal read verb, one result or many.
+	// Order matters: a real keyword (tool, then template, then static
+	// resource) always wins before the bare-reachable default is even
+	// considered, so `get docker network appnet` reads the docker-network
+	// template instead of docker/containers silently swallowing "network"
+	// as an ignored extra argument (see matchBareTool's doc comment).
 	if verb == "get" {
-		if tool, remaining, ok := matchToolByLinuxctlVerb(reg, group, rest); ok {
+		if tool, remaining, ok := matchToolExactKeyword(reg, group, rest); ok {
 			return Action{Kind: "tool_call", Tool: tool, Args: map[string]interface{}{}, Positional: remaining}, nil
+		}
+		if tpl, remaining, ok := matchTemplateByKeyword(reg, group, rest); ok {
+			return Action{Kind: "template_read", Template: tpl, Positional: remaining}, nil
 		}
 		if res, ok := findResourceByTarget(reg, group, rest); ok {
 			return Action{Kind: "resource_read", ResourceURI: res.URI}, nil
+		}
+		if tool, remaining, ok := matchBareTool(reg, group, rest); ok {
+			return Action{Kind: "tool_call", Tool: tool, Args: map[string]interface{}{}, Positional: remaining}, nil
+		}
+		if len(rest) > 0 {
+			return Action{}, fmt.Errorf("no read target %q in group %q - try: linuxctl explain %s", rest[0], group, group)
 		}
 	}
 
