@@ -6,7 +6,7 @@ Reclaims disk by deleting unused Docker objects: stopped containers, dangling im
 
 ## What each target actually removes
 
-| Target | Endpoint | Removes | Never removes | Reports space |
+| Target | Docker Endpoint | Removes | Never removes | Reports space |
 |---|---|---|---|---|
 | `containers` | `POST /containers/prune` | stopped, exited, created containers | running, paused | yes |
 | `images` | `POST /images/prune` | **dangling** images (untagged and unreferenced) | anything tagged, or referenced by any container | yes |
