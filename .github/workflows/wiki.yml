@@ -1,0 +1,32 @@
+# Mirrors backlog/ into the GitHub wiki - see scripts/publish_wiki.sh for
+# what actually gets generated. One wiki page per ticket, plus a
+# status-grouped board on Home.md; every status is public (backlog/README.md
+# says all of them are meant to be seen).
+name: wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backlog/**"
+      - "scripts/publish_wiki.sh"
+      - ".github/workflows/wiki.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # push to the wiki (GITHUB_TOKEN's contents:write also covers it)
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Publish to wiki
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/publish_wiki.sh
