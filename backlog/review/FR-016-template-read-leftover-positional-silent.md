@@ -23,11 +23,11 @@ Not dangerous the way FR-015 was (the right object is still read), but it's the 
 
 ## Acceptance criteria
 
-- [ ] `fillTemplate` returns leftover positional words alongside the filled URI.
-- [ ] `get docker network bridge extra-word` and `describe docker network bridge extra-word` both warn about `extra-word` and still return the correct data.
-- [ ] No regression: `file:///{path}` and `process://{pid}/{target}` describes (which build multiple URIs per call) still work and don't double-warn or warn on the words they do consume.
-- [ ] A call with exactly the right number of positional words for its template prints no warning.
-- [ ] Definition of Done (backlog/README.md).
+- [x] `fillTemplate` returns leftover positional words alongside the filled URI.
+- [x] `get docker network bridge extra-word` and `describe docker network bridge extra-word` both warn about `extra-word` and still return the correct data.
+- [x] No regression: `file:///{path}` and `process://{pid}/{target}` describes (which build multiple URIs per call) still work and don't double-warn or warn on the words they do consume.
+- [x] A call with exactly the right number of positional words for its template prints no warning.
+- [x] Definition of Done (backlog/README.md).
 
 ## Tests
 
@@ -59,4 +59,5 @@ Not dangerous the way FR-015 was (the right object is still read), but it's the 
 
   Not yet: T6 (`go test ./...` is Linux-only on the full tree; only `./cmd/linuxctl/` was run, green) and the 9092 Docker stand (its `privileged` token needs rotating). Staying in in-progress.
 - 2026-09-29 - 9092 (Docker stand, user privileged, token rotated, mcpd-docker restarted): `get docker network bridge extra-word` and `describe docker network bridge extra-word` each print `Warning: 1 extra argument(s) ignored: extra-word` with the bridge JSON on stdout, `describe files /etc/hostname x` warns once, `get docker networkz` is still `Error: no read target ...` exit 1, `get docker <TAB>` offers container/containers/exec/image/images/logs/network/networks/volume/volumes. T1-T6 all pass on both stands; what remains is the Definition of Done in backlog/README.md - the owner decides on moving to review.
+- 2026-09-29 - Definition of Done walked through: unit tests pass (`go test ./...` natively on the VPS, green); `GOOS=linux go build ./...` ok; `check_docs.sh` passes and the behaviour is in the 0.4.0 release notes (no tool or resource changed, so no tool page to update); checked live on VPS 9091 and 9092 and now on the local k8s stand too (`describe files /etc/hosts x` → `Warning: 1 extra argument(s) ignored: x`, `describe files /etc/hosts` → no warning). Only `linuxctl` changed, not mcpd, so the daemons needed no redeploy; the "Operating mcpd" cheat sheet is unaffected. Committed (481bc95). All criteria met and T1-T6 pass - moved to review for the owner.
 
