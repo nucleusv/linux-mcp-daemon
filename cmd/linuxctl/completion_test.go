@@ -180,3 +180,12 @@ func TestResolveGetHostNetworkNotAmbiguousWithDockerNetwork(t *testing.T) {
 		t.Errorf("get network interfaces: kind=%q uri=%q, want resource_read network://interfaces", action.Kind, action.ResourceURI)
 	}
 }
+
+func TestKeywordsForGetDockerIncludesBareToolAndTemplates(t *testing.T) {
+	kws := keywordsFor(dockerFixture(), "get", "docker")
+	for _, want := range []string{"containers", "container", "network", "volume", "image"} {
+		if !contains(kws, want) {
+			t.Errorf("get docker completion missing %q: %v", want, kws)
+		}
+	}
+}

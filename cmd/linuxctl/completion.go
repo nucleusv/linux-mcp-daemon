@@ -383,13 +383,24 @@ func keywordsFor(reg Registry, verb, group string) []string {
 	switch verb {
 	case "get":
 		for _, t := range reg.Tools {
-			if t.ToolsGroup == group && !isMutationOnly(t) && t.LinuxctlVerb != "" && t.LinuxctlVerb != "get" {
+			if t.ToolsGroup != group || isMutationOnly(t) || t.LinuxctlVerb == "" {
+				continue
+			}
+			if t.LinuxctlVerb == "get" { // the group's bare tool is addressed by its command name
+				_, cmd, _ := strings.Cut(t.Name, "/")
+				kws = append(kws, cmd)
+			} else {
 				kws = append(kws, t.LinuxctlVerb)
 			}
 		}
 		for _, r := range reg.Resources {
 			if r.Group == group && r.LinuxctlVerb != "" {
 				kws = append(kws, r.LinuxctlVerb)
+			}
+		}
+		for _, t := range reg.Templates { // "get docker network <name>" (FR-015)
+			if t.Group == group && t.LinuxctlVerb != "" {
+				kws = append(kws, t.LinuxctlVerb)
 			}
 		}
 	case "describe":
