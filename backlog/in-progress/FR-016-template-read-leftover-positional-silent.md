@@ -33,11 +33,11 @@ Not dangerous the way FR-015 was (the right object is still read), but it's the 
 
 | # | Checks | How | Expected | Run | Result |
 |---|---|---|---|---|---|
-| T1 | Simple template, extra word | Go unit test on `fillTemplate`/`runDescribe` | leftover = `["extra-word"]`, warning printed | | 2026-09-29 | pass - `TestBuildDescribeURIsLeftover` "simple extra" |
-| T2 | Simple template, exact word count | Go unit test | leftover empty, no warning | | 2026-09-29 | pass - "simple exact" |
-| T3 | `file:///{path}` describe, extra word | Go unit test | both `/stat` and `/type` reads still happen, one warning, not two | | 2026-09-29 | pass - "file extra, no double warn" (2 URIs, 1 leftover) |
-| T4 | `process://{pid}/{target}` describe | Go unit test | unaffected - this template already takes an optional target keyword, not just positional filler | | 2026-09-29 | pass - "process pid only"/"process extra" |
-| T5 | Live | VPS 9091 or 9092 | `get docker network bridge extra-word` and `describe docker network bridge extra-word` both warn | | 2026-09-29 | pass - 9091 @ 89.125.210.117, commit ab6c4a6, see comment |
+| T1 | Simple template, extra word | Go unit test on `fillTemplate`/`runDescribe` | leftover = `["extra-word"]`, warning printed | 2026-09-29 | pass - `TestBuildDescribeURIsLeftover` "simple extra" |
+| T2 | Simple template, exact word count | Go unit test | leftover empty, no warning | 2026-09-29 | pass - "simple exact" |
+| T3 | `file:///{path}` describe, extra word | Go unit test | both `/stat` and `/type` reads still happen, one warning, not two | 2026-09-29 | pass - "file extra, no double warn" (2 URIs, 1 leftover) |
+| T4 | `process://{pid}/{target}` describe | Go unit test | unaffected - this template already takes an optional target keyword, not just positional filler | 2026-09-29 | pass - "process pid only"/"process extra" |
+| T5 | Live | VPS 9091 or 9092 | `get docker network bridge extra-word` and `describe docker network bridge extra-word` both warn | 2026-09-29 | pass - 9091 @ 89.125.210.117, commit ab6c4a6, see comment |
 | T6 | Docs/tests | `check_docs.sh`, `go test ./...` | pass | | |
 
 ## Comments
