@@ -85,3 +85,14 @@ func TestCallGivesUpWhenSessionEnds(t *testing.T) {
 		t.Fatalf("err = %v, want the session-ended message", err)
 	}
 }
+
+func TestSplitFlagsBareDashDashEndsFlags(t *testing.T) {
+	flags, pos, _ := splitFlagsAndPositional([]string{"web", "--user", "root", "--", "ls", "--color", "-la"})
+	if !reflect.DeepEqual(pos, []string{"web", "ls", "--color", "-la"}) || flags["user"] != "root" || len(flags) != 1 {
+		t.Errorf("got flags %v positional %v", flags, pos)
+	}
+	_, pos, _ = splitFlagsAndPositional([]string{"web", "--", "echo", "hello"})
+	if !reflect.DeepEqual(pos, []string{"web", "echo", "hello"}) {
+		t.Errorf("-- swallowed a word: %v", pos)
+	}
+}

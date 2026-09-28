@@ -13,7 +13,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 <details>
 <summary><b>linuxctl</b></summary>
 
-Trailing words are the argv, so a plain command needs no quoting:
+Trailing words are the argv, so a plain command needs no quoting. A bare `--` ends `linuxctl`'s own flag parsing, so an argument that looks like a flag reaches the container untouched (`linuxctl exec docker web-1 -- ls --color`):
 
 ```bash
 linuxctl exec docker web-1 ls /usr/share/nginx/html

@@ -549,6 +549,10 @@ func splitFlagsAndPositional(args []string) (map[string]interface{}, []string, s
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
+		if arg == "--" { // end of flags: the rest is argv, e.g. exec docker web -- ls --color
+			positional = append(positional, args[i+1:]...)
+			break
+		}
 		if strings.HasPrefix(arg, "--") {
 			key := strings.TrimPrefix(arg, "--")
 			// --flag=value is the same as --flag value (and the only way to
