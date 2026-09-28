@@ -19,12 +19,14 @@
 
 | # | Checks | How | Expected | Run | Result |
 |---|---|---|---|---|---|
-| T1 | `--` ends flags, words kept | `TestSplitFlagsBareDashDashEndsFlags` (fails on the old code: `[web hello]`) | pass | | |
-| T2 | Live exec after `--` | VPS 9092, `exec docker fr011-probe -- echo hello` | `hello`, exit 0 | | |
-| T3 | Live flag-looking arg | VPS 9092, `exec docker fr011-probe -- ls --color /etc/hostname` | ls output, exit 0 | | |
-| T4 | Regression | `exec docker fr011-probe echo hello`, `get processes --limit 2` | unchanged | | |
-| T5 | Docs, build | `go test ./cmd/linuxctl/`, `GOOS=linux go build ./...`, `check_docs.sh` | pass | | |
+| T1 | `--` ends flags, words kept | `TestSplitFlagsBareDashDashEndsFlags` (fails on the old code: `[web hello]`) | pass | 2026-09-29 | pass - fails on old code (`[web hello]`), passes now |
+| T2 | Live exec after `--` | VPS 9092, `exec docker fr011-probe -- echo hello` | `hello`, exit 0 | 2026-09-29 | pass - VPS 9092, linuxctl from a14f1c5: `hello`, exit 0 |
+| T3 | Live flag-looking arg | VPS 9092, `exec docker fr011-probe -- ls --color /etc/hostname` | ls output, exit 0 | 2026-09-29 | pass - `ls --color` got the flag (ANSI codes in the output), exit 0 |
+| T4 | Regression | `exec docker fr011-probe echo hello`, `get processes --limit 2` | unchanged | 2026-09-29 | pass - `exec ... echo hello` and `get processes --limit 2` unchanged |
+| T5 | Docs, build | `go test ./cmd/linuxctl/`, `GOOS=linux go build ./...`, `check_docs.sh` | pass | 2026-09-29 | pass - `go test ./cmd/linuxctl/` ok, `GOOS=linux go build ./...` ok, `check_docs.sh` passes |
 
 ## Comments
 
 - 2026-09-29 - created and in-progress: found while checking docker/manage and docker/exec on 9092; the old client sent `["hello"]` for `-- echo hello`. Fix is a 4-line early exit in the parser plus the test.
+- 2026-09-29 - fixed in a14f1c5 and deployed to the VPS (`/usr/bin/linuxctl`, 9092 as privileged). Live: `exec docker fr011-probe -- echo hello` → `hello`, exit 0; `-- ls --color /etc/hostname` → coloured output, exit 0; `-- sh -c "echo a; echo b"` → `a` `b`; the no-`--` form and `get processes --limit 2` unchanged. Definition of Done left: redeploy of local k8s (the daemon is untouched, only the client changed) - owner decides on review.
+
