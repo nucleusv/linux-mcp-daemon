@@ -172,7 +172,7 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 				"name":          "Docker Container Introspection",
 				"group":         "docker",
 				"linuxctl_verb": "container",
-				"description":   "One Docker container's own view of itself. Valid views: status (computed summary - state, health, exit code, restart count, uptime, image, ports, limits), inspect (Docker's full raw config), stats (one CPU/memory/network/IO snapshot, not a stream), top (the processes running inside it). Hint: list containers with the docker/containers tool first.",
+				"description":   "One Docker container's own view of itself, chosen with `{view}`: `status` is a computed summary (state, health, exit code, restart count, uptime, image, ports, limits); `inspect` is Docker's full raw config; `stats` is one CPU/memory/network/IO snapshot, not a stream; `top` is the processes running inside it. Hint: list containers with the docker/containers tool first.",
 				"mimeType":      "application/json",
 			},
 			map[string]interface{}{
