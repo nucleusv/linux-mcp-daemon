@@ -434,8 +434,9 @@ func Resolve(reg Registry, verb, group string, rest []string) (Action, error) {
 }
 
 // fillTemplate substitutes {name}/{pid}/{path}/{type} placeholders in a
-// uriTemplate with positional args, in order of appearance.
-func fillTemplate(uriTemplate string, positional []string) string {
+// uriTemplate with positional args, in order of appearance. Returns the
+// filled URI and the positional words no placeholder consumed.
+func fillTemplate(uriTemplate string, positional []string) (string, []string) {
 	result := uriTemplate
 	idx := 0
 	for {
@@ -451,7 +452,7 @@ func fillTemplate(uriTemplate string, positional []string) string {
 		result = result[:start] + positional[idx] + result[end+1:]
 		idx++
 	}
-	return result
+	return result, positional[idx:]
 }
 
 // mapPositionalArgs assigns leftover positional args to a tool's own

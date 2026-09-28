@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -9,7 +10,10 @@ import (
 // detail. Most templates need only one resources/read; two (file, process)
 // combine several reads into one report - see buildDescribeURIs.
 func runDescribe(authToken string, tpl TemplateDef, positional []string, outputFormat string) {
-	uris := buildDescribeURIs(tpl, positional)
+	uris, extra := buildDescribeURIs(tpl, positional)
+	if len(extra) > 0 {
+		fmt.Fprintf(os.Stderr, "Warning: %d extra argument(s) ignored: %s\n", len(extra), strings.Join(extra, " "))
+	}
 
 	if len(uris) == 1 {
 		respRPC := callMethod(authToken, nextID(), "resources/read", map[string]interface{}{"uri": uris[0]})
@@ -36,24 +40,24 @@ func runDescribe(authToken string, tpl TemplateDef, positional []string, outputF
 // buildDescribeURIs returns the concrete resource URI(s) a describe call
 // needs. Deliberately excludes process://{pid}/environ - see
 // plan/linuxctl-redesign.md's verb rule: describe never leaks secret-shaped
-// data by default.
-func buildDescribeURIs(tpl TemplateDef, positional []string) []string {
+// data by default. The second result is the positional words nothing consumed.
+func buildDescribeURIs(tpl TemplateDef, positional []string) ([]string, []string) {
 	switch tpl.URITemplate {
 	case "file:///{path}":
-		base := fillTemplate(tpl.URITemplate, positional)
-		return []string{base + "/stat", base + "/type"}
+		base, extra := fillTemplate(tpl.URITemplate, positional)
+		return []string{base + "/stat", base + "/type"}, extra
 
 	case "process://{pid}/{target}":
-		var pidArg []string
+		var pidArg, extra []string
 		if len(positional) > 0 {
-			pidArg = positional[:1]
+			pidArg, extra = positional[:1], positional[1:]
 		}
-		base := fillTemplate("process://{pid}/{target}", pidArg) // leaves "{target}" unfilled
+		base, _ := fillTemplate("process://{pid}/{target}", pidArg) // leaves "{target}" unfilled
 		var uris []string
 		for _, target := range []string{"status", "cmdline", "limits"} {
 			uris = append(uris, strings.Replace(base, "{target}", target, 1))
 		}
-		return uris
+		return uris, extra
 
 	case "container://{name}/{view}":
 		// Two placeholders, usually one argument: default to the computed
@@ -65,7 +69,12 @@ func buildDescribeURIs(tpl TemplateDef, positional []string) []string {
 		if len(positional) > 1 {
 			view = positional[1]
 		}
-		return []string{fillTemplate(tpl.URITemplate, []string{name, view})}
+		uri, _ := fillTemplate(tpl.URITemplate, []string{name, view})
+		var extra []string
+		if len(positional) > 2 {
+			extra = positional[2:]
+		}
+		return []string{uri}, extra
 
 	case "service://{name}/status":
 		name := ""
@@ -75,9 +84,15 @@ func buildDescribeURIs(tpl TemplateDef, positional []string) []string {
 		if name != "" && !strings.Contains(name, ".") {
 			name += ".service"
 		}
-		return []string{fillTemplate(tpl.URITemplate, []string{name})}
+		uri, _ := fillTemplate(tpl.URITemplate, []string{name})
+		var extra []string
+		if len(positional) > 1 {
+			extra = positional[1:]
+		}
+		return []string{uri}, extra
 
 	default:
-		return []string{fillTemplate(tpl.URITemplate, positional)}
+		uri, extra := fillTemplate(tpl.URITemplate, positional)
+		return []string{uri}, extra
 	}
 }
