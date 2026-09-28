@@ -954,7 +954,7 @@ var mutatingTools = map[string]bool{
 	// whether or not the command it ran changed anything.
 	"docker/manage": true, "docker/exec": true,
 	// docker/prune deletes objects nobody named, so it is audited with the
-	// target list and - uniquely - a one-line summary of what it reclaimed.
+	// target and - uniquely - a one-line summary of what it reclaimed.
 	"docker/prune": true,
 }
 
@@ -995,42 +995,30 @@ func logToolCall(session *Session, params CallToolParams, loggedArgs string, sta
 }
 
 // pruneSummary reduces docker/prune's answer to the one line worth auditing:
-// each target's count, and the total reclaimed.
+// the kind reclaimed, how many objects went, and how many bytes came back.
 func pruneSummary(resultText string) string {
 	// Any structured output_format answers as one JSON line that holds every
 	// deleted object's ID - summarize it from the counts, or the "no content"
 	// promise above holds only for the text format.
 	if strings.HasPrefix(strings.TrimSpace(resultText), "{") {
 		var r struct {
-			Results []struct {
-				Target    string `json:"target"`
-				Count     int    `json:"count"`
-				Reclaimed int64  `json:"space_reclaimed_bytes"`
-				Error     string `json:"error"`
-			} `json:"results"`
-			Total int64 `json:"total_space_reclaimed_bytes"`
+			Target    string `json:"target"`
+			Count     int    `json:"count"`
+			Reclaimed int64  `json:"space_reclaimed_bytes"`
 		}
 		if err := json.Unmarshal([]byte(resultText), &r); err == nil {
-			var parts []string
-			for _, t := range r.Results {
-				if t.Error != "" {
-					parts = append(parts, t.Target+": failed")
-					continue
-				}
-				parts = append(parts, fmt.Sprintf("%s: %d removed, %d bytes", t.Target, t.Count, t.Reclaimed))
-			}
-			parts = append(parts, fmt.Sprintf("total %d bytes", r.Total))
-			return strings.Join(parts, "; ")
+			return fmt.Sprintf("%s: %d removed, %d bytes", r.Target, r.Count, r.Reclaimed)
 		}
 	}
-	var parts []string
+	// The text format is one header line followed by the deleted objects'
+	// own names, indented - the header alone is the summary.
 	for _, line := range strings.Split(resultText, "\n") {
-		if strings.HasPrefix(line, " ") || line == "" {
-			continue // the per-object names, not the per-target counts
+		if line == "" || strings.HasPrefix(line, " ") {
+			continue
 		}
-		parts = append(parts, strings.TrimSpace(line))
+		return strings.TrimSpace(line)
 	}
-	return strings.Join(parts, "; ")
+	return ""
 }
 
 // withoutKey returns the JSON object args without key (args unchanged if

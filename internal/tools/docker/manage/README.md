@@ -16,4 +16,4 @@ An action whose state the container is already in (a `start` on a running contai
 
 The identifier is **resolved first, then checked**: the daemon matches the canonical name *and* the ID against the allowlist and acts on the ID, so a `docker rename` between check and action cannot move the call to another container. An identifier that does not match is rejected, never sanitized.
 
-`linuxctl stop docker <name>` and friends call this tool (the verb comes from the `action` enum).
+`linuxctl stop docker container <name>` and friends call this tool (the verb comes from the `action` enum; the `container` keyword is optional - `linuxctl stop docker <name>` resolves identically - but names explicitly what the call acts on).

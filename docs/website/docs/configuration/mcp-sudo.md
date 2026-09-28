@@ -175,7 +175,7 @@ Granting any of these to a user who can reach a container that runs as root or m
 
 ## Limiting what may be reclaimed (`prune:`)
 
-[`docker/prune`](../mcp-api/tools/docker/prune) is the one docker tool that deletes objects it was never given the names of, so a `containers:` list cannot scope it. It takes a `prune:` list of the *kinds* of unused object it may reclaim instead - the same five words the tool's `targets` parameter accepts:
+[`docker/prune`](../mcp-api/tools/docker/prune) is the one docker tool that deletes objects it was never given the names of, so a `containers:` list cannot scope it. It takes a `prune:` list of the *kinds* of unused object it may reclaim instead - the same five words the tool's `target` parameter accepts, one of which each call names:
 
 ```yaml
 users:
@@ -189,7 +189,7 @@ users:
             - build-cache
 ```
 
-There is deliberately no `"*"` and no `all`: pruning volumes deletes data nothing can rebuild, so each kind is named or it is refused. `allowed: true` with no `prune:` list is a strict-parse error (`linuxctl edit mcpd config sudo` refuses the save) and inert at startup - it refuses every call rather than allowing any, exactly like a missing `containers:` list. A misspelled target is rejected at load whatever the strictness. A call naming any target outside the list is refused **whole**, before the socket is dialled, so a partly-unauthorized request deletes nothing at all. `prune:` on any other tool is rejected as a no-op.
+There is deliberately no `"*"` and no `all`: pruning volumes deletes data nothing can rebuild, so each kind is named or it is refused. `allowed: true` with no `prune:` list is a strict-parse error (`linuxctl edit mcpd config sudo` refuses the save) and inert at startup - it refuses every call rather than allowing any, exactly like a missing `containers:` list. A misspelled target is rejected at load whatever the strictness. A call naming a target outside the list is refused before the socket is dialled, so an unauthorized request deletes nothing at all. Each call names exactly one kind, so the grant and the audit line agree on what was reclaimed. `prune:` on any other tool is rejected as a no-op.
 
 **Containerized mcpd.** The worker dials the socket path from `worker.docker_socket` in [`daemon.yaml`](./daemon.md), which defaults to `/var/run/docker.sock`. In a container, mount the host's socket there (`-v /var/run/docker.sock:/var/run/docker.sock`) or point the setting at wherever it is mounted. With `worker.containerized: true` the path is still written as the *host* path: a privileged worker joins the host mount namespace and the client rewrites the socket through `/proc/1/root` before dialling, so `/var/run/docker.sock` resolves to the host's socket from either namespace. Don't write that prefix yourself - a path already under `/proc/1/root/` is left alone, but the plain host path is the one to configure.
 

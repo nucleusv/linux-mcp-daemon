@@ -5,10 +5,10 @@ Reclaims disk by deleting unused Docker objects over the Engine API: `POST /cont
 The only tool in this daemon that deletes objects it was never given the names of. `docker/manage remove` takes one container and is scoped by a `containers:` list; prune is scoped by *what kind of garbage* to collect, so it carries its own allowlist.
 
 ## Parameters
-- `targets` (array of string, **required**): one or more of `containers`, `images`, `volumes`, `networks`, `build-cache`. There is no `all` — an empty or missing list is an error, never "everything".
+- `target` (string, **required**): exactly one of `containers`, `images`, `volumes`, `networks`, `build-cache`. There is no `all` — a missing target is an error, never "everything".
 - `output_format` (string, optional): `json`, `yaml`; default text.
 
-Targets are reclaimed in dependency order — containers, images, volumes, networks, build cache — whatever order they were given in, because removing stopped containers is what makes their images dangling and their volumes unused.
+One kind per call, deliberately. The kinds are not independent — removing stopped containers is what makes their images dangling and their anonymous volumes unused — so a call naming two of them reclaims more than the sum of what either name described, and nothing in the request says which of those deletions was actually asked for. Separate calls make each deletion its own decision, and its own audit line. Call it again for the next kind; the effects still compound across calls, just visibly.
 
 ## What each target actually removes
 
@@ -36,10 +36,10 @@ docker/prune:
     - build-cache
 ```
 
-`allowed: true` with no `prune:` list is a strict-parse error (`linuxctl edit mcpd config sudo` refuses the save) and inert at startup — it refuses every call rather than allowing any. A requested target outside the list refuses the **whole** call before the socket is dialled, so a partly-unauthorized request deletes nothing at all. A misspelled target in the config is rejected at load, strict or not.
+`allowed: true` with no `prune:` list is a strict-parse error (`linuxctl edit mcpd config sudo` refuses the save) and inert at startup — it refuses every call rather than allowing any. A target outside the list is refused before the socket is dialled, so an unauthorized request deletes nothing at all. A misspelled target in the config is rejected at load, strict or not.
 
-Every call is audit-logged whatever the log level, with the target list and — uniquely for this tool — a one-line summary of what it reclaimed, because for a destructive tool that is the whole point of the audit line.
+Every call is audit-logged whatever the log level, with the target and — uniquely for this tool — a one-line summary of what it reclaimed, because for a destructive tool that is the whole point of the audit line. One kind per call is also what makes that line unambiguous.
 
-A partial failure still reports what was deleted (per-target `error` alongside the counts); a call where every target failed is an error, not a report.
+A prune that fails is an error, not a report of nothing.
 
-`linuxctl prune docker images build-cache` calls this tool — the targets are positional words, since `targets` is the required array.
+`linuxctl prune docker images` calls this tool — the target is a positional word.

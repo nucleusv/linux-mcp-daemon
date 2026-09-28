@@ -167,18 +167,18 @@ func dockerTools(sudoCfg *config.SudoConfig, user string) []interface{} {
 			"name":          "docker/prune",
 			"tools_group":   "docker",
 			"linuxctl_verb": "prune",
-			"description":   "Reclaims disk by deleting unused Docker objects: stopped containers, dangling images, anonymous volumes, unused networks, and the build cache. `targets` is required and there is no \"everything\" - name each kind to reclaim. This is the only docker tool that deletes objects it was never given the names of, so it is scoped by kind rather than by container: which kinds this user may reclaim comes from the `prune:` list in their grant, not from the call, and a target outside that list refuses the whole request before anything is deleted. Two Engine API defaults are never overridden: images prunes only *dangling* ones (an image a stopped container still references survives), and volumes only *anonymous* ones (a named volume, the one thing in a Docker install nothing can rebuild, is never touched). Targets are reclaimed in dependency order - containers first, build cache last - whatever order they are given in." + rootNote,
+			"description":   "Reclaims disk by deleting unused Docker objects: stopped containers, dangling images, anonymous volumes, unused networks, or the build cache. `target` names exactly one of those kinds and is required - there is no \"everything\", and one call reclaims one kind. Call it again for the next kind: the kinds are not independent (pruning containers is what makes their images dangling and their anonymous volumes unused), so reclaiming two in one call would delete more than either request described. This is the only docker tool that deletes objects it was never given the names of, so it is scoped by kind rather than by container: which kinds this user may reclaim comes from the `prune:` list in their grant, not from the call, and a target outside that list refuses before anything is deleted. Two Engine API defaults are never overridden: images prunes only *dangling* ones (an image a stopped container still references survives), and volumes only *anonymous* ones (a named volume, the one thing in a Docker install nothing can rebuild, is never touched)." + rootNote,
 			"inputSchema": map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
-					"targets": map[string]interface{}{
-						"type":        "array",
-						"items":       map[string]interface{}{"type": "string", "enum": docker.PruneTargets},
-						"description": "What to reclaim: one or more of containers (stopped), images (dangling), volumes (anonymous, unused), networks (unused), build-cache",
+					"target": map[string]interface{}{
+						"type":        "string",
+						"enum":        docker.PruneTargets,
+						"description": "The one kind to reclaim: containers (stopped), images (dangling), volumes (anonymous, unused), networks (unused) or build-cache",
 					},
 					"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml). Defaults to text"},
 				},
-				"required": []string{"targets"},
+				"required": []string{"target"},
 			},
 		})
 	}

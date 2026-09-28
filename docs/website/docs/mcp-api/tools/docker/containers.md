@@ -14,7 +14,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 <summary><b>linuxctl</b></summary>
 
 ```bash
-linuxctl get docker
+linuxctl get docker containers
 ```
 
 Output (Docker-in-Docker test host):
@@ -34,7 +34,7 @@ Hint: For one container's runtime summary, read container://<name>/status; for t
 A stopped container only shows with `--all`:
 
 ```bash
-linuxctl get docker --all
+linuxctl get docker containers --all
 ```
 
 Output:
@@ -58,7 +58,7 @@ Hint: For one container's runtime summary, read container://<name>/status; for t
 `-o json` adds the fields the text view leaves out - full ID, image ID, creation time, the entrypoint command and labels:
 
 ```bash
-linuxctl get docker --state running -o json
+linuxctl get docker containers --state running -o json
 ```
 
 Output (one element of the array):

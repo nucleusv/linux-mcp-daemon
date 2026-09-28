@@ -4,8 +4,15 @@
 // Every other destructive docker tool is scoped by container name
 // (docker/manage's containers: list). Prune cannot be: it is scoped by what
 // kind of garbage to collect, so it carries its own allowlist (`prune:` in
-// mcp-sudo.yaml) and each requested target is checked against it before the
+// mcp-sudo.yaml) and the requested target is checked against it before the
 // socket is dialled at all.
+//
+// One target per call, deliberately. Kinds are not independent - pruning
+// containers makes their images dangling and their anonymous volumes unused -
+// so a multi-target call quietly reclaims more than the sum of its parts, and
+// the caller cannot tell from the request which of those deletions it asked
+// for. Separate calls make each deletion its own decision, and its own audit
+// line.
 //
 // Two Engine API defaults are load-bearing here and are deliberately never
 // overridden: /images/prune removes only *dangling* images (sending
@@ -29,7 +36,7 @@ type Args struct {
 	// Prune is this user's prune: allowlist, injected by the daemon like
 	// CommonArgs.Containers. Empty refuses everything.
 	Prune        []string `json:"_prune,omitempty"`
-	Targets      []string `json:"targets,omitempty"`
+	Target       string   `json:"target,omitempty"`
 	OutputFormat string   `json:"output_format,omitempty"`
 }
 
@@ -61,7 +68,6 @@ type targetResult struct {
 	Deleted   []string `json:"deleted"`
 	Count     int      `json:"count"`
 	Reclaimed int64    `json:"space_reclaimed_bytes"`
-	Error     string   `json:"error,omitempty"`
 }
 
 func Prune(argsJSON []byte) (string, error) {
@@ -69,117 +75,59 @@ func Prune(argsJSON []byte) (string, error) {
 	if err := json.Unmarshal(argsJSON, &args); err != nil {
 		return "", fmt.Errorf("invalid arguments: %v", err)
 	}
-	if len(args.Targets) == 0 {
-		return "", fmt.Errorf("targets is required: name what to reclaim (%s) - there is no implicit prune-everything", strings.Join(docker.PruneTargets, ", "))
+	target := strings.ToLower(strings.TrimSpace(args.Target))
+	if target == "" {
+		return "", fmt.Errorf("target is required: name the one kind to reclaim (%s) - there is no implicit prune-everything, and one call reclaims one kind", strings.Join(docker.PruneTargets, ", "))
+	}
+	if _, known := endpoints[target]; !known {
+		return "", fmt.Errorf("unknown prune target %q: use one of %s", target, strings.Join(docker.PruneTargets, ", "))
 	}
 	if len(args.Prune) == 0 {
 		return "", fmt.Errorf("not authorized: no prune: list in this tool's grant in mcp-sudo.yaml - list the targets it may reclaim (%s)", strings.Join(docker.PruneTargets, ", "))
 	}
-
-	// Check every requested target before touching the socket, so a request
-	// that is partly unauthorized deletes nothing at all.
-	wanted := map[string]bool{}
-	for _, t := range args.Targets {
-		t = strings.ToLower(strings.TrimSpace(t))
-		if _, known := endpoints[t]; !known {
-			return "", fmt.Errorf("unknown prune target %q: use one or more of %s", t, strings.Join(docker.PruneTargets, ", "))
-		}
-		if !docker.PruneAllowed(t, args.Prune) {
-			return "", fmt.Errorf("not authorized to prune %s: it is not in this tool's prune: list in mcp-sudo.yaml (granted: %s)", t, strings.Join(args.Prune, ", "))
-		}
-		wanted[t] = true
+	if !docker.PruneAllowed(target, args.Prune) {
+		return "", fmt.Errorf("not authorized to prune %s: it is not in this tool's prune: list in mcp-sudo.yaml (granted: %s)", target, strings.Join(args.Prune, ", "))
 	}
 
-	c := args.Client(120 * time.Second)
-	var results []targetResult
-	var firstErr error
-	// docker.PruneTargets order, not the caller's: pruning containers first
-	// is what makes their images dangling and their volumes unused, so one
-	// call reclaims what two calls in the wrong order would miss.
-	for _, target := range docker.PruneTargets {
-		if !wanted[target] {
-			continue
-		}
-		var res apiResult
-		if err := c.PostJSON(endpoints[target], nil, &res); err != nil {
-			if firstErr == nil {
-				firstErr = err
-			}
-			results = append(results, targetResult{Target: target, Error: err.Error()})
-			continue
-		}
-		deleted := res.ContainersDeleted
-		deleted = append(deleted, res.VolumesDeleted...)
-		deleted = append(deleted, res.NetworksDeleted...)
-		deleted = append(deleted, res.CachesDeleted...)
-		count := len(deleted)
-		// Docker reports one entry per *event*, so a removed image usually
-		// arrives twice - untagged, then deleted. Both are worth listing, but
-		// only the deletions are counted, or one image reads as two.
-		for _, img := range res.ImagesDeleted {
-			if img.Deleted != "" {
-				deleted = append(deleted, img.Deleted)
-				count++
-			} else if img.Untagged != "" {
-				deleted = append(deleted, "untagged "+img.Untagged)
-			}
-		}
-		results = append(results, targetResult{
-			Target:    target,
-			Deleted:   deleted,
-			Count:     count,
-			Reclaimed: res.SpaceReclaimed,
-		})
+	var res apiResult
+	if err := args.Client(120 * time.Second).PostJSON(endpoints[target], nil, &res); err != nil {
+		return "", err
 	}
-
-	// Every target failed: nothing was reclaimed, so this is a failed call,
-	// not a report. A partial failure still reports what was deleted.
-	if firstErr != nil && len(results) == countFailed(results) {
-		return "", firstErr
+	deleted := res.ContainersDeleted
+	deleted = append(deleted, res.VolumesDeleted...)
+	deleted = append(deleted, res.NetworksDeleted...)
+	deleted = append(deleted, res.CachesDeleted...)
+	count := len(deleted)
+	// Docker reports one entry per *event*, so a removed image usually
+	// arrives twice - untagged, then deleted. Both are worth listing, but
+	// only the deletions are counted, or one image reads as two.
+	for _, img := range res.ImagesDeleted {
+		if img.Deleted != "" {
+			deleted = append(deleted, img.Deleted)
+			count++
+		} else if img.Untagged != "" {
+			deleted = append(deleted, "untagged "+img.Untagged)
+		}
 	}
-
-	var total int64
-	for _, r := range results {
-		total += r.Reclaimed
-	}
+	result := targetResult{Target: target, Deleted: deleted, Count: count, Reclaimed: res.SpaceReclaimed}
 
 	if docker.Structured(args.OutputFormat) {
-		b, _ := json.Marshal(map[string]interface{}{
-			"results":                     results,
-			"total_space_reclaimed_bytes": total,
-		})
+		b, _ := json.Marshal(result)
 		return string(b), nil
 	}
 
 	var text strings.Builder
-	for _, r := range results {
-		if r.Error != "" {
-			fmt.Fprintf(&text, "%s: failed - %s\n", r.Target, r.Error)
-			continue
-		}
-		if r.Target == "networks" {
-			// /networks/prune is the only endpoint that reports no
-			// SpaceReclaimed at all - "0.0 B" would read as a measurement.
-			fmt.Fprintf(&text, "%s: %d removed\n", r.Target, r.Count)
-		} else {
-			fmt.Fprintf(&text, "%s: %d removed, %s reclaimed\n", r.Target, r.Count, humanSize(r.Reclaimed))
-		}
-		for _, d := range r.Deleted {
-			fmt.Fprintf(&text, "  %s\n", short(d))
-		}
+	if target == "networks" {
+		// /networks/prune is the only endpoint that reports no SpaceReclaimed
+		// at all - "0.0 B" would read as a measurement.
+		fmt.Fprintf(&text, "%s: %d removed\n", target, count)
+	} else {
+		fmt.Fprintf(&text, "%s: %d removed, %s reclaimed\n", target, count, humanSize(res.SpaceReclaimed))
 	}
-	fmt.Fprintf(&text, "\nTotal reclaimed: %s\n", humanSize(total))
+	for _, d := range deleted {
+		fmt.Fprintf(&text, "  %s\n", short(d))
+	}
 	return text.String(), nil
-}
-
-func countFailed(results []targetResult) int {
-	n := 0
-	for _, r := range results {
-		if r.Error != "" {
-			n++
-		}
-	}
-	return n
 }
 
 // short trims the sha256: IDs Docker returns for deleted images and caches;

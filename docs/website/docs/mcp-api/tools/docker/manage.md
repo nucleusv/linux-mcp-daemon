@@ -22,7 +22,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 Every action is its own verb - the action comes from the enum in the schema, so `start`, `stop`, `restart`, `kill`, `pause`, `unpause` and `remove` all work the same way:
 
 ```bash
-linuxctl restart docker web-1
+linuxctl restart docker container web-1
 ```
 
 Output (Docker-in-Docker test host):
@@ -31,7 +31,7 @@ Container web-1 (e36aeba4369a): restart succeeded.
 ```
 
 ```bash
-linuxctl start docker db-1 -o json
+linuxctl start docker container db-1 -o json
 ```
 
 Output:
@@ -47,7 +47,7 @@ Output:
 An action the container is already in is a no-op, not a failure - Docker answers `304` and the tool reports it as `unchanged` rather than an error an agent would retry:
 
 ```bash
-linuxctl start docker db-1
+linuxctl start docker container db-1
 ```
 
 Output (`db-1` already running):
@@ -58,7 +58,7 @@ Container db-1 (80d3cf9c8b3c): start not needed, it is already in that state.
 `remove` never forces. A running container is refused, and the error says what to do about it:
 
 ```bash
-linuxctl remove docker web-1
+linuxctl remove docker container web-1
 ```
 
 Output:
@@ -69,7 +69,7 @@ docker API returned 409: cannot remove container "e36aeba4369a725068b13142ef53c5
 A container outside the caller's `containers:` list is refused before the socket is dialled - here a user granted `containers: ["web-*"]` reaching for `db-1`:
 
 ```bash
-linuxctl stop docker db-1
+linuxctl stop docker container db-1
 ```
 
 Output:
