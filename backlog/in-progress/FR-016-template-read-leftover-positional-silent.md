@@ -37,8 +37,8 @@ Not dangerous the way FR-015 was (the right object is still read), but it's the 
 | T2 | Simple template, exact word count | Go unit test | leftover empty, no warning | 2026-09-29 | pass - "simple exact" |
 | T3 | `file:///{path}` describe, extra word | Go unit test | both `/stat` and `/type` reads still happen, one warning, not two | 2026-09-29 | pass - "file extra, no double warn" (2 URIs, 1 leftover) |
 | T4 | `process://{pid}/{target}` describe | Go unit test | unaffected - this template already takes an optional target keyword, not just positional filler | 2026-09-29 | pass - "process pid only"/"process extra" |
-| T5 | Live | VPS 9091 or 9092 | `get docker network bridge extra-word` and `describe docker network bridge extra-word` both warn | 2026-09-29 | pass - 9091 @ 89.125.210.117, commit ab6c4a6, see comment |
-| T6 | Docs/tests | `check_docs.sh`, `go test ./...` | pass | | |
+| T5 | Live | VPS 9091 or 9092 | `get docker network bridge extra-word` and `describe docker network bridge extra-word` both warn | 2026-09-29 | pass - 9091 and 9092 @ 89.125.210.117, commit ab6c4a6, see comments |
+| T6 | Docs/tests | `check_docs.sh`, `go test ./...` | pass | 2026-09-29 | pass - `go test -count=1 ./...` all ok natively on the VPS (golang:1.26, linux/amd64) at b375caa; `check_docs.sh` passes |
 
 ## Comments
 
@@ -58,3 +58,5 @@ Not dangerous the way FR-015 was (the right object is still read), but it's the 
   ```
 
   Not yet: T6 (`go test ./...` is Linux-only on the full tree; only `./cmd/linuxctl/` was run, green) and the 9092 Docker stand (its `privileged` token needs rotating). Staying in in-progress.
+- 2026-09-29 - 9092 (Docker stand, user privileged, token rotated, mcpd-docker restarted): `get docker network bridge extra-word` and `describe docker network bridge extra-word` each print `Warning: 1 extra argument(s) ignored: extra-word` with the bridge JSON on stdout, `describe files /etc/hostname x` warns once, `get docker networkz` is still `Error: no read target ...` exit 1, `get docker <TAB>` offers container/containers/exec/image/images/logs/network/networks/volume/volumes. T1-T6 all pass on both stands; what remains is the Definition of Done in backlog/README.md - the owner decides on moving to review.
+
