@@ -103,6 +103,13 @@ func dockerFixture() Registry {
 			{URITemplate: "image://{name}/inspect", Name: "Docker Image Inspect", Group: "docker", LinuxctlVerb: "image"},
 			{URITemplate: "volume://{name}/inspect", Name: "Docker Volume Inspect", Group: "docker", LinuxctlVerb: "volume"},
 			{URITemplate: "docker-network://{name}/inspect", Name: "Docker Network Inspect", Group: "docker", LinuxctlVerb: "network"},
+			// Same LinuxctlVerb as the network://interfaces resource below,
+			// deliberately - one interface's detail vs. the plain list, a
+			// kubectl get-one/get-many pair sharing a keyword across a
+			// resource and a template. The bare form must still hit the
+			// resource (nothing to fill {name} with); see
+			// TestResolveGetHostNetworkNotAmbiguousWithDockerNetwork.
+			{URITemplate: "network://interfaces/{name}", Name: "Network Interface Detail", Group: "network", LinuxctlVerb: "interfaces"},
 		},
 		Resources: []ResourceDef{
 			{URI: "network://interfaces", Name: "Network Interfaces", Group: "network", LinuxctlVerb: "interfaces"},

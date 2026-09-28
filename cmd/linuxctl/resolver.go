@@ -384,20 +384,27 @@ func Resolve(reg Registry, verb, group string, rest []string) (Action, error) {
 	}
 
 	// Case B: get - the sole universal read verb, one result or many.
-	// Order matters: a real keyword (tool, then template, then static
-	// resource) always wins before the bare-reachable default is even
-	// considered, so `get docker network appnet` reads the docker-network
-	// template instead of docker/containers silently swallowing "network"
-	// as an ignored extra argument (see matchBareTool's doc comment).
+	// Order matters: a real keyword always wins before the bare-reachable
+	// default is even considered, so `get docker network appnet` reads the
+	// docker-network template instead of docker/containers silently
+	// swallowing "network" as an ignored extra argument (see matchBareTool's
+	// doc comment). The static resource is checked *before* the template
+	// for the same keyword (network's "interfaces" names both the plain
+	// resource, all interfaces, and a {name}-taking template, one interface
+	// - like kubectl's get-many/get-one pair): with no name left over there
+	// is nothing to fill the template with, so the resource - the
+	// unparameterized "list" form - is the one that must win when the
+	// keyword is bare, and `explain`/docs never document a `get`-shaped way
+	// to reach one interface by name here regardless.
 	if verb == "get" {
 		if tool, remaining, ok := matchToolExactKeyword(reg, group, rest); ok {
 			return Action{Kind: "tool_call", Tool: tool, Args: map[string]interface{}{}, Positional: remaining}, nil
 		}
-		if tpl, remaining, ok := matchTemplateByKeyword(reg, group, rest); ok {
-			return Action{Kind: "template_read", Template: tpl, Positional: remaining}, nil
-		}
 		if res, ok := findResourceByTarget(reg, group, rest); ok {
 			return Action{Kind: "resource_read", ResourceURI: res.URI}, nil
+		}
+		if tpl, remaining, ok := matchTemplateByKeyword(reg, group, rest); ok {
+			return Action{Kind: "template_read", Template: tpl, Positional: remaining}, nil
 		}
 		if tool, remaining, ok := matchBareTool(reg, group, rest); ok {
 			return Action{Kind: "tool_call", Tool: tool, Args: map[string]interface{}{}, Positional: remaining}, nil
