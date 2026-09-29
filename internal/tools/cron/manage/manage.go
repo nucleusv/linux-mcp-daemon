@@ -24,8 +24,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -43,19 +45,17 @@ type Args struct {
 	IfMatch      string  `json:"if_match,omitempty"`
 	OutputFormat string  `json:"output_format,omitempty"`
 
-	Mode         string   `json:"_mode,omitempty"`
-	TargetUser   string   `json:"_target_user,omitempty"`
-	TargetUID    uint32   `json:"_target_uid,omitempty"`
-	TargetGID    uint32   `json:"_target_gid,omitempty"`
-	TargetGroups []uint32 `json:"_target_groups,omitempty"`
-	ViewUsers    []string `json:"_view_users,omitempty"`
-	Info         bool     `json:"_info,omitempty"` // metadata only (the crontab://{user}/info template)
+	Mode       string   `json:"_mode,omitempty"`
+	TargetUser string   `json:"_target_user,omitempty"` // a NAME: the worker resolves it itself, see credentialFor
+	ViewUsers  []string `json:"_view_users,omitempty"`
+	Info       bool     `json:"_info,omitempty"` // metadata only (the crontab://{user}/info template)
 }
 
 // Test hooks.
 var (
-	crontabBin = ""
-	spoolDirs  = []string{"/var/spool/cron/crontabs", "/var/spool/cron"}
+	lookupAccount = user.Lookup
+	crontabBin    = ""
+	spoolDirs     = []string{"/var/spool/cron/crontabs", "/var/spool/cron"}
 )
 
 func Manage(argsJSON []byte) (string, error) {
@@ -195,11 +195,14 @@ func run(a Args, stdin []byte, args ...string) (string, string, int, error) {
 	if stdin != nil {
 		cmd.Stdin = bytes.NewReader(stdin)
 	}
-	if a.Mode == "other" && a.TargetUID != 0 {
-		if os.Geteuid() != 0 {
-			return "", "", 0, errors.New("acting on another account's crontab needs the root worker")
+	if a.Mode == "other" {
+		cred, err := credentialFor(a)
+		if err != nil {
+			return "", "", 0, err
 		}
-		cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: a.TargetUID, Gid: a.TargetGID, Groups: a.TargetGroups}}
+		if cred != nil {
+			cmd.SysProcAttr = &syscall.SysProcAttr{Credential: cred}
+		}
 	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -321,4 +324,40 @@ func stripSpoolHeader(s string) string {
 		return ""
 	}
 	return parts[3]
+}
+
+// credentialFor resolves the target account HERE, in the namespace this worker
+// actually runs in. The master may sit in a container whose /etc/passwd numbers
+// the same names differently from the host's (testuser is uid 1001 in the
+// container and uid 1000 on the host, where 1001 is another account), so a
+// numeric id chosen by the master would act on the wrong account. Root (uid 0,
+// under any name) is viewable and never writable; nil means "run as root".
+func credentialFor(a Args) (*syscall.Credential, error) {
+	if os.Geteuid() != 0 {
+		return nil, errors.New("acting on another account's crontab needs the root worker")
+	}
+	u, err := lookupAccount(a.TargetUser)
+	if err != nil {
+		return nil, fmt.Errorf("no account named %s on this host", a.TargetUser)
+	}
+	uid, err1 := strconv.ParseUint(u.Uid, 10, 32)
+	gid, err2 := strconv.ParseUint(u.Gid, 10, 32)
+	if err1 != nil || err2 != nil {
+		return nil, fmt.Errorf("account %s has no numeric ids", a.TargetUser)
+	}
+	if uid == 0 {
+		if a.Content != nil {
+			return nil, errors.New("root's crontab may be viewed but never edited through mcpd")
+		}
+		return nil, nil
+	}
+	var groups []uint32
+	if ids, err := u.GroupIds(); err == nil {
+		for _, id := range ids {
+			if n, err := strconv.ParseUint(id, 10, 32); err == nil {
+				groups = append(groups, uint32(n))
+			}
+		}
+	}
+	return &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid), Groups: groups}, nil
 }

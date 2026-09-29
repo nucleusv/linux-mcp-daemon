@@ -3,7 +3,6 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
-	"os/user"
 	"strings"
 	"testing"
 
@@ -31,17 +30,9 @@ func cronGrant(t *testing.T) *config.SudoConfig {
 	return c
 }
 
-func fakeAccounts(name string) (*user.User, error) {
-	m := map[string]string{"test_user": "1001", "www-data": "33", "root": "0", "toor": "0"}
-	if uid, ok := m[name]; ok {
-		return &user.User{Username: name, Uid: uid, Gid: uid}, nil
-	}
-	return nil, fmt.Errorf("unknown user %s", name)
-}
-
 func plan(t *testing.T, caller, args string, info bool) (cronPlan, map[string]interface{}, error) {
 	t.Helper()
-	p, err := prepareCronCall(cronGrant(t), caller, json.RawMessage(args), info, fakeAccounts)
+	p, err := prepareCronCall(cronGrant(t), caller, json.RawMessage(args), info)
 	var m map[string]interface{}
 	if err == nil {
 		json.Unmarshal(p.Args, &m)
@@ -74,7 +65,7 @@ func TestCronAnotherAccount(t *testing.T) {
 	}
 	// view and edit through a rule: root worker, target credentials injected
 	p, m, err := plan(t, "alice", `{"user":"test_user","privileged":true,"content":"0 3 * * * x"}`, false)
-	if err != nil || !p.Privileged || !p.Write || m["_mode"] != "other" || m["_target_uid"] != float64(1001) || m["_target_user"] != "test_user" {
+	if err != nil || !p.Privileged || !p.Write || m["_mode"] != "other" || m["_target_user"] != "test_user" || m["_target_uid"] != nil {
 		t.Errorf("edit allowed: %+v %v %v", p, m, err)
 	}
 	// view-only account: read fine, write refused naming view only
@@ -88,21 +79,21 @@ func TestCronAnotherAccount(t *testing.T) {
 	if _, _, err := plan(t, "alice", `{"user":"nobody","privileged":true}`, false); err == nil || !strings.Contains(err.Error(), "no rule") {
 		t.Errorf("unnamed account: %v", err)
 	}
-	// unknown on the host but named in the grant
-	if _, _, err := plan(t, "alice", `{"user":"ghost","privileged":true}`, false); err == nil {
-		t.Error("an account that does not exist must be refused")
+	// no numeric ids ever travel from the master: the worker resolves the name where it runs
+	if _, m, _ := plan(t, "alice", `{"user":"test_user","privileged":true,"_target_uid":0}`, false); m["_target_uid"] != nil || m["_target_gid"] != nil || m["_target_groups"] != nil {
+		t.Errorf("uid/gid/groups must not be set by the master: %v", m)
 	}
 }
 
 func TestCronRootIsViewOnly(t *testing.T) {
-	if _, m, err := plan(t, "alice", `{"user":"root","privileged":true}`, false); err != nil || m["_target_uid"] != float64(0) {
+	// root may be viewed when named ...
+	if _, m, err := plan(t, "alice", `{"user":"root","privileged":true}`, false); err != nil || m["_target_user"] != "root" {
 		t.Errorf("root view: %v %v", m, err)
 	}
-	for _, name := range []string{"root", "toor"} { // toor: uid 0 under another name, with an edit rule
-		_, _, err := plan(t, "alice", fmt.Sprintf(`{"user":%q,"privileged":true,"content":"x"}`, name), false)
-		if err == nil || !strings.Contains(err.Error(), "never be edited") && !strings.Contains(err.Error(), "never edited") && !strings.Contains(err.Error(), "view only") {
-			t.Errorf("edit of %s (uid 0) must be refused, got %v", name, err)
-		}
+	// ... but the rule can only say view (an edit rule for root is a load error, see config tests),
+	// so a write to root is refused in the master; a uid-0 alias under another name is refused by the worker.
+	if _, _, err := plan(t, "alice", `{"user":"root","privileged":true,"content":"x"}`, false); err == nil || !strings.Contains(err.Error(), "view only") {
+		t.Errorf("edit of root must be refused, got %v", err)
 	}
 }
 

@@ -3,7 +3,6 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
-	"os/user"
 	"strings"
 	"time"
 
@@ -803,7 +802,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 		} else if params.Name == config.CronTool {
 			// Whose crontab, and whether this caller may, is decided here; the
 			// worker only carries out the prepared call (see cron.go).
-			plan, err := prepareCronCall(sudoCfg, session.User, params.Arguments, false, user.Lookup)
+			plan, err := prepareCronCall(sudoCfg, session.User, params.Arguments, false)
 			if err != nil {
 				execErr = err
 			} else {

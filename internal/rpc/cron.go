@@ -12,14 +12,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os/user"
-	"strconv"
 	"strings"
 
 	"github.com/nucleusv/linux-mcp-daemon/internal/config"
 	"github.com/nucleusv/linux-mcp-daemon/internal/worker"
 )
 
+// The numeric keys are no longer used; they stay on the list so a caller can never smuggle them through.
 var cronReserved = []string{"_mode", "_target_user", "_target_uid", "_target_gid", "_target_groups", "_view_users", "_info"}
 
 // cronPlan is a prepared call: the arguments for the worker and whether the
@@ -31,12 +30,9 @@ type cronPlan struct {
 	Target     string
 }
 
-// accountLookup resolves an account name (os/user.Lookup in production).
-type accountLookup func(name string) (*user.User, error)
-
 // prepareCronCall authorizes one cron/manage call for caller and builds the
 // worker's arguments. info asks for the metadata view (the /info template).
-func prepareCronCall(sudoCfg *config.SudoConfig, caller string, raw json.RawMessage, info bool, lookup accountLookup) (cronPlan, error) {
+func prepareCronCall(sudoCfg *config.SudoConfig, caller string, raw json.RawMessage, info bool) (cronPlan, error) {
 	var m map[string]interface{}
 	if len(raw) > 0 {
 		if err := json.Unmarshal(raw, &m); err != nil {
@@ -108,26 +104,11 @@ func prepareCronCall(sudoCfg *config.SudoConfig, caller string, raw json.RawMess
 	if !write && !rule.View {
 		return cronPlan{}, fmt.Errorf("user %s may not view %s's crontab: no rule for it in the cron/manage grant (users:)", caller, target)
 	}
-	u, err := lookup(target)
-	if err != nil {
-		return cronPlan{}, fmt.Errorf("no account named %s on this host", target)
-	}
-	uid, _ := strconv.ParseUint(u.Uid, 10, 32)
-	gid, _ := strconv.ParseUint(u.Gid, 10, 32)
-	if uid == 0 && write { // root, under any name: view only, whatever a rule says
-		return cronPlan{}, fmt.Errorf("root's crontab may be viewed but never edited through mcpd")
-	}
-	var groups []uint32
-	if ids, err := u.GroupIds(); err == nil {
-		for _, id := range ids {
-			if n, err := strconv.ParseUint(id, 10, 32); err == nil {
-				groups = append(groups, uint32(n))
-			}
-		}
-	}
+	// The master does not resolve the account: it may run in a container whose
+	// account database numbers names differently from the host's. The worker
+	// resolves the name where it runs, and refuses to edit uid 0 under any name.
 	m["_mode"] = "other"
 	m["_target_user"] = target
-	m["_target_uid"], m["_target_gid"], m["_target_groups"] = uint32(uid), uint32(gid), groups
 	m["_info"] = info
 	return finish(cronPlan{Privileged: true, Write: write, Target: target}, m)
 }
@@ -192,7 +173,7 @@ func (h *RPCHandler) readCrontabResource(session *Session, sudoCfg *config.SudoC
 		args["output_format"] = "json"
 	}
 	raw, _ := json.Marshal(args)
-	plan, err := prepareCronCall(sudoCfg, session.User, raw, view == "info", user.Lookup)
+	plan, err := prepareCronCall(sudoCfg, session.User, raw, view == "info")
 	if err != nil {
 		return "", "", err
 	}

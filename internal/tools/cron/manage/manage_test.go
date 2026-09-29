@@ -3,6 +3,7 @@ package manage
 import (
 	"encoding/json"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -141,5 +142,36 @@ func TestCounts(t *testing.T) {
 	s := "# comment\nMAILTO=ops\n\n*/5 * * * * a\n@daily b\n"
 	if countLines(s) != 5 || countJobs(s) != 2 {
 		t.Errorf("lines %d jobs %d", countLines(s), countJobs(s))
+	}
+}
+
+func TestCredentialResolvedInTheWorkersOwnNamespace(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("credentialFor needs the root worker")
+	}
+	// The master (in a container) may number names differently from this
+	// namespace: the credential must come from THIS lookup, by name.
+	lookupAccount = func(name string) (*user.User, error) {
+		switch name {
+		case "testuser":
+			return &user.User{Username: name, Uid: "1000", Gid: "1001"}, nil // the host's numbering
+		case "toor":
+			return &user.User{Username: name, Uid: "0", Gid: "0"}, nil // uid 0 under another name
+		}
+		return nil, os.ErrNotExist
+	}
+	t.Cleanup(func() { lookupAccount = user.Lookup })
+	c, err := credentialFor(Args{Mode: "other", TargetUser: "testuser"})
+	if err != nil || c == nil || c.Uid != 1000 || c.Gid != 1001 {
+		t.Errorf("testuser: %+v %v", c, err)
+	}
+	if c, err := credentialFor(Args{Mode: "other", TargetUser: "toor"}); err != nil || c != nil {
+		t.Errorf("a uid-0 alias may be viewed (run as root): %+v %v", c, err)
+	}
+	if _, err := credentialFor(Args{Mode: "other", TargetUser: "toor", Content: str("x")}); err == nil {
+		t.Error("a uid-0 alias must never be edited")
+	}
+	if _, err := credentialFor(Args{Mode: "other", TargetUser: "ghost"}); err == nil {
+		t.Error("an unknown account must be refused")
 	}
 }
