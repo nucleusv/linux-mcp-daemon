@@ -23,3 +23,4 @@ A release install (`install.sh`, `.deb`/`.rpm`) puts `linuxctl` on `PATH`; `./ex
 ## Comments
 
 - 2026-09-27 - done, to review.
+- 2026-09-29 - closed by the owner ("all in review can be closed").
