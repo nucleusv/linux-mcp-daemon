@@ -13,11 +13,11 @@ Also check: a config reload (`daemon/reload-config`, `linuxctl edit|create|delet
 
 ## Acceptance criteria
 
-- [ ] An idle SSE stream receives a keepalive comment at a fixed interval; the interval is configurable and documented.
-- [ ] Keepalives and events never interleave within a line (single writer).
+- [x] An idle SSE stream receives a keepalive comment at a fixed interval; the interval is configurable and documented.
+- [x] Keepalives and events never interleave within a line (single writer).
 - [ ] A client idle for longer than 300 s (mcp-remote's default body timeout) keeps its session and can call tools afterwards.
-- [ ] Reload behavior for open sessions decided and documented (daemon docs).
-- [ ] "Operating mcpd" in CLAUDE.md updated if a `daemon.yaml` key is added.
+- [x] Reload behavior for open sessions decided and documented (daemon docs).
+- [x] "Operating mcpd" in CLAUDE.md updated if a `daemon.yaml` key is added.
 - [ ] Definition of Done (backlog/README.md).
 
 ## Tests
@@ -33,3 +33,5 @@ Also check: a config reload (`daemon/reload-config`, `linuxctl edit|create|delet
 ## Comments
 
 - 2026-09-26 - created. Evidence: Claude Desktop log `[72662] ... Body Timeout Error ... Remote SSE stream reconnected ... Re-established session (none) after server expiry`; mcpd log: last `tool call user=agent` at 18:29:02, then only `POST /message?session_id=… status=202` from new sessions. `handleSSE` loop in `cmd/mcpd/http.go` has no ticker.
+- 2026-09-29 - in-progress at the owner's request ("include FR-005 into 0.4.1"). Implemented: `server.sse_keepalive_seconds` (default 20; `DaemonConfig.SSEKeepalive()`), a ticker in `handleSSE`'s existing select so the single writer sends `: ping\n\n` (no interleaving possible), read when a stream opens. Reload behaviour, decided: nothing new - it already closed only the sessions of removed users or users whose token changed (the ticket assumed it closed every session); everyone else keeps their session. That is now documented in `configuration/daemon.md`. `server.*` keys keep their running values on a reload, so a changed `sse_keepalive_seconds` is reported by the reload as needing a restart (`restartOnlyChanges`) and documented as such. Tests (`cmd/mcpd/sse_test.go`): keepalive arrives on an idle stream, 50 concurrent events + keepalives arrive as well-formed frames only, config default/override, reload reports the key; whole tree `go test ./...` passes natively on the VPS. Still open: the live idle tests (T3, T5) and the Definition of Done deployments.
+

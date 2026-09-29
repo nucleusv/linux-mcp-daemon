@@ -205,6 +205,9 @@ func restartOnlyChanges(running, onDisk Config) []string {
 	if !reflect.DeepEqual(onDisk.Server.TLS, running.Server.TLS) {
 		out = append(out, "server.tls")
 	}
+	if onDisk.Server.SSEKeepaliveSeconds != running.Server.SSEKeepaliveSeconds {
+		out = append(out, fmt.Sprintf("server.sse_keepalive_seconds: %d -> %d", running.Server.SSEKeepaliveSeconds, onDisk.Server.SSEKeepaliveSeconds))
+	}
 	if !reflect.DeepEqual(onDisk.Server.HTTP, running.Server.HTTP) {
 		out = append(out, "server.http")
 	}

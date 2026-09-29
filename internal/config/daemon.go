@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"time"
 
 	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 	"gopkg.in/yaml.v3"
@@ -44,6 +45,11 @@ type DaemonConfig struct {
 			Enabled bool `yaml:"enabled"`
 			Port    int  `yaml:"port"`
 		} `yaml:"http,omitempty"`
+		// SSEKeepaliveSeconds is how often an idle SSE stream gets a ": ping"
+		// comment line, so clients and proxies that drop a silent connection
+		// (mcp-remote gives up after 300 s) keep the session. 0 means the
+		// default, DefaultSSEKeepalive.
+		SSEKeepaliveSeconds int `yaml:"sse_keepalive_seconds,omitempty"`
 	} `yaml:"server"`
 	RateLimits struct {
 		DefaultRPS   float64 `yaml:"default_rps"`
@@ -73,6 +79,18 @@ type DaemonConfig struct {
 	// Users is the legacy location of the user list; it now lives in
 	// users.yaml (see LoadConfigDir), which is read instead when present.
 	Users []DaemonUser `yaml:"users"`
+}
+
+// DefaultSSEKeepalive is the SSE keepalive interval when daemon.yaml sets none:
+// far below the 300 s idle limit of the common clients, cheap enough to ignore.
+const DefaultSSEKeepalive = 20 * time.Second
+
+// SSEKeepalive returns the interval between keepalive comments on an SSE stream.
+func (d *DaemonConfig) SSEKeepalive() time.Duration {
+	if s := d.Server.SSEKeepaliveSeconds; s > 0 {
+		return time.Duration(s) * time.Second
+	}
+	return DefaultSSEKeepalive
 }
 
 // DaemonUser is one mcpd user: a name and its token (users.yaml).

@@ -2,6 +2,9 @@
 # /etc/mcpd/configs/daemon.yaml. Existing files are never overwritten on
 # upgrade.
 server:
+  # An idle SSE stream gets a ": ping" comment this often (seconds, default 20),
+  # so clients that drop a silent connection (mcp-remote: 300 s) keep the session.
+  # sse_keepalive_seconds: 20
   # HTTPS on 9091, on all interfaces. Bearer tokens travel in every request,
   # so they must not cross a network in clear text.
   tls:

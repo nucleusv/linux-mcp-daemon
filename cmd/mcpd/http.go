@@ -13,8 +13,10 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"github.com/nucleusv/linux-mcp-daemon/internal/config"
 	"github.com/nucleusv/linux-mcp-daemon/internal/logging"
 	"github.com/nucleusv/linux-mcp-daemon/internal/rpc"
 )
@@ -139,6 +141,13 @@ func authenticateRequest(r *http.Request) (string, bool) {
 	return "", false
 }
 
+// sseKeepalive is the interval between ": ping" comments on an idle SSE stream
+// (daemon.yaml server.sse_keepalive_seconds), in nanoseconds. A stream reads it
+// when it opens; a reload that changes it applies to streams opened afterwards.
+var sseKeepalive atomic.Int64
+
+func setSSEKeepalive(d time.Duration) { sseKeepalive.Store(int64(d)) }
+
 func handleSSE(w http.ResponseWriter, r *http.Request) {
 	username, ok := userFromContext(r.Context())
 	if !ok {
@@ -180,10 +189,24 @@ func handleSSE(w http.ResponseWriter, r *http.Request) {
 		logging.Debug("SSE session closed", "user", sessionUser, "session", uniqueSessionID)
 	}()
 
+	// Same goroutine writes events and keepalives, so they never interleave.
+	// An SSE line starting with ":" is a comment that every client ignores.
+	interval := time.Duration(sseKeepalive.Load())
+	if interval <= 0 {
+		interval = config.DefaultSSEKeepalive
+	}
+	keepalive := time.NewTicker(interval)
+	defer keepalive.Stop()
+
 	for {
 		select {
 		case msg := <-session.Event:
 			fmt.Fprintf(w, "event: message\ndata: %s\n\n", msg)
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+		case <-keepalive.C:
+			fmt.Fprint(w, ": ping\n\n")
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
 			}

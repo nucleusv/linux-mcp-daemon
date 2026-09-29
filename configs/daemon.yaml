@@ -1,5 +1,8 @@
 server:
   port: 9091
+  # An idle SSE stream gets a ": ping" comment this often (seconds, default 20),
+  # so clients that drop a silent connection (mcp-remote: 300 s) keep the session.
+  # sse_keepalive_seconds: 20
   tls:
     enabled: false
     port: 9443

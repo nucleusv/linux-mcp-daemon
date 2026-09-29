@@ -237,6 +237,7 @@ func main() {
 	}
 
 	worker.Containerized = daemonConfig.Worker.Containerized
+	setSSEKeepalive(daemonConfig.SSEKeepalive())
 	// Where the docker/* tools reach the Engine API. Set here, not carried in
 	// the RPC handler's reloadable settings, because worker mode never loads
 	// daemon.yaml - the master injects this path into every docker call.
