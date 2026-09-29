@@ -35,6 +35,7 @@ var toolAnnotations = map[string]toolAnnotation{
 	"services/manage":       {"Control systemd service", false, true, false, false},
 	"services/list":         {"List systemd services", true, false, true, false},
 	"timers/list":           {"List systemd timers", true, false, true, false},
+	"cron/manage":           {"Read or replace a crontab", false, true, true, false},
 	"logs/journal-control":  {"Query systemd journal", true, false, true, false},
 	"logs/dmesg":            {"Kernel ring buffer", true, false, true, false},
 	"logs/logins":           {"Login history", true, false, true, false},

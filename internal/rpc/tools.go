@@ -3,6 +3,7 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
+	"os/user"
 	"strings"
 	"time"
 
@@ -655,6 +656,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 	// Every tool is listed for every user; a call the user's grant does not
 	// allow is refused with an error naming the missing grant (FR-020).
 	toolsList["tools"] = append(toolsList["tools"].([]interface{}), dockerTools()...)
+	toolsList["tools"] = append(toolsList["tools"].([]interface{}), cronTools()...)
 	toolsList["tools"] = append(toolsList["tools"].([]interface{}), map[string]interface{}{
 		"name":          "daemon/reload-config",
 		"tools_group":   "daemon",
@@ -731,8 +733,9 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 		toolRes := ToolResult{}
 		var resultText string
 		var execErr error
+		var cronAudit []any
 		defer func() {
-			logToolCall(session, params, loggedArgs, start, execErr, resp.Error != nil, resultText)
+			logToolCall(session, params, loggedArgs, start, execErr, resp.Error != nil, resultText, cronAudit...)
 		}()
 
 		standardWorkers := map[string]bool{
@@ -796,6 +799,19 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 		} else if params.Name == "auth/sudo-rules" {
 			// No need to spawn an isolated worker to read our own memory config
 			resultText, execErr = sudorules.SudoRules(params.Arguments, session.User, sudoCfg)
+
+		} else if params.Name == config.CronTool {
+			// Whose crontab, and whether this caller may, is decided here; the
+			// worker only carries out the prepared call (see cron.go).
+			plan, err := prepareCronCall(sudoCfg, session.User, params.Arguments, false, user.Lookup)
+			if err != nil {
+				execErr = err
+			} else {
+				if plan.Write {
+					cronAudit = cronAuditAttrs(plan.Args, plan.Target)
+				}
+				resultText, execErr = worker.SpawnWorker(session.User, params.Name, plan.Args, plan.Privileged, sudoCfg, h.timeoutFor(params.Name))
+			}
 
 		} else if standardWorkers[params.Name] {
 
@@ -975,7 +991,7 @@ var mutatingTools = map[string]bool{
 // logToolCall writes one line per tool call: an audit line for calls that
 // change something, otherwise an info line (warn when the call was denied).
 // Arguments are redacted; tool output is never logged.
-func logToolCall(session *Session, params CallToolParams, loggedArgs string, start time.Time, execErr error, rpcErr bool, resultText string) {
+func logToolCall(session *Session, params CallToolParams, loggedArgs string, start time.Time, execErr error, rpcErr bool, resultText string, extra ...any) {
 	var a struct {
 		Privileged bool            `json:"privileged"`
 		Value      json.RawMessage `json:"value"`
@@ -989,6 +1005,7 @@ func logToolCall(session *Session, params CallToolParams, loggedArgs string, sta
 	if params.Name == "docker/prune" && execErr == nil {
 		attrs = append(attrs, "reclaimed", pruneSummary(resultText))
 	}
+	attrs = append(attrs, extra...) // e.g. a crontab write: target, size, lines, hash
 	if execErr != nil {
 		msg := execErr.Error()
 		if len(msg) > 200 {
@@ -997,7 +1014,8 @@ func logToolCall(session *Session, params CallToolParams, loggedArgs string, sta
 		attrs = append(attrs, "error", msg)
 	}
 	mutating := mutatingTools[params.Name] ||
-		(params.Name == "kernel/system-control" && len(a.Value) > 0 && string(a.Value) != "null")
+		(params.Name == "kernel/system-control" && len(a.Value) > 0 && string(a.Value) != "null") ||
+		(params.Name == config.CronTool && len(extra) > 0)
 	switch {
 	case mutating:
 		logging.Audit("tool call", attrs...)

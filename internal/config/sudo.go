@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -44,6 +45,11 @@ type ToolPrivilege struct {
 	// Engine API has no authorization of its own. Absent on an allowed grant
 	// = refuse everything; there is deliberately no "all".
 	Prune []string `yaml:"prune,omitempty"`
+	// Users are the per-account rules of cron/manage, and only its: which
+	// accounts' crontabs a privileged call may view and edit. Keys are single
+	// account names - no wildcards - so root is covered only when named, and
+	// then for view only. A caller's own crontab needs no rule.
+	Users map[string]CronRule `yaml:"users,omitempty"`
 	// Network restricts where an outbound network tool (network/curl,
 	// network/ping) may connect. Unlike Allowed, which only governs
 	// running as root, it applies to every call of the tool - network
@@ -183,6 +189,21 @@ func ParseSudoConfig(data []byte, strict bool) (*SudoConfig, error) {
 			}
 			if len(privs.Prune) > 0 && toolName != PruneTool && strict {
 				return nil, fmt.Errorf("user '%s', tool '%s': prune has no effect - only %s reclaims unused objects", username, toolName, PruneTool)
+			}
+			if len(privs.Users) > 0 && toolName != CronTool && strict {
+				return nil, fmt.Errorf("user '%s', tool '%s': users has no effect - only %s takes per-account crontab rules", username, toolName, CronTool)
+			}
+			if toolName == CronTool && privs.Allowed && len(privs.Users) == 0 && strict {
+				return nil, fmt.Errorf("user '%s', tool '%s': allowed without users - a call on another account's crontab could only be refused; name the accounts and what may be done: users: {test_user: {view: true, edit: true}} (your own crontab needs no rule)", username, toolName)
+			}
+			for target, rule := range privs.Users {
+				if err := validateCronRule(target, rule); err != nil {
+					return nil, fmt.Errorf("user '%s', tool '%s', users.%s: %v", username, toolName, target, err)
+				}
+				if rule.Edit && !rule.View { // edit implies view
+					rule.View = true
+					privs.Users[target] = rule
+				}
 			}
 		}
 	}
@@ -392,4 +413,68 @@ func sortedContainerTools() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// CronTool is the one tool taking a `users:` list, and CronRule what a grant
+// allows on one account's crontab.
+const CronTool = "cron/manage"
+
+// CronRule: View allows reading (and listing) the account's crontab, Edit
+// replacing it as a whole. Edit implies View.
+type CronRule struct {
+	View bool `yaml:"view"`
+	Edit bool `yaml:"edit"`
+}
+
+var accountNameRE = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_.-]{0,63}$`)
+
+// ValidAccountName reports whether name is a plausible OS account name: no
+// leading dash (it could become an option), no glob characters, no path bits.
+func ValidAccountName(name string) bool { return accountNameRE.MatchString(name) }
+
+func validateCronRule(target string, r CronRule) error {
+	if !ValidAccountName(target) {
+		return fmt.Errorf("%q is not a single account name (no wildcards or globs - name each account)", target)
+	}
+	if !r.View && !r.Edit {
+		return fmt.Errorf("rule allows nothing: set view: true, edit: true, or both")
+	}
+	if target == "root" && r.Edit {
+		return fmt.Errorf("root's crontab may be viewed but never edited through mcpd: remove edit: true")
+	}
+	return nil
+}
+
+// CronRuleFor returns what username's cron/manage grant allows on target's
+// crontab; the zero rule (nothing allowed) when the grant names no such account.
+func (c *SudoConfig) CronRuleFor(username, target string) CronRule {
+	if userSudo, ok := c.Users[username]; ok {
+		if privs, ok := userSudo.Privileged.Tools[CronTool]; ok && privs.Allowed {
+			r := privs.Users[target]
+			if r.Edit {
+				r.View = true
+			}
+			if target == "root" {
+				r.Edit = false
+			}
+			return r
+		}
+	}
+	return CronRule{}
+}
+
+// CronViewAccounts lists the accounts whose crontab username may view, sorted.
+func (c *SudoConfig) CronViewAccounts(username string) []string {
+	var out []string
+	if userSudo, ok := c.Users[username]; ok {
+		if privs, ok := userSudo.Privileged.Tools[CronTool]; ok && privs.Allowed {
+			for name, r := range privs.Users {
+				if r.View || r.Edit {
+					out = append(out, name)
+				}
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
 }

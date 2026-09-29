@@ -26,6 +26,7 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon/internal/tlsutil"
 	cpulist "github.com/nucleusv/linux-mcp-daemon/internal/tools/cpu/list"
 	loadaverage "github.com/nucleusv/linux-mcp-daemon/internal/tools/cpu/load-average"
+	cronmanage "github.com/nucleusv/linux-mcp-daemon/internal/tools/cron/manage"
 	"github.com/nucleusv/linux-mcp-daemon/internal/tools/disks/free"
 	"github.com/nucleusv/linux-mcp-daemon/internal/tools/disks/health"
 	disklist "github.com/nucleusv/linux-mcp-daemon/internal/tools/disks/list"
@@ -156,6 +157,7 @@ func main() {
 			"read_interfaces":       interfaces.ReadWorker,
 			"services/list":         list.List,
 			"timers/list":           timerslist.List,
+			"cron/manage":           cronmanage.Manage,
 			"services/manage":       manage_service.Manage,
 			"services/status":       status_service.Status,
 			"logs/journal-control":  journal_control.JournalControl,
