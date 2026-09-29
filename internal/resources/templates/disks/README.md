@@ -1,12 +1,10 @@
-# disks
+# disks resource template
 
-This package implements the `disks` tool/resource for the MCP daemon.
+Handler for `disks://{name}/stats`: the I/O counters of one block device (`sda`, `vda`, `nvme0n1`) as JSON, through the `disks/performance` worker (`/proc/diskstats`).
 
-## Overview
+The numbers are cumulative since boot, not rates: sample twice and subtract for throughput. An unknown device name returns an error; for every device at once use the `disks/performance` tool, for the device tree `disks/list`.
 
-This module provides the core implementation for retrieving or modifying the relevant system data.
+## Permissions
+Unprivileged: `/proc/diskstats` is world-readable, so the worker always runs as the caller and no grant is involved.
 
-## Usage & Permissions
-
-Refer to `configs/mcp-sudo.yaml` to see the default privilege requirements for this feature.
-If this tool wraps a privileged binary, the worker execution will run as root if allowed by the configuration.
+`linuxctl`: `describe disks vda`.

@@ -1,12 +1,17 @@
-# process
+# process resource template
 
-This package implements the `process` tool/resource for the MCP daemon.
+Handler for `process://{pid}/{target}`: one process's metadata, read from procfs by the `processes/read` worker.
 
-## Overview
+| `{target}` | Returns |
+|---|---|
+| `status` | `/proc/<pid>/status` (name, state, uid/gid, memory, threads) |
+| `cmdline` | the command line, NUL separators shown as spaces |
+| `limits` | `/proc/<pid>/limits` (resource limits) |
+| `environ` | the process environment - secret-shaped data, so `linuxctl describe processes` deliberately does not read it |
 
-This module provides the core implementation for retrieving or modifying the relevant system data.
+`{pid}` must be a number; anything else is refused. The result is `text/plain`.
 
-## Usage & Permissions
+## Permissions
+The worker runs as the caller's OS account, so the kernel decides what of another user's process is visible (`environ` of a process you do not own is refused). As root only when the user's `resources:` grant for `process://` allows that pid (`resources: {"process://": ["*"]}`).
 
-Refer to `configs/mcp-sudo.yaml` to see the default privilege requirements for this feature.
-If this tool wraps a privileged binary, the worker execution will run as root if allowed by the configuration.
+`linuxctl`: `describe processes 1234` (status, cmdline and limits together); to list processes and find a pid use `get processes`.
