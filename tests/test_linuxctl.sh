@@ -123,6 +123,9 @@ run_tool "get system packages" "system/packages"
 run_tool "get users --min_uid 1000" "users/list"
 # The pattern stays literal (set -f above): a bare * would expand against the cwd.
 run_tool "get system services --pattern $SVC_PATTERN --privileged true" "services/list (via system group)"
+# timers/list (FR-025): privileged so it also reaches the host bus from inside a container
+TOK=$PRIV_TOKEN run_tool "get timers --privileged true" "timers/list"
+TOK=$PRIV_TOKEN run_tool "get timers --pattern *.timer --active_state active --privileged true" "timers/list (filtered)"
 
 echo "==========================================="
 echo "   Testing get-one vs get-many, describe,  "

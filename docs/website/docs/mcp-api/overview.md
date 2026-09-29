@@ -107,6 +107,9 @@ Reading and writing crontabs (`linuxctl get|update|edit crontabs`) is being buil
 - [`network/connections`](./tools/network/connections) - TCP and UDP sockets with their owning processes, like `ss -tuanp`, read natively from /proc.
 - [`network/trace-path`](./tools/network/trace-path) - Traces the network path to a host (equivalent to traceroute).
 
+**timers**
+- [`timers/list`](./tools/timers/list) - Lists systemd timers with the unit they start, schedule, and next and last run (read-only).
+
 **memory**
 - [`memory/usage`](./tools/memory/usage) - Returns memory and swap utilization information.
 

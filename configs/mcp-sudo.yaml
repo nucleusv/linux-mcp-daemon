@@ -258,6 +258,8 @@ users:
           allowed: true
         services/list:  # systemd's private socket instead of the system bus
           allowed: true
+        timers/list:  # systemd's private socket instead of the system bus
+          allowed: true
         services/manage:  # ⚠ start, stop, restart, enable any unit
           allowed: true
         # These three are never callable directly via tools/call (they're

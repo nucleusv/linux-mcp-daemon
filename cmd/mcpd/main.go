@@ -72,6 +72,7 @@ import (
 	status_service "github.com/nucleusv/linux-mcp-daemon/internal/tools/services/status"
 	osrelease "github.com/nucleusv/linux-mcp-daemon/internal/tools/system/os-release"
 	"github.com/nucleusv/linux-mcp-daemon/internal/tools/system/packages"
+	timerslist "github.com/nucleusv/linux-mcp-daemon/internal/tools/timers/list"
 	userslist "github.com/nucleusv/linux-mcp-daemon/internal/tools/users/list"
 	"github.com/nucleusv/linux-mcp-daemon/internal/worker"
 )
@@ -154,6 +155,7 @@ func main() {
 			"read_routes":           routes.ReadRoutes,
 			"read_interfaces":       interfaces.ReadWorker,
 			"services/list":         list.List,
+			"timers/list":           timerslist.List,
 			"services/manage":       manage_service.Manage,
 			"services/status":       status_service.Status,
 			"logs/journal-control":  journal_control.JournalControl,

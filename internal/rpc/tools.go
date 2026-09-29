@@ -415,6 +415,22 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				},
 			},
 			map[string]interface{}{
+				"name":          "timers/list",
+				"tools_group":   "timers",
+				"linuxctl_verb": "get",
+				"description":   "Lists the systemd timers of the host - systemd's scheduler, the modern counterpart of cron - each with the unit it starts, its schedule (`OnCalendar=` and monotonic settings such as `OnBootSec=`), its next and last run, whether it is `Persistent` (catches up runs missed while the host was off) and its last result. Read-only. Use it to answer \"what runs on a schedule, and when next\": `services/list` shows only `.service` units, so timers never appear there. To inspect the unit a timer starts, use `linuxctl describe system <name>` or the `service://<name>/status` resource; a timer's own state is in this listing. Times are RFC 3339 UTC, and `never` means systemd reports none (a timer that has not fired yet, or one with no upcoming trigger). `pattern` accepts a leading and/or trailing `*` (`apt*`, `*.timer`, `*daily*`); the timer name includes `.timer`. Unprivileged calls need the host's systemd bus (a bare-metal or VM host); inside a container use `privileged: true`, which joins the host. `output_format: json` returns an array with the same fields; text is the default. Empty result means no timer matched. Managing timers (start, stop, enable) is not offered by this tool.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"pattern":       map[string]interface{}{"type": "string", "description": "Wildcard on the timer name (e.g. 'apt*', '*.timer', '*daily*'); no other wildcards"},
+						"active_state":  map[string]interface{}{"type": "string", "description": "Only timers in this active state (e.g. 'active', 'inactive', 'failed')"},
+						"output_format": map[string]interface{}{"type": "string", "description": "'json' (also yaml/table/wide, which return the same JSON) for an array of objects; default is text"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root (needed inside a container to reach the host's systemd; needs a grant)"},
+					},
+					"required": []string{},
+				},
+			},
+			map[string]interface{}{
 				"name":          "logs/journal-control",
 				"tools_group":   "logs",
 				"linuxctl_verb": "journal",
@@ -730,6 +746,7 @@ func (h *RPCHandler) HandleToolsCall(session *Session, req JSONRPCRequest, resp 
 			"files/chown":           true,
 			"services/manage":       true,
 			"services/list":         true,
+			"timers/list":           true,
 			"logs/journal-control":  true,
 			"logs/dmesg":            true,
 			"logs/logins":           true,

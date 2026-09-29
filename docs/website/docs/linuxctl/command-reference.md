@@ -265,7 +265,24 @@ linuxctl enable  system services nginx.service --privileged true
 linuxctl disable system services nginx.service --privileged true
 ```
 
+
 Note: `get system release`/`get system uname` are the `os://release`/`os://uname` *resources*; `get system os-release` is the separate `system/os-release` *tool* (combined kernel+distro text) - both stay reachable since neither is purely redundant with the other.
+
+### timers
+
+systemd timers - what runs on a schedule, and when next (read-only; `services/list` does not show them):
+
+```text
+$ linuxctl get timers --pattern "apt*"
+[active] apt-daily.timer
+  Next: 2026-09-29T10:12:15Z | Last: 2026-09-28T20:40:39Z | Runs: apt-daily.service
+  Schedule: OnCalendar=*-*-* 06,18:00:00
+  Desc: Daily apt download activities
+
+$ linuxctl get timers --active_state inactive --output json
+```
+
+Inside a container add `--privileged true` (it joins the host to reach systemd).
 
 ## network
 
