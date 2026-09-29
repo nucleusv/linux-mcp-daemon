@@ -7,6 +7,24 @@ sidebar_label: 'Release Notes'
 
 What changed in each release, and what to do when upgrading. Every release, with its binaries, packages and the full commit list, is on [GitHub Releases](https://github.com/nucleusv/linux-mcp-daemon/releases).
 
+## 0.4.1
+
+Upgrading from 0.4.0 needs no changes to your configs.
+
+### Changed: every tool is listed to every user
+
+In 0.4.0 the `docker/*` tools and `daemon/reload-config` were listed in `tools/list` only for users whose grant allowed them. Now every tool is listed for everyone, and a call the user's grant does not allow fails with an error that names the missing grant, before anything reaches the Docker socket:
+
+```text
+user testuser is not authorized to run docker/exec: the Docker socket is root-owned, so every docker/* tool needs `allowed: true` in its grant in mcp-sudo.yaml ...
+```
+
+A wrong call no longer looks like a typo (`no read target ...`), and `get mcp-api tools`, `linuxctl` tab completion and any client's tool list show the same surface to every user. What a user may *do* is unchanged - it is still decided by [mcp-sudo.yaml](./configuration/mcp-sudo). The four Docker resource templates were already listed to everyone; the tools now match them.
+
+### Tests
+
+`tests/test_linuxctl.sh` runs against any target - local k8s by default, a VPS stand through environment variables - and has a docker section.
+
 ## 0.4.0
 
 Upgrading from 0.3.5 needs no changes: existing configs, tools and their output are the same. The new Docker tools are refused until you grant them in `mcp-sudo.yaml`, and a `docker/*` tool without its grant is not listed in `tools/list`. The four Docker resource templates (`container://`, `image://`, `volume://`, `docker-network://`) are listed for every user, but reading one is refused without its own `resources:` grant.

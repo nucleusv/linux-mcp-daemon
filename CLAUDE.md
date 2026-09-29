@@ -59,6 +59,7 @@ Before giving any ops instruction (install, users, tokens, grants, TLS, reload),
 ## Testing
 - Go unit tests adjacent to code (`*_test.go`).
 - Integration tests in `tests/` (`test_mcp.sh`, `test_linuxctl.sh`) go through the **MCP JSON-RPC interface**, not raw HTTP/curl against the server.
+- `tests/test_linuxctl.sh` runs against any stand: defaults are local k8s; for a VPS stand set `DAEMON_URL`, `MCP_CA_CERT`, `TOKEN`/`PRIV_TOKEN`/`UNPRIV_TOKEN`, `LINUXCTL=$(which linuxctl)`, `SERVICE`, `SVC_PATTERN`, `CURL_URL`, `LOGINS_MAY_FAIL=no`, `DOCKER_EXEC_CONTAINER` (example in the script header and in FR-017); disk and interface are discovered, the docker section runs when the privileged user has docker grants.
 
 ## graphify
 
