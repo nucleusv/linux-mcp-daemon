@@ -9,7 +9,7 @@ What changed in each release, and what to do when upgrading. Every release, with
 
 ## 0.4.0
 
-Upgrading from 0.3.5 needs no changes: existing configs, tools and their output are the same. The new Docker tools stay off, and out of `tools/list`, until you grant them in `mcp-sudo.yaml`.
+Upgrading from 0.3.5 needs no changes: existing configs, tools and their output are the same. The new Docker tools are refused until you grant them in `mcp-sudo.yaml`, and a `docker/*` tool without its grant is not listed in `tools/list`. The four Docker resource templates (`container://`, `image://`, `volume://`, `docker-network://`) are listed for every user, but reading one is refused without its own `resources:` grant.
 
 ### New: Docker tools
 
