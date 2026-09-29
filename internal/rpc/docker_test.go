@@ -119,13 +119,20 @@ func TestDockerToolsAreListedToEveryone(t *testing.T) {
 	for _, tool := range dockerTools() {
 		got[tool.(map[string]interface{})["name"].(string)] = true
 	}
+	// docker/inspect is the internal worker behind the container:// / image://
+	// / volume:// templates, never a listed tool.
+	want := 0
 	for name := range config.DockerTools {
+		if name == "docker/inspect" {
+			continue
+		}
+		want++
 		if !got[name] {
 			t.Errorf("%s is a docker tool but is not listed", name)
 		}
 	}
-	if len(got) != len(config.DockerTools) {
-		t.Errorf("listed %d docker tools, config.DockerTools has %d", len(got), len(config.DockerTools))
+	if len(got) != want {
+		t.Errorf("listed %d docker tools, want %d", len(got), want)
 	}
 }
 
