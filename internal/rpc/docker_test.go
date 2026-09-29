@@ -112,34 +112,33 @@ func TestPrepareDockerCallInjectsPerToolAllowlist(t *testing.T) {
 	}
 }
 
-// An ungranted docker tool is absent from tools/list entirely, not listed as
-// something that would fail when called.
-func TestDockerToolsListingFollowsGrants(t *testing.T) {
-	cfg := dockerSudo(t)
+// Every docker tool is listed to every user (FR-020); it is the call that is
+// refused without a grant, with an error naming what is missing.
+func TestDockerToolsAreListedToEveryone(t *testing.T) {
+	got := map[string]bool{}
+	for _, tool := range dockerTools() {
+		got[tool.(map[string]interface{})["name"].(string)] = true
+	}
+	for name := range config.DockerTools {
+		if !got[name] {
+			t.Errorf("%s is a docker tool but is not listed", name)
+		}
+	}
+	if len(got) != len(config.DockerTools) {
+		t.Errorf("listed %d docker tools, config.DockerTools has %d", len(got), len(config.DockerTools))
+	}
+}
 
-	names := func(user string) map[string]bool {
-		out := map[string]bool{}
-		for _, tool := range dockerTools(cfg, user) {
-			out[tool.(map[string]interface{})["name"].(string)] = true
+func TestUngrantedDockerCallIsRefusedWithTheGrantNamed(t *testing.T) {
+	cfg := dockerSudo(t)
+	for name := range config.DockerTools {
+		if cfg.CanRunAsRoot("nobody", name) {
+			t.Fatalf("fixture: nobody must not hold %s", name)
 		}
-		return out
-	}
-	ops := names("ops")
-	for _, want := range []string{"docker/containers", "docker/manage", "docker/exec"} {
-		if !ops[want] {
-			t.Errorf("%s was granted but not listed", want)
+		_, err := prepareDockerCall(cfg, "nobody", name, json.RawMessage(`{}`))
+		if err == nil || !strings.Contains(err.Error(), "mcp-sudo.yaml") || !strings.Contains(err.Error(), name) {
+			t.Errorf("%s: want a not-authorized error naming mcp-sudo.yaml, got %v", name, err)
 		}
-	}
-	if !ops["docker/prune"] {
-		t.Error("docker/prune was granted but not listed")
-	}
-	for _, unwanted := range []string{"docker/logs", "docker/images", "docker/volumes", "docker/networks"} {
-		if ops[unwanted] {
-			t.Errorf("%s was not granted but is listed", unwanted)
-		}
-	}
-	if len(names("nobody")) != 0 {
-		t.Errorf("a user with no docker grants should see no docker tools, saw %v", names("nobody"))
 	}
 }
 

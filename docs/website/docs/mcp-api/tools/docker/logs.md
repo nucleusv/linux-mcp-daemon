@@ -2,7 +2,7 @@
 
 **Tool Name**: `docker/logs`
 
-Reads one container's logs - the shape logs/journal-control has for systemd units. Both streams interleaved in the order Docker recorded them (`stdout: false` or `stderr: false` drops one), last 100 lines unless `lines` says otherwise, and never a follow: this returns what is there and ends. Answers are capped at 1 MiB; ask for a smaller tail rather than a bigger answer. Which containers it may touch comes from the `containers:` list in this user's grant, not from the call. This tool always runs as root (the Docker socket is root-owned), so it takes no `privileged` argument - being able to call it at all means it was granted in mcp-sudo.yaml.
+Reads one container's logs - the shape logs/journal-control has for systemd units. Both streams interleaved in the order Docker recorded them (`stdout: false` or `stderr: false` drops one), last 100 lines unless `lines` says otherwise, and never a follow: this returns what is there and ends. Answers are capped at 1 MiB; ask for a smaller tail rather than a bigger answer. Which containers it may touch comes from the `containers:` list in this user's grant, not from the call. This tool always runs as root (the Docker socket is root-owned), so it takes no `privileged` argument - a call is refused unless this user's grant in mcp-sudo.yaml allows it.
 
 Two things about the Engine API worth knowing before reading an answer:
 

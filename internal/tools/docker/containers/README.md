@@ -12,7 +12,7 @@ Running containers only by default; `all: true` includes exited/created ones, an
 - `output_format` (string, optional): `json`, `yaml`, `table`, `wide`; default text.
 
 ## Usage & Permissions
-Root or nothing: the socket is `srw-rw---- root docker`, so the daemon forces `privileged: true` and this tool takes no `privileged` argument. It needs `docker/containers: {allowed: true}` in the caller's grant in `configs/mcp-sudo.yaml`; without it the tool is not even listed by `tools/list`.
+Root or nothing: the socket is `srw-rw---- root docker`, so the daemon forces `privileged: true` and this tool takes no `privileged` argument. It needs `docker/containers: {allowed: true}` in the caller's grant in `configs/mcp-sudo.yaml`; without it the tool is still listed by `tools/list`, but a call is refused with an error naming the missing grant.
 
 Unlike `docker/logs`, `docker/exec` and `docker/manage`, it names no container, so it needs no `containers:` list — it lists every container on the host.
 

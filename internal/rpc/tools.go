@@ -636,24 +636,20 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 			},
 		},
 	}
-	// Same reason as daemon/reload-config below: a docker tool without its
-	// grant can't work at all (the socket is root-owned), so it isn't listed.
-	if dt := dockerTools(sudoCfg, session.User); len(dt) > 0 {
-		toolsList["tools"] = append(toolsList["tools"].([]interface{}), dt...)
-	}
-	// Shown only to users granted it: everyone else couldn't call it anyway.
-	if sudoCfg.CanRunAsRoot(session.User, "daemon/reload-config") {
-		toolsList["tools"] = append(toolsList["tools"].([]interface{}), map[string]interface{}{
-			"name":          "daemon/reload-config",
-			"tools_group":   "daemon",
-			"linuxctl_verb": "reload",
-			"description":   "Re-reads mcpd's config files (daemon.yaml, users.yaml, mcp-sudo.yaml) and applies them without restarting mcpd: users and tokens, per-user grants, rate limits and tool timeouts. It only reads the files - they are edited on the host (linuxctl). They are validated first, strictly (a misspelled key is an error): if any is invalid, nothing changes and the error is returned. Returns what changed (users added/removed, tokens and grants changed). Sessions of removed users, and of users whose token changed, are closed. Server settings (port, TLS, worker.containerized) still need a restart. Only for users granted daemon/reload-config in mcp-sudo.yaml.",
-			"inputSchema": map[string]interface{}{
-				"type":       "object",
-				"properties": map[string]interface{}{},
-			},
-		})
-	}
+	// Every tool is listed for every user; a call the user's grant does not
+	// allow is refused with an error naming the missing grant (FR-020).
+	toolsList["tools"] = append(toolsList["tools"].([]interface{}), dockerTools()...)
+	toolsList["tools"] = append(toolsList["tools"].([]interface{}), map[string]interface{}{
+		"name":          "daemon/reload-config",
+		"tools_group":   "daemon",
+		"linuxctl_verb": "reload",
+		"description":   "Re-reads mcpd's config files (daemon.yaml, users.yaml, mcp-sudo.yaml) and applies them without restarting mcpd: users and tokens, per-user grants, rate limits and tool timeouts. It only reads the files - they are edited on the host (linuxctl). They are validated first, strictly (a misspelled key is an error): if any is invalid, nothing changes and the error is returned. Returns what changed (users added/removed, tokens and grants changed). Sessions of removed users, and of users whose token changed, are closed. Server settings (port, TLS, worker.containerized) still need a restart. Only for users granted daemon/reload-config in mcp-sudo.yaml.",
+		"inputSchema": map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+	})
+
 	resp.Result = toolsList
 
 }

@@ -2,7 +2,7 @@
 
 **Tool Name**: `docker/images`
 
-Lists Docker images with tags, size and creation time (plus digests, labels and how many containers use each in `output_format: json`). Read-only by construction: no pull, no build, no remove. Untagged intermediate layers are hidden unless `all: true`. Hint: for one image's full config read image://\<ref\>/inspect. This tool always runs as root (the Docker socket is root-owned), so it takes no `privileged` argument - being able to call it at all means it was granted in mcp-sudo.yaml.
+Lists Docker images with tags, size and creation time (plus digests, labels and how many containers use each in `output_format: json`). Read-only by construction: no pull, no build, no remove. Untagged intermediate layers are hidden unless `all: true`. Hint: for one image's full config read image://\<ref\>/inspect. This tool always runs as root (the Docker socket is root-owned), so it takes no `privileged` argument - a call is refused unless this user's grant in mcp-sudo.yaml allows it.
 
 Sizes are Docker's own per-image size, which counts shared layers once per image - the numbers do not add up to the disk the images occupy together.
 

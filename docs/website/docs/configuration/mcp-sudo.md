@@ -142,7 +142,7 @@ Without a `sysctl:` block, writes are unrestricted - the default, unchanged. (An
 
 ## Limiting containers (`containers:`)
 
-Every `docker/*` tool is root or nothing - the Docker socket is root-owned and all-or-nothing - so the daemon forces `privileged: true` on the call and refuses it outright without `allowed: true` here. A `docker` tool without its grant is not even listed in `tools/list`, the way `daemon/reload-config` isn't.
+Every `docker/*` tool is root or nothing - the Docker socket is root-owned and all-or-nothing - so the daemon forces `privileged: true` on the call and refuses it outright without `allowed: true` here. Every `docker/*` tool is listed in `tools/list` for every user, like all other tools; without its grant the call fails with an error that names the missing grant (`user X is not authorized to run docker/exec: ... needs allowed: true ...`), before anything reaches the socket. `daemon/reload-config` behaves the same way.
 
 The tools that name one container (`docker/manage`, `docker/logs`, `docker/exec`, and `docker/inspect`, the internal worker behind `container://`) take a `containers:` list of name or ID globs. It is matched in the worker, against both the name given and the resolved full ID, before anything is sent to the socket:
 

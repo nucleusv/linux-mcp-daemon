@@ -2,7 +2,7 @@
 
 **Tool Name**: `docker/volumes`
 
-Lists Docker volumes with driver, mountpoint and the containers currently mounting each (Docker reports only a refcount; the names are more useful, so this cross-references the container list). Read-only: no create, no remove - a volume is the one part of a Docker install that holds data nothing else can rebuild. Hint: for one volume's options and labels read volume://\<name\>/inspect. This tool always runs as root (the Docker socket is root-owned), so it takes no `privileged` argument - being able to call it at all means it was granted in mcp-sudo.yaml.
+Lists Docker volumes with driver, mountpoint and the containers currently mounting each (Docker reports only a refcount; the names are more useful, so this cross-references the container list). Read-only: no create, no remove - a volume is the one part of a Docker install that holds data nothing else can rebuild. Hint: for one volume's options and labels read volume://\<name\>/inspect. This tool always runs as root (the Docker socket is root-owned), so it takes no `privileged` argument - a call is refused unless this user's grant in mcp-sudo.yaml allows it.
 
 `In use by` is computed from the container list, so it names containers whether they are running or stopped - a stopped container still holds its volume. An empty list means no container mounts it, which is the closest thing to "safe to delete" this tool will tell you; deleting it is still someone else's job.
 

@@ -2,9 +2,9 @@
 
 **Tool Name**: `docker/containers`
 
-Lists Docker containers with image, state, status and ports (plus labels in `output_format: json`) - the Engine API's own view, read straight from /var/run/docker.sock (the `docker` CLI is never invoked and need not be installed). Running containers only by default; `all: true` includes exited and created ones, and `state` filters to one state. Hint: for one container's runtime summary read container://\<name\>/status, for its processes container://\<name\>/top. This tool always runs as root (the Docker socket is root-owned), so it takes no `privileged` argument - being able to call it at all means it was granted in mcp-sudo.yaml.
+Lists Docker containers with image, state, status and ports (plus labels in `output_format: json`) - the Engine API's own view, read straight from /var/run/docker.sock (the `docker` CLI is never invoked and need not be installed). Running containers only by default; `all: true` includes exited and created ones, and `state` filters to one state. Hint: for one container's runtime summary read container://\<name\>/status, for its processes container://\<name\>/top. This tool always runs as root (the Docker socket is root-owned), so it takes no `privileged` argument - a call is refused unless this user's grant in mcp-sudo.yaml allows it.
 
-Every `docker/*` tool needs `allowed: true` in its own grant in [mcp-sudo.yaml](../../../configuration/mcp-sudo.md) - without the grant the tool is not even listed, the way `daemon/reload-config` is not. `docker/containers` is a plain listing, so it has no `containers:` allowlist: a user who may list at all sees every container on the host. When `mcpd` runs containerized, point `worker.docker_socket` in [daemon.yaml](../../../configuration/daemon.md) at the socket as the worker sees it.
+Every `docker/*` tool needs `allowed: true` in its own grant in [mcp-sudo.yaml](../../../configuration/mcp-sudo.md) - without the grant the tool is still listed, but calling it fails with an error naming the missing grant, the way `daemon/reload-config` does. `docker/containers` is a plain listing, so it has no `containers:` allowlist: a user who may list at all sees every container on the host. When `mcpd` runs containerized, point `worker.docker_socket` in [daemon.yaml](../../../configuration/daemon.md) at the socket as the worker sees it.
 
 ## Example
 
