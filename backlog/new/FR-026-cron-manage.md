@@ -49,6 +49,7 @@ One tool, **`cron/manage`**, shown in `linuxctl` as the group **`crontabs`** (`t
 - [ ] `linuxctl`: `get`, `update`, `edit`, `describe` for `crontabs` as in the table; `user` added to the positional priority list without changing other commands.
 - [ ] Own crontab works unprivileged with no grant; another user's needs root and a matching rule; unmatched user, missing `view`/`edit`, invalid crontab (old one kept), `if_match` mismatch, `update` without `--content` give clear errors; the list shows only viewable users.
 - [ ] Audit line for every write.
+- [ ] **Risks documented** (owner: "write the risks down ... link with a warning from the edit/update page"): the risk table is written in `docs/website/docs/configuration/permissions-and-risks.md` (section "Crontabs", marked planned until release) and pointed to from `mcp-api/overview.md`; when the tool ships, remove the "planned" banners, and the `cron/manage` docs page and the `linuxctl` `update`/`edit` `crontabs` entries in the command reference each open with a `:::danger` box - "Writing a crontab schedules commands as that user, and survives the end of the session and the revocation of the token. Read the [crontab risks](../../../configuration/permissions-and-risks#crontabs) first." - linking there. Also keep the table in step with the tool's real behaviour (name validation, `cron.deny` check, size cap, `if_match`).
 - [ ] `crontab` listed as a CLI exception in ARCHITECTURE.md; README, docs page with live output, overview, `linuxctl` command reference and man page, `configs/mcp-sudo.yaml` (`privileged` block) and `mcp-sudo.md`; `check_docs.sh` and `check_readmes.sh` pass.
 - [ ] Deployed and checked live on local k8s, VPS 9091 and VPS 9092.
 - [ ] Definition of Done (backlog/README.md).
@@ -69,3 +70,4 @@ One tool, **`cron/manage`**, shown in `linuxctl` as the group **`crontabs`** (`t
 ## Comments
 
 - 2026-09-29 - filed, cut down, then rewritten to the agreed design: group `crontabs`, no `action` parameter, own crontab free, privileged listing of users that have a crontab, per-user view/edit rules for others, `edit` verb, template `crontab://{user}`. The example account is `test_user` (illustrative; the live tests use a real throwaway account, never root's crontab and never the amnezia container).
+- 2026-09-29 - owner asked for the risks to be written into the docs: section "Crontabs" (planned) added to permissions-and-risks.md and a pointer in the overview; the warning box on the tool and command pages is an acceptance criterion above and lands with the implementation.

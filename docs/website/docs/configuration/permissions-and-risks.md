@@ -102,6 +102,29 @@ Each of these lets an agent turn its grant into unrestricted root - by writing a
 - **Reading logs and process lists** shows command lines, environment-derived arguments and log lines - sometimes with passwords or tokens in them.
 - **The token is the user.** Whoever has it acts as that user. Keep TLS on (the default), give each agent its own user and token, and rotate a token (`linuxctl update mcpd user NAME`) whenever it may have leaked.
 
+## Crontabs
+
+:::caution Planned - not released yet
+The crontab tools (`get`, `update` and `edit` for `crontabs`, tracked as FR-026) are not in a release. This section is the risk assessment they are being built against, so you can decide about them in advance.
+:::
+
+A crontab is a list of commands the system runs as a user, on a schedule. Reading one is a read; **writing one is scheduling code**. The design: your own crontab is free (like any other unprivileged call - the worker runs as your account, and `crontab` acts on it); another user's crontab needs `privileged: true` and a per-user `view`/`edit` rule in the `cron/manage` grant ([rules](./mcp-sudo)). Whichever way you use it, know these risks:
+
+| Risk | What can happen | What mcpd does, and what is left to you |
+|---|---|---|
+| **Persistence** | A job written by an agent outlives its session, its token and the token's rotation. Revoking an MCP user does not remove a job it already wrote. | Every write is an audit-log line (caller, target, size, line count, content hash) and every crontab can be read back, so a job can be found and removed. Own-crontab edits are open by design; to forbid them for an account, list it in `/etc/cron.deny` (mcpd has no switch for it). |
+| **Code as another user, or as root** | `edit` on a user's crontab is arbitrary commands as that user; on `root`'s, as root. | Needs sudo and a matching `edit` rule. `"*"` never matches `root`: it has to be named. Grant `edit` per account, narrowly. |
+| **Argument injection** | A user name such as `-l` becoming a `crontab` option. | The name is validated by the daemon (allowed characters, must start with a letter or digit, must be an existing account) and passed as a separate argument, never through a shell; the content goes through stdin. |
+| **Bypassing `cron.deny`** | root can write the crontab of a user the administrator denied. | A privileged write honours `/etc/cron.allow` and `/etc/cron.deny` for the target and refuses a denied user. |
+| **Secrets in the text** | Crontabs and the journal's `CMD` lines hold whatever was typed into a command, including passwords. | Reading needs `view`. Audit logs record size and hash, never the content. Keep secrets out of crontabs regardless. |
+| **Reading the spool as root** | The listing of users with a crontab reads a root-owned directory. | File names are treated as untrusted: checked against the account database, no symlinks followed, anything that is not a regular file skipped. The list shows only users the rules allow `view` for. |
+| **Oversized or abusive content** | A huge file, or a job every minute. | A size cap on `content`; cron's own limits apply. |
+| **Mail as an exfiltration path** | `MAILTO=` sends job output to any address when a mail agent is installed. | Part of what `edit` means; not filtered. |
+| **Concurrent edits** | A whole-file write replaces someone else's later change. | Optional `if_match` (the hash you read) refuses a write if the crontab changed. |
+| **Cron not running** | A write succeeds while the cron service is stopped; nothing runs. | Not detected by the tool; check the service with `linuxctl describe system cron`. |
+
+Before granting `edit` on a crontab, treat it as you would a shell: give it only to accounts and users you would give a shell to, and read the audit log.
+
 ## Recipes
 
 **Read-only diagnostics** - load, memory, disks, processes, services, logs readable by the account: no entry at all, plus a network limit.

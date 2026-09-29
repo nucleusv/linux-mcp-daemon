@@ -71,6 +71,10 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 
 ### Tools, by group
 
+:::caution Crontab tools are planned
+Reading and writing crontabs (`linuxctl get|update|edit crontabs`) is being built and is not in a release yet. Writing a crontab schedules commands as that user, so read the [risks](../configuration/permissions-and-risks#crontabs) before you plan to grant it.
+:::
+
 **files**
 - [`files/list`](./tools/files/list) - Lists one directory like `ls -l` (permissions, owner, size, dates, symlink targets; dotfiles with `all`).
 - [`files/read`](./tools/files/read) - Reads a text file as raw text: by line range or byte range, default cap 10 KiB, binary refused.
