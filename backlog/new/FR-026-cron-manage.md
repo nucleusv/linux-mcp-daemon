@@ -1,44 +1,36 @@
-# FR-026 cron/manage: view and edit crontabs, with per-user view/edit rules
+# FR-026 cron/manage: read a user's crontab and write it whole, with per-user view/edit rules
 
-- **Created:** 2026-09-29, by the owner (design agreed in chat: the caller's own crontab by default, per-user rules for view and edit, no `commands:` allowlist)
-- **Related:** FR-023 (research: the cron deep-dive, section (c)), FR-025 (`timers/list`), `internal/tools/docker/manage` and its `containers:` grant (the pattern), `internal/config/sudo.go`, ARCHITECTURE.md (documented CLI exceptions), FR-024 (description checklist)
+- **Created:** 2026-09-29, by the owner ("edit = we can fully write the cron file")
+- **Related:** FR-023 (research, section (c)), FR-025 (`timers/list`), `internal/tools/docker/manage` and its `containers:` grant (the grant pattern), FR-024 (description checklist, GUIDELINES.md §9)
 
 ## Description
 
-One tool, **`cron/manage`** (no separate `cron/list`), `action: list | add | remove`, optional `user` (default: the caller). Same shape as `docker/manage` / `services/manage`.
+One tool, `cron/manage`, two actions:
 
-- **Whose crontab:** by default the caller's own OS account. Unprivileged, no root: through the `crontab` command (`crontab -l`, `crontab -`), because a user's crontab is not writable by that user - checked on the VPS: `/var/spool/cron/crontabs` is `root:crontab` mode 1730 and only `/usr/bin/crontab` (setgid crontab, 2755) writes there. That makes it a documented exception to "no CLI wrapping" (like `smartctl`, `traceroute`); the CLI also signals cron and syntax-checks. Another user's crontab (`user` != caller) needs root: `crontab -u <user>`.
-- **Grant, per-user rules** (owner's design). One mechanism for every case, the caller's own account included (matched by name or glob like any other):
-  ```yaml
-  cron/manage:
-    allowed: true
-    users:
-      deploy:   {view: true, edit: true}
-      www-data: {view: true}
-      "*":      {view: true}     # everyone else read-only; root and system accounts only if named
-  ```
-  `view` allows `action: list`, `edit` allows `add` and `remove`. A target that matches no entry is refused; an entry with neither flag is a load error; `allowed: true` with no `users:` is rejected in strict mode and refuses everything at runtime (fails closed), like `containers:`. **No `commands:` allowlist** (owner decision): `edit` therefore means an agent can schedule **any command as that user** - a delayed remote-execution primitive, since mcpd has no arbitrary-command tool today. The docs and the tool description must say so, and the reference config grants it narrowly.
-- **Only mcpd's own entries are changed:** every entry `add` creates carries a marker (`# mcpd:<id>`); `remove` takes that id and refuses foreign lines; `list` shows the whole crontab with each line marked mcpd-managed or not (the `view` rule covers everything in that user's crontab).
-- **Validation:** schedule = five valid fields (ranges, lists, steps, month/day names) or `@hourly|@daily|@weekly|@monthly|@yearly`; a command with `%` (cron turns it into a newline) is rejected or escaped; empty/oversized command rejected; no newlines in any field.
-- **Audit:** every `add` and `remove` is an `audit=true` log line with user, target, id and the full entry.
+- `read` - returns the target user's whole crontab.
+- `write` - replaces the target user's whole crontab with the `content` given. No entry parsing, no markers: `crontab` itself rejects a file it cannot parse, and then nothing is replaced.
 
-### Open questions (defaults proposed, the owner decides)
+`user` is optional and defaults to the caller. The caller's own crontab is handled unprivileged, through the `crontab` command (`crontab -l`, `crontab -`) - a user cannot write their own spool file (VPS: `/var/spool/cron/crontabs` is `root:crontab` 1730, `/usr/bin/crontab` is setgid crontab 2755), so this is a documented CLI exception like `smartctl`. Another user's crontab is `crontab -u <user>` as root.
 
-| Question | Proposed default |
-|---|---|
-| `@reboot` allowed? | no |
-| Minimum interval | reject schedules firing more than every 5 minutes |
-| Jobs per crontab from mcpd | at most 20 |
-| Concurrent edits (read-modify-write race on `crontab -`) | last writer wins, documented; the marker keeps foreign lines intact |
-| Root's crontab | only if `root` is named in `users:` |
+Grant, per-user rules (one mechanism for the caller's own account and for others; matched by name or glob):
+
+```yaml
+cron/manage:
+  allowed: true
+  users:
+    deploy:   {view: true, edit: true}
+    www-data: {view: true}
+    "*":      {view: true}      # everyone else read-only; root and system accounts only if named
+```
+
+`view` allows `read`, `edit` allows `write`. No matching entry -> refused; an entry with neither flag -> load error; `allowed: true` without `users:` -> rejected in strict mode, fails closed at runtime (like `containers:`). `edit` means the agent can schedule **any command as that user** - the docs and the description say so plainly. Every `write` is an audit line: caller, target user, size, line count and a hash of the content (not the content, which may hold secrets).
 
 ## Acceptance criteria
 
-- [ ] Decisions in the table above settled (or accepted as proposed), recorded in this ticket.
-- [ ] `cron/manage` implemented (`internal/tools/cron/manage/`), registered in `cmd/mcpd/main.go`, `internal/rpc/tools.go` (schema, description per GUIDELINES.md §9, annotations once FR-024 lands, router), with the per-user `users:` rules in the grant parser (`internal/config/sudo.go`) and strict-mode validation.
-- [ ] Unprivileged call edits only the caller's crontab; a target other than the caller needs root and a matching `users:` rule; unmatched target, missing `view`/`edit` flag, foreign-line removal and invalid schedules are refused with clear errors.
-- [ ] Audit log lines for add/remove.
-- [ ] `crontab` documented as a CLI exception in ARCHITECTURE.md; README, docs page with live output, overview, `linuxctl` verbs (`get cron`, `create cron`, `delete cron`) and man page; `configs/mcp-sudo.yaml` (`privileged` block, plus the `mcp-sudo.md` page); `check_docs.sh` and `check_readmes.sh` pass.
+- [ ] `cron/manage` (`internal/tools/cron/manage/`) with `read` and `write`, registered in `cmd/mcpd/main.go` and `internal/rpc/tools.go` (schema, description per GUIDELINES.md §9, router), `users:` rules parsed and validated in `internal/config/sudo.go`.
+- [ ] Own crontab works unprivileged; another user's needs root and a matching rule; an unmatched user, a missing `view`/`edit` flag, and an invalid crontab (rejected by `crontab`, old one kept) give clear errors.
+- [ ] Audit line for every `write`.
+- [ ] `crontab` listed as a CLI exception in ARCHITECTURE.md; README, docs page with live output, overview, `linuxctl` verbs, `configs/mcp-sudo.yaml` (`privileged` block) and `mcp-sudo.md`; `check_docs.sh` and `check_readmes.sh` pass.
 - [ ] Deployed and checked live on local k8s, VPS 9091 and 9092.
 - [ ] Definition of Done (backlog/README.md).
 
@@ -46,15 +38,13 @@ One tool, **`cron/manage`** (no separate `cron/list`), `action: list | add | rem
 
 | # | Checks | How | Expected | Run | Result |
 |---|---|---|---|---|---|
-| T1 | Schedule validator | Go unit test: valid/invalid 5-field and `@` forms, ranges, steps, names, newlines, `%` | accepts/rejects as specified | | |
-| T2 | Rules matching | Go unit test: name, glob, no match, `view` only, `edit` only, root named vs `*`, empty `users:` | refusals and allows as specified | | |
-| T3 | Marker handling | Go unit test with a fake `crontab` binary: add, list, remove; foreign lines untouched | only marked lines change | | |
-| T4 | Strict config | `ParseSudoConfig` strict: `allowed: true` without `users:`, an entry with no flags | load error; non-strict fails closed | | |
-| T5 | Live, unprivileged | VPS 9092 as a throwaway user: add `echo hi >> /tmp/mcpd-cron-test`, list, wait one minute, remove | file written once, crontab clean after | | |
-| T6 | Live, privileged target | VPS: root grant, `user: <throwaway>` allowed/refused per rules; foreign crontab entry survives | as specified | | |
-| T7 | Boundaries | live: unmatched user, `@reboot`, interval below the minimum, removing a foreign line | each refused with a clear error | | |
-| T8 | Docs/build | `check_docs.sh`, `check_readmes.sh`, `GOOS=linux go build ./...`, `go test ./...` | pass | | |
+| T1 | Rules matching | Go unit test: name, glob, no match, view-only, edit-only, root named vs `*`, empty `users:` | allow/refuse as specified | | |
+| T2 | Strict config | `ParseSudoConfig` strict: no `users:`, an entry with no flags | load error; non-strict fails closed | | |
+| T3 | Read/write | Go unit test with a fake `crontab` binary: write then read back; an invalid file keeps the old one | as specified | | |
+| T4 | Live, unprivileged | VPS 9092, a throwaway account: write a crontab with one harmless job, read it back, write it empty again | round trip exact, crontab left empty | | |
+| T5 | Live, privileged target | VPS: root grant, allowed and refused targets per the rules | as specified | | |
+| T6 | Docs/build | `check_docs.sh`, `check_readmes.sh`, `GOOS=linux go build ./...`, `go test ./...` | pass | | |
 
 ## Comments
 
-- 2026-09-29 - filed. Design settled in chat with the owner: caller's own crontab by default; privileged targets through per-user `view`/`edit` rules in one `cron/manage` grant; no `commands:` allowlist. Everything else in the table above is a proposed default. Live tests use a throwaway account only, never root's crontab and never the amnezia container.
+- 2026-09-29 - filed, then cut down at the owner's word ("it is too much", "edit = fully write the cron file"): dropped `cron/list`, entry markers, schedule validation, entry limits and the open-questions table. Live tests use a throwaway account only - never root's crontab, never the amnezia container.
