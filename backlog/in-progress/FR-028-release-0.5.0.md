@@ -1,18 +1,18 @@
-# FR-028 Release v0.5.0 - timers, crontabs, docker/run, Glama-ready tool descriptions
+# FR-028 Release v0.5.0 - timers, crontabs, Glama-ready tool descriptions
 
 - **Created:** 2026-09-29, by the owner ("release ticket with all tasks included"; docker/run "next release")
 - **Related:** FR-022 (0.4.1, released), FR-027 (article, after this release), CLAUDE.md "Releasing vX.Y.Z"
 
 ## Description
 
-The next release after v0.4.1. The version is a proposal: new tools (`timers/list`, `crontabs`, `docker/run`) and MCP annotations on every tool, so **0.5.0**; the owner confirms.
+The next release after v0.4.1. The version is a proposal: new tools (`timers/list`, `crontabs`) and MCP annotations on every tool, so **0.5.0**; the owner confirms. `docker/run` (FR-014) is **not** in this release - the owner: it is for the release after.
 
 ## Subtasks
 
 - [FR-025](../review/FR-025-timers-list.md) - `timers/list` - review (built, deployed on all stands)
 - [FR-024](FR-024-glama-tool-quality-descriptions-annotations.md) - Glama tool quality: annotations (done), 46 rewritten descriptions (done, second read open), guide (done), 14 follow-up code bugs listed in its section E - in-progress
 - [FR-026](../new/FR-026-cron-manage.md) - crontabs: `get|update|edit crontabs`, per-user view/edit rules, worker as the target UID, resource templates - new
-- [FR-014](../new/FR-014-docker-run-allowed-images.md) - `docker/run` from allowed images with per-image settings - new (the owner: in this release; security-heavy, built after FR-026)
+- Not in this release, planned for the one after: [FR-014](../new/FR-014-docker-run-allowed-images.md) - `docker/run` from allowed images with per-image settings (design agreed and recorded; not started).
 - Not in this release: FR-023's other proposals (ssh, certs, time, ...), FR-027 (the article, published after it).
 
 ## Acceptance criteria
@@ -40,4 +40,5 @@ The next release after v0.4.1. The version is a proposal: new tools (`timers/lis
 
 ## Comments
 
-- 2026-09-29 - created with all tasks linked. Order of work: FR-025 (done) -> FR-026 crontabs -> FR-014 docker/run -> FR-024 remainder and the description second read -> docs and notes -> deploy -> tag -> registry. The registry already holds 0.4.1 (published today).
+- 2026-09-29 - created with all tasks linked. Order of work: FR-025 (done) -> FR-026 crontabs -> FR-024 remainder and the description second read -> docs and notes -> deploy -> tag -> registry. The registry already holds 0.4.1 (published today).
+- 2026-09-29 - owner: `docker/run` is for the next release, not this one; FR-014 removed from the scope above (its design stays recorded in its ticket).

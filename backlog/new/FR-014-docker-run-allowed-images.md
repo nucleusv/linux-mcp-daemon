@@ -1,7 +1,7 @@
 # FR-014 docker/run - launch containers from allowed images, with per-image allowed settings
 
 - **Created:** 2026-09-27, by the owner
-- **Release:** [FR-028](../in-progress/FR-028-release-0.5.0.md) - v0.5.0
+- **Release:** planned for the release after v0.5.0 (the owner: "run is next release, not now"); not part of [FR-028](../in-progress/FR-028-release-0.5.0.md)
 - **Related:** FR-011 (the docker group, container allowlists), FR-012 (prune), FR-013 (networks), `internal/docker/allow.go`, `configs/mcp-sudo.yaml`, `docs/website/docs/configuration/permissions-and-risks.md`
 
 ## Description
@@ -131,5 +131,6 @@ CLI (mock-up): `linuxctl run docker ghcr.io/nucleusv/linux-mcp-daemon:0.5.0 --me
   boundary list and the launch-spec decision above are the answer. Not started -
   FR-011, FR-013 and FR-012 come first, and this ticket only exists so the
   analysis is not lost in chat.
-- 2026-09-29 - redesigned with the owner: direct run gated by allowed image patterns with per-image allowed settings, no `containers:` list on `docker/run`, automatic `mcpd-<user>-` names, default-deny settings. Part of release v0.5.0 (FR-028); built after FR-026.
+- 2026-09-29 - redesigned with the owner: direct run gated by allowed image patterns with per-image allowed settings, no `containers:` list on `docker/run`, automatic `mcpd-<user>-` names, default-deny settings. Planned for the release after v0.5.0.
 - 2026-09-29 - owner: `container_name` belongs in the per-image settings (allowed name patterns), replacing the automatic `mcpd-<user>-` prefix as the default; the prefix stays only as the fallback when no name setting is listed. Added a config-load warning for overlap with other grants' container lists.
+- 2026-09-29 - owner: this ships in the release after v0.5.0, not in the current one; nothing is built until then.
