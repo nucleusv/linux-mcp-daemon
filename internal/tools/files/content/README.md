@@ -1,12 +1,7 @@
-# content
+# files/content (internal worker)
 
-This package implements the `content` tool/resource for the MCP daemon.
+The worker behind `file:///{path}` and `file:///{path}/content`: it reads one file's contents as text. It is not a tool an agent can call (it is absent from `tools/list`); the `file://` template handler runs it.
 
-## Overview
+The read is capped: past 10 KB the output ends with `[WARNING: File truncated at 10KB context limit]`. For a byte or line range, or a larger read, use the `files/read` tool. Arguments: `path` (absolute), and `_no_follow`, which the daemon sets when a `resources:` grant narrower than the whole filesystem makes the worker refuse to follow a symlink out of the allowed tree.
 
-This module provides the core implementation for retrieving or modifying the relevant system data.
-
-## Usage & Permissions
-
-Refer to `configs/mcp-sudo.yaml` to see the default privilege requirements for this feature.
-If this tool wraps a privileged binary, the worker execution will run as root if allowed by the configuration.
+Permissions are those of the `file://` template: the caller's own account by default, root only where the user's `resources:` grant for `file://` covers the path.

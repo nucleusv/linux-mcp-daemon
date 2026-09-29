@@ -1,12 +1,5 @@
-# status
+# services/status (internal worker)
 
-This package implements the `status` tool/resource for the MCP daemon.
+The worker behind `service://{name}/status`: the properties of one systemd unit as JSON - `name`, `description`, `load_state`, `active_state`, `sub_state`, `fragment_path` - read over DBus (`go-systemd`, no `systemctl`). Not a tool an agent can call; the `service://` template handler runs it.
 
-## Overview
-
-This module provides the core implementation for retrieving or modifying the relevant system data.
-
-## Usage & Permissions
-
-Refer to `configs/mcp-sudo.yaml` to see the default privilege requirements for this feature.
-If this tool wraps a privileged binary, the worker execution will run as root if allowed by the configuration.
+It uses the private systemd socket as root and the system bus otherwise, which any user may read on a host with systemd; a host without it gets a named connection error. To list units use `services/list`, for timers `timers/list`.

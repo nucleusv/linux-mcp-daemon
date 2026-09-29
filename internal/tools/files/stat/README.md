@@ -1,12 +1,5 @@
-# stat
+# files/stat (internal worker)
 
-This package implements the `stat` tool/resource for the MCP daemon.
+The worker behind `file:///{path}/stat`: metadata of one file or directory as JSON - `name`, `size` (bytes), `mode`, `modified_time`, `is_dir`. It is not a tool an agent can call; the `file://` template handler runs it. `stat` follows a symlink and describes its target, unless the daemon sets `_no_follow` (a narrow `resources:` grant), in which case the exact inode is described and a path through a symlink is refused.
 
-## Overview
-
-This module provides the core implementation for retrieving or modifying the relevant system data.
-
-## Usage & Permissions
-
-Refer to `configs/mcp-sudo.yaml` to see the default privilege requirements for this feature.
-If this tool wraps a privileged binary, the worker execution will run as root if allowed by the configuration.
+For a directory listing use the `files/list` tool; for the MIME type, `file:///{path}/type` (worker `files/filetype`).

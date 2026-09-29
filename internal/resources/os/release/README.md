@@ -1,12 +1,7 @@
-# release
+# os://release
 
-This package implements the `release` tool/resource for the MCP daemon.
+Static resource: the contents of `/etc/os-release`, verbatim (`text/plain`) - distribution name, version, ID, `VERSION_ID`, `PRETTY_NAME` and the rest of the `KEY=value` lines. Read by the daemon's resource handler, cached for 60 seconds.
 
-## Overview
+For the kernel (name, release, machine) read `os://uname`; for a tool that returns the distribution and kernel version together use `system/os-release`.
 
-This module provides the core implementation for retrieving or modifying the relevant system data.
-
-## Usage & Permissions
-
-Refer to `configs/mcp-sudo.yaml` to see the default privilege requirements for this feature.
-If this tool wraps a privileged binary, the worker execution will run as root if allowed by the configuration.
+Unprivileged: `/etc/os-release` is world-readable, so no grant is involved. `linuxctl get system release` (or `linuxctl resource os://release`).
