@@ -4,6 +4,7 @@ import (
 	"math"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestUsecToTime(t *testing.T) {
@@ -72,5 +73,23 @@ func TestFillFromPropertiesTimerNeverRun(t *testing.T) {
 	})
 	if tm.Unit != "logrotate.service" || !tm.Persistent || tm.NextRun != "never" || tm.LastRun != "2023-11-14T22:13:20Z" || tm.Schedule == nil {
 		t.Errorf("got %+v", tm)
+	}
+}
+
+func TestMonotonicNext(t *testing.T) {
+	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	nowMono := 100 * time.Hour
+	// due in 15 minutes on the monotonic clock
+	got := monotonicNext(uint64((100*time.Hour+15*time.Minute)/time.Microsecond), now, nowMono)
+	if got != "2026-09-29T12:15:00Z" {
+		t.Errorf("got %q", got)
+	}
+	for _, v := range []interface{}{uint64(0), nil, "x", uint64(math.MaxUint64)} {
+		if got := monotonicNext(v, now, nowMono); got != "never" {
+			t.Errorf("monotonicNext(%v) = %q, want never", v, got)
+		}
+	}
+	if got := monotonicNext(uint64(1), now, 0); got != "never" {
+		t.Errorf("unreadable monotonic clock must give never, got %q", got)
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-systemd/v22/dbus"
+	"golang.org/x/sys/unix"
 )
 
 type GetListArgs struct {
@@ -136,6 +137,9 @@ func fillFromProperties(t *timer, props map[string]interface{}) {
 		t.Unit = s
 	}
 	t.NextRun = usecToTime(props["NextElapseUSecRealtime"])
+	if t.NextRun == "never" { // OnBootSec=/OnUnitActiveSec=... timers keep their next run on the monotonic clock
+		t.NextRun = monotonicNext(props["NextElapseUSecMonotonic"], time.Now(), monotonicNow())
+	}
 	t.LastRun = usecToTime(props["LastTriggerUSec"])
 	if b, ok := props["Persistent"].(bool); ok {
 		t.Persistent = b
@@ -157,6 +161,27 @@ func usecToTime(v interface{}) string {
 		return "never"
 	}
 	return time.UnixMicro(int64(u)).UTC().Format(time.RFC3339)
+}
+
+// monotonicNow is the current CLOCK_MONOTONIC reading, the clock systemd's
+// monotonic timers count on (0 if it cannot be read).
+func monotonicNow() time.Duration {
+	var ts unix.Timespec
+	if unix.ClockGettime(unix.CLOCK_MONOTONIC, &ts) != nil {
+		return 0
+	}
+	return time.Duration(ts.Nano())
+}
+
+// monotonicNext converts NextElapseUSecMonotonic (microseconds on CLOCK_MONOTONIC)
+// to an RFC 3339 UTC time: now + (next - nowMono). 0 or unreadable is "never".
+func monotonicNext(v interface{}, now time.Time, nowMono time.Duration) string {
+	u, ok := v.(uint64)
+	if !ok || u == 0 || u >= math.MaxInt64/1000 || nowMono == 0 {
+		return "never"
+	}
+	next := time.Duration(u) * time.Microsecond
+	return now.Add(next - nowMono).UTC().Format(time.RFC3339)
 }
 
 // calendarSpecs reads TimersCalendar, an array of (base, spec, next_elapse).
