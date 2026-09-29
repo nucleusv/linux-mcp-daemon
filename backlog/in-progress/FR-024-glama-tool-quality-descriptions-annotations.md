@@ -63,7 +63,7 @@ Reading the pattern (only `files/create`'s reasons are quoted by Glama; the rest
 
 - [x] Guide written: GUIDELINES.md §9 (checklist per dimension, annotations rule, "every statement must be true", post-release check) and CLAUDE.md step 3 points to it.
 - [ ] Analysis section in this ticket covers every tool (all 46), with the per-dimension needs and the facts to state.
-- [ ] Every tool in `tools/list` has `annotations` set correctly; a Go test enforces it for the registry (existing and future tools).
+- [x] Every tool in `tools/list` has `annotations` set correctly; a Go test enforces it for the registry (existing and future tools).
 - [ ] Every description rewritten to the checklist; each statement re-read against the tool's code (T2); READMEs and docs pages updated to match; `check_docs.sh` and `check_readmes.sh` pass.
 - [ ] Released; Glama's next scoring shows every tool at grade A and no dimension at 2 or below - or the remaining gap per tool is recorded here.
 - [ ] Definition of Done (backlog/README.md).
@@ -72,7 +72,7 @@ Reading the pattern (only `files/create`'s reasons are quoted by Glama; the rest
 
 | # | Checks | How | Expected | Run | Result |
 |---|---|---|---|---|---|
-| T1 | Annotations everywhere | Go test over the registry (`HandleToolsList` output for a granted user): every tool has `annotations` with the four hints and a `title`; read-only tools are `readOnlyHint: true`, mutating ones are not | no tool without annotations | | |
+| T1 | Annotations everywhere | Go test over the registry (`HandleToolsList` output for a granted user): every tool has `annotations` with the four hints and a `title`; read-only tools are `readOnlyHint: true`, mutating ones are not | no tool without annotations | 2026-09-29 | pass - `TestEveryListedToolHasConsistentAnnotations` (46 tools, both directions), `go test ./internal/rpc/` ok natively on the VPS |
 | T2 | No false claims | each rewritten description re-read against the tool's code by a second pass | every statement true | | |
 | T3 | Live | `linuxctl get mcp-api tools` and an MCP `tools/list` on a stand | new text and annotations present | | |
 | T4 | Glama | tool page after the release (all 46, dimension by dimension); also read the 17 tools this ticket could not see | grade A everywhere, no dimension <= 2; remaining gaps recorded | | |
@@ -305,3 +305,5 @@ Shared docker facts to state once per description (currently repeated as the lon
 
 - 2026-09-29 - created and in-progress at the owner's request. Fetched Glama's page: six dimensions, the 20 tool rows above, and the rubric's repeated "no annotations are provided" / no output schemas. Guide written the same day (GUIDELINES.md §9, CLAUDE.md step 3). FR-010 (8 lowest tools) is covered by this ticket; it is left in `new/` with a comment for the owner to close. Per-tool analysis handed to a background agent.
 - 2026-09-29 - Analysis section filled (background agent, read-only): all 46 tools read against their implementation (tools.go, docker.go, config/sudo.go, spawner.go, every `internal/tools/*` package), annotations table, per-tool entries, cross-cutting findings including 13 false/misleading claims. Not verified: nothing was run (no tool calls, no VPS); Glama was re-fetched twice and still shows only the 20 rows above (truncated after logs/dmesg) - scores for the other 26 tools, dmesg Purpose/Usage and all rationale text are "not visible" and were not invented; smartctl behaviour without root, lxcfs/container `/proc/meminfo`, and `privileged` on system/os-release are stated from code/README only. Acceptance criterion "Analysis covers every tool" is left for the owner to tick.
+- 2026-09-29 - annotations done (owner: "ok fix glama"): `internal/rpc/annotations.go` holds the table (generated from the analysis section B), `HandleToolsList` adds `annotations` to every tool, `annotations_test.go` fails for a tool without a row or a row without a tool and checks read-only tools are non-destructive and idempotent. Glama only scores tools - the page has no resources or templates section - so resources and templates need nothing for it. Description rewrite next.
+

@@ -650,6 +650,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 		},
 	})
 
+	annotateTools(toolsList["tools"].([]interface{}))
 	resp.Result = toolsList
 
 }
