@@ -240,6 +240,38 @@ curl -s -X POST "$ENDPOINT" -H "Authorization: Bearer $MCP_TOKEN" -H "Content-Ty
   -d '{"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"services/manage","arguments":{"service":"nginx.service","action":"restart","privileged":true}}}'
 ```
 
+### Docker (read, lifecycle, exec)
+
+Talks to the Docker Engine API over its socket - no `docker` CLI needed. Every `docker/*` tool needs its own grant in `mcp-sudo.yaml`; the ones that name a container also need a `containers:` list, so an agent only touches the containers you list.
+
+```bash
+linuxctl get docker containers --all true          # running and stopped
+linuxctl get docker images
+linuxctl get docker network bridge                 # one network's full configuration
+linuxctl get docker container web-1 status         # computed runtime summary (state, health, uptime, limits)
+linuxctl get docker logs web-1 --lines 50
+
+# needs docker/manage and docker/exec grants that list web-1
+linuxctl restart docker web-1
+linuxctl exec docker web-1 ls /usr/share/nginx/html
+linuxctl exec docker web-1 -- ls --color /etc      # after `--` everything goes to the container as-is
+```
+
+### Crontabs (planned - not in a release yet)
+
+> Reading and writing crontabs is being built (see FR-026 in `backlog/`). **Writing a crontab schedules commands as that user, and the job survives the end of the session and the revocation of the token** - read the [crontab risks](https://nucleusv.github.io/linux-mcp-daemon/next/configuration/permissions-and-risks#crontabs) before you plan to grant it. The commands below are the intended interface and may change before release.
+
+```bash
+linuxctl get crontabs                                  # my own crontab, exactly as `crontab -l` prints it
+linuxctl update crontabs --content "$(cat mycron.txt)" # replace my whole crontab
+linuxctl edit crontabs                                 # open it in $EDITOR, write back if unchanged meanwhile
+
+# another user's crontab: sudo plus a rule naming that account in mcp-sudo.yaml
+linuxctl get crontabs --privileged true                # the users you may view that have a crontab
+linuxctl get crontabs test_user --privileged true
+linuxctl update crontabs test_user --privileged true --content "$(cat test_user.cron)"
+```
+
 ### Introspecting the MCP protocol itself
 
 ```bash
