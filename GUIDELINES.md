@@ -46,3 +46,24 @@ This document outlines the core architectural principles, naming conventions, an
 ## 8. Testing Strategy
 *   **Go Unit Tests**: Standard library `testing` is used for internal business logic and modular components (e.g., `config`, `auth`). Keep tests adjacent to the code they verify (`config_test.go`).
 *   **Integration Tests**: Bash scripts under `tests/` (like `test_mcp.sh` and `test_linuxctl.sh`) perform end-to-end testing against a compiled daemon and CLI instance. Ensure these are updated whenever modifying tool schemas or command line routing.
+
+## 9. Tool descriptions and annotations (Glama TDQS)
+
+Glama scores every tool on six dimensions, 1-5 each, from the `description` and the schema that `tools/list` returns (page: https://glama.ai/mcp/servers/nucleusv/linux-mcp-daemon). Agents choose tools the same way the scorer reads them, so a description is written for a model that sees only that text. When you add or change a tool, its `description` in `internal/rpc/tools.go` must pass this checklist:
+
+| Dimension | What the description must do |
+|---|---|
+| **Purpose** | First sentence: verb + resource, and how it differs from its siblings, by name (`files/create` vs `files/update`, `disks/usage` vs `disks/free`). |
+| **Usage guidelines** | When to use it, when not to, and the alternative: "For X use `group/tool`". Scores of 5 come from descriptions that route to named alternatives. |
+| **Behavior** | Read-only or mutating; what needs `privileged: true` or a grant, and what is refused without it; the edge behavior an agent will hit - creates parent directories? follows symlinks? recursive by default? truncates output? timeout? idempotent? |
+| **Parameters** | Only what the schema does not already say: defaults, units, formats, precedence between parameters, mutually exclusive ones, one example of non-obvious syntax (a glob, a range). Repeating the schema scores a flat 3. |
+| **Completeness** | What comes back: the shape of the output (text vs `output_format: json`), limits and truncation, what an empty result means. mcpd has no `outputSchema`, so the description carries this. |
+| **Conciseness** | Front-loaded, no filler or marketing, every sentence carries a fact. Typical length 60-150 words; long only when the tool has many interacting parameters. |
+
+Rules that go with it:
+
+- **Every statement must be true** against the tool's code (re-read the description against the implementation before committing). A wrong claim costs an agent a failed call.
+- **Annotations:** every tool carries MCP `annotations` in `tools/list` - `title`, `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` - set from what the tool really does (a read-only tool is `readOnlyHint: true`; `files/create`, `processes/delete`, `docker/manage`, `docker/prune` are destructive). Glama's rubric says "no annotations are provided" for tools without them, which forces the description to carry the whole behavioral burden. (Introduced by FR-024; until it is done, describe read/write behavior in the text.)
+- **Check the score after a release:** open the Glama tool list; a tool under 4.0 on any dimension gets a follow-up. Record the result in the ticket.
+- The docs page and README of the tool repeat the description: change all three together (`check_docs.sh`, `check_readmes.sh`).
+

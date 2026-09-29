@@ -20,7 +20,7 @@ Every idea or task from the owner becomes a ticket `backlog/<status>/FR-NNN-name
 ## Adding or changing a tool — do all of these
 1. Implement under `internal/tools/<group>/<command>/<command>.go`.
 2. Register in the `handlers` map in `cmd/mcpd/main.go` (worker mode dispatch).
-3. Register the schema in `internal/rpc/tools.go` (`HandleToolsList`), with a rich `description` and `tools_group`.
+3. Register the schema in `internal/rpc/tools.go` (`HandleToolsList`), with a rich `description`, `tools_group` and MCP `annotations`. The description follows the checklist in GUIDELINES.md §9 (purpose vs siblings, when to use / not use with named alternatives, side effects and grants, parameter interactions, what comes back) - Glama scores every tool on it.
 4. Add to the `tools/call` router in `internal/rpc/tools.go` (`HandleToolsCall`).
 5. Write `internal/tools/<group>/<command>/README.md` — verify with `bash scripts/check_readmes.sh`.
 6. If it needs root, add it to `configs/mcp-sudo.yaml` and note it in `docs/website/docs/configuration/mcp-sudo.md`.

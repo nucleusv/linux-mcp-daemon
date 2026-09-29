@@ -53,3 +53,5 @@ Glama rates the definitions of a release, so the new scores appear with the next
 ## Comments
 
 - 2026-09-27 - created from Glama's TDQS page (v0.3.5: 3.9/5 average; nslookup 2.6, find 2.7, create 3.1, arp 3.2, delete 3.2, ping 3.3, services/list 3.3, read 3.4). Glama shows scores only, no per-dimension reasons; the pattern (length/usage guidance/alternatives/side effects) is inferred from the A-rated tools. Discovery score went 33% → 83% after the Glama release.
+- 2026-09-29 - superseded in scope by FR-024, which covers all tools (not only these 8), adds MCP annotations (Glama's rubric repeatedly says "no annotations are provided") and writes the description guide into GUIDELINES.md. The owner decides whether to close this one as rejected/merged; nothing else was changed here.
+
