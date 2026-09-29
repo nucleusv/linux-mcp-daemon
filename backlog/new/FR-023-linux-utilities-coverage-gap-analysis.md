@@ -26,7 +26,7 @@ Method, kernel-first as the project requires: for each utility, say what it does
 
 The research is done; what it recommends is built as separate tickets, each one small enough to finish alone. This ticket stays open as the parent until the owner has decided on every item of the ranked list (section (d) under "Research results").
 
-- [FR-025](FR-025-timers-list.md) - `timers/list`: read systemd timers (rank 1) - new
+- [FR-025](../review/FR-025-timers-list.md) - `timers/list`: read systemd timers (rank 1) - review
 - [FR-026](FR-026-cron-manage.md) - `cron/manage`: read a user's crontab and write it whole, per-user view/edit rules (ranks 2 and 9, cut down by the owner) - new
 - Not filed yet (ranks 3-15 in section (d)): the owner picks which become tickets.
 
