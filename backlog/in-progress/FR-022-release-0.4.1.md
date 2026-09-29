@@ -31,4 +31,5 @@ Ship what is on main since v0.4.0: FR-005 (SSE keepalive, added at the owner's r
 - 2026-09-29 - created with the drafted notes. Also updated CLAUDE.md's Testing section: test_linuxctl.sh now runs on any stand through env vars. Nothing bumped or tagged yet.
 - 2026-09-29 - owner: "yes 0.4.1". Bumped server.json and the install commands to 0.4.1, docs build green; tagging v0.4.1 on the bump commit next. FR-020 and FR-017 stay in review (the owner closes them).
 - 2026-09-29 - the owner asked to include FR-005. v0.4.1 had already been tagged (e97b155) and its workflow had finished green, so the tag on GitHub does NOT contain FR-005 (8422780). Notes updated for it; waiting for the owner's decision: re-cut v0.4.1 (delete the release and tag, re-tag at the new commit, re-run the workflow - rewrites a published release, GHCR 0.4.1 and /v0.4.1/ docs) or ship it as 0.4.2.
+- 2026-09-29 - 0.4.1 is on the MCP Registry (published after the owner's login; registry now lists 0.4.1 as latest). What remains of this ticket is folded into FR-028 ("loose ends from 0.4.1": Glama confirmation, the stands running the tagged build, Definition of Done).
 

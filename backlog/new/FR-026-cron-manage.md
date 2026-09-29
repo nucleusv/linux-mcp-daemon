@@ -1,6 +1,7 @@
 # FR-026 Crontabs: `get crontabs` / `update crontabs` / `edit crontabs`, own crontab free, other users' behind sudo and per-user rules
 
 - **Created:** 2026-09-29, by the owner (design agreed in chat)
+- **Release:** [FR-028](../in-progress/FR-028-release-0.5.0.md) - v0.5.0
 - **Parent:** [FR-023](FR-023-linux-utilities-coverage-gap-analysis.md) - survey of everyday Linux utilities (this is a subtask of it)
 - **Related:** FR-025 (`timers/list`), `internal/tools/docker/manage` and its grants (the injection pattern for daemon-supplied values), `internal/tools/kernel/system-control` (read when no value, write when a value is given), FR-024 (description checklist, GUIDELINES.md §9 - description and annotations for the new tool)
 

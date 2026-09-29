@@ -1,6 +1,7 @@
 # FR-014 docker/run - launch containers from named specs
 
 - **Created:** 2026-09-27, by the owner
+- **Release:** [FR-028](../in-progress/FR-028-release-0.5.0.md) - v0.5.0
 - **Related:** FR-011 (the docker group, container allowlists), FR-012 (prune), FR-013 (networks), `internal/docker/allow.go`, `configs/mcp-sudo.yaml`, `docs/website/docs/configuration/permissions-and-risks.md`
 
 ## Description

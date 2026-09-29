@@ -1,6 +1,7 @@
 # FR-024 Raise every tool's Glama quality score: rewrite descriptions to the six dimensions, add MCP annotations, and a guide for new tools
 
 - **Created:** 2026-09-29, by the owner ("I have Glama tools verify ... files/create - behavior is yellow and usage guidelines ... analyze what is needed for each tool, put on task to redo, and to Claude as guide for the new tools")
+- **Release:** [FR-028](FR-028-release-0.5.0.md) - v0.5.0
 - **Related:** FR-010 (the 8 lowest tools - superseded in scope, left for the owner to close), FR-006 (Glama listing), GUIDELINES.md §9 (the guide, written with this ticket), `internal/rpc/tools.go`, `internal/rpc/docker.go`, `docs/website/docs/mcp-api/tools/`, each tool's `README.md`
 
 ## Description
