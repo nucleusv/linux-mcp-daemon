@@ -59,6 +59,19 @@ func buildDescribeURIs(tpl TemplateDef, positional []string) ([]string, []string
 		}
 		return uris, extra
 
+	case "crontab://{user}/{view}":
+		// One report: the metadata (with the hash `update --if_match` needs),
+		// then the raw crontab.
+		name := ""
+		if len(positional) > 0 {
+			name = positional[0]
+		}
+		var extra []string
+		if len(positional) > 1 {
+			extra = positional[1:]
+		}
+		return []string{"crontab://" + name + "/info", "crontab://" + name + "/text"}, extra
+
 	case "container://{name}/{view}":
 		// Two placeholders, usually one argument: default to the computed
 		// summary, which is what "describe" means everywhere else.

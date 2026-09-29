@@ -195,12 +195,22 @@ func hasOptionalValueField(t ToolDef) bool {
 		return false
 	}
 	props, _ := t.InputSchema["properties"].(map[string]interface{})
-	if _, hasValue := props["value"]; !hasValue {
+	// The write field is "value" (kernel/system-control) or "content"
+	// (cron/manage: a whole crontab); either one, when optional, makes the
+	// tool dual-purpose: it reads without it and writes with it.
+	field := ""
+	for _, f := range []string{"value", "content"} {
+		if _, ok := props[f]; ok {
+			field = f
+			break
+		}
+	}
+	if field == "" {
 		return false
 	}
 	if reqRaw, ok := t.InputSchema["required"].([]interface{}); ok {
 		for _, r := range reqRaw {
-			if s, ok := r.(string); ok && s == "value" {
+			if s, ok := r.(string); ok && s == field {
 				return false
 			}
 		}
@@ -460,7 +470,7 @@ func fillTemplate(uriTemplate string, positional []string) (string, []string) {
 // the "map first positional to path" heuristic the original client already
 // used for files/list, extended to every other single-identifier tool
 // param this schema surface actually uses.
-var positionalFieldPriority = []string{"path", "pid", "device", "host", "url", "key", "value", "service", "name", "content"}
+var positionalFieldPriority = []string{"path", "pid", "device", "host", "url", "key", "value", "service", "name", "user", "content"}
 
 func mapPositionalArgs(schema map[string]interface{}, args map[string]interface{}, positional []string) []string {
 	if len(positional) == 0 || schema == nil {

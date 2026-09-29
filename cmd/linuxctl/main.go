@@ -257,6 +257,13 @@ func main() {
 	verb, group := rawArgs[0], rawArgs[1]
 	flagArgs, positional, outputFormat := splitFlagsAndPositional(rawArgs[2:])
 
+	// "edit crontabs [user]": read, $EDITOR, write back only if unchanged
+	// meanwhile - built from the same tool, so it lives on the client.
+	if verb == "edit" && group == "crontabs" && groupExists(reg, "crontabs") {
+		editCrontab(authToken, positional, flagArgs)
+		os.Exit(0)
+	}
+
 	action, err := Resolve(reg, verb, group, positional)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -281,6 +288,10 @@ func main() {
 			"name":      action.Tool.Name,
 			"arguments": toolArgs,
 		})
+		if action.Tool.Name == "cron/manage" && outputFormat == "" {
+			renderRawText(respRPC) // the crontab exactly as it is: no added newline
+			return
+		}
 		renderResponse(respRPC, outputFormat, "content")
 
 	case "resource_read":

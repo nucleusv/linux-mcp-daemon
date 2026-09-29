@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/nucleusv/linux-mcp-daemon/internal/config"
+	"github.com/nucleusv/linux-mcp-daemon/internal/worker"
 )
 
 var cronReserved = []string{"_mode", "_target_user", "_target_uid", "_target_gid", "_target_groups", "_view_users", "_info"}
@@ -171,4 +172,36 @@ func cronLines(s string) int {
 		return 0
 	}
 	return strings.Count(strings.TrimSuffix(s, "\n"), "\n") + 1
+}
+
+// readCrontabResource serves crontab://{user}/{view}: the same preparation as
+// the tool, so one rule set decides who may see whose crontab. Another
+// account's crontab is read by a root worker acting for the caller's `view`
+// rule; there is no separate resources: grant.
+func (h *RPCHandler) readCrontabResource(session *Session, sudoCfg *config.SudoConfig, uri string) (string, string, error) {
+	rest := strings.TrimPrefix(uri, "crontab://")
+	target, view, _ := strings.Cut(rest, "/")
+	if view == "" {
+		view = "text"
+	}
+	if target == "" || (view != "text" && view != "info") {
+		return "", "", fmt.Errorf("unknown resource %s (use crontab://<user>/text or crontab://<user>/info)", uri)
+	}
+	args := map[string]interface{}{"user": target, "privileged": target != session.User}
+	if view == "info" {
+		args["output_format"] = "json"
+	}
+	raw, _ := json.Marshal(args)
+	plan, err := prepareCronCall(sudoCfg, session.User, raw, view == "info", user.Lookup)
+	if err != nil {
+		return "", "", err
+	}
+	out, err := worker.SpawnWorker(session.User, config.CronTool, plan.Args, plan.Privileged, sudoCfg, h.timeoutFor(config.CronTool))
+	if err != nil {
+		return "", "", err
+	}
+	if view == "info" {
+		return out, "application/json", nil
+	}
+	return out, "text/plain", nil
 }

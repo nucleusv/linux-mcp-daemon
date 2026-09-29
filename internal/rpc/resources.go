@@ -168,6 +168,14 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 				"mimeType":    "application/json",
 			},
 			map[string]interface{}{
+				"uriTemplate":   "crontab://{user}/{view}",
+				"name":          "User Crontab",
+				"group":         "crontabs",
+				"linuxctl_verb": "crontab",
+				"description":   "One account's crontab, read-only. `{view}` is `text` (the crontab exactly as `crontab -l` prints it, empty when there is none) or `info` (JSON: exists, lines, jobs, bytes, sha256 - the hash to pass as `if_match` when replacing it with the cron/manage tool). Your own crontab needs no grant; another account's needs a `view` rule for it in your cron/manage grant. To change a crontab use the cron/manage tool; for systemd timers use timers/list.",
+				"mimeType":      "text/plain",
+			},
+			map[string]interface{}{
 				"uriTemplate":   "container://{name}/{view}",
 				"name":          "Docker Container Introspection",
 				"group":         "docker",
@@ -192,9 +200,9 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 				"mimeType":      "application/json",
 			},
 			map[string]interface{}{
-				"uriTemplate":   "docker-network://{name}/inspect",
-				"name":          "Docker Network Inspect",
-				"group":         "docker",
+				"uriTemplate": "docker-network://{name}/inspect",
+				"name":        "Docker Network Inspect",
+				"group":       "docker",
 				// The keyword is resolved inside the docker group, so the plain
 				// noun is unambiguous here even though the URI scheme cannot be:
 				// `linuxctl get docker network backend`.
@@ -285,6 +293,8 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 			content, mimeType, readErr = file.Handle(params.URI, session.User, sudoCfg)
 		case strings.HasPrefix(params.URI, "service://") && strings.HasSuffix(params.URI, "/status"):
 			content, mimeType, readErr = service.Handle(params.URI, session.User, sudoCfg)
+		case strings.HasPrefix(params.URI, "crontab://"):
+			content, mimeType, readErr = h.readCrontabResource(session, sudoCfg, params.URI)
 		case strings.HasPrefix(params.URI, "container://"),
 			strings.HasPrefix(params.URI, "image://"),
 			strings.HasPrefix(params.URI, "volume://"),
