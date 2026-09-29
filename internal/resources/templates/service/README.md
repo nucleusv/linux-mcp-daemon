@@ -9,7 +9,7 @@ $ linuxctl describe system cron --privileged true
   "fragment_path": "/usr/lib/systemd/system/cron.service" }
 ```
 
-The name is the unit, `.service` is added when it is missing. To list units use the `services/list` tool (services) or `timers/list` (timers); to start or stop one use `services/manage`.
+To list units use the `services/list` tool (services) or `timers/list` (timers); to start or stop one use `services/manage`.
 
 ## Permissions
-The worker runs as the caller and reads the system bus, which any user may read on a host with systemd. Inside a container that bus does not exist, so the read needs root through the user's `resources:` grant for `service://`, which joins the host. A host without systemd gets a named connection error.
+The worker runs as the caller and reads the system bus, which any user may read on a host with systemd. Inside a container that bus does not exist, so the read needs root: the user's `resources:` grant for `service://` matches the unit name by prefix (`resources: {"service://": [""]}` for every unit, `["ssh"]` for names starting with ssh; a literal `"*"` does not work for prefix schemes), and the privileged worker joins the host. A host without systemd gets a named connection error.
