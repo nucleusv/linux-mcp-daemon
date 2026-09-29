@@ -4,6 +4,10 @@ The task tracker for this project. Every idea or task from the owner becomes a t
 
 A ticket is one file, `FR-NNN-short-name.md`, and everything about the task lives in it - description, criteria, tests, results, the real output used as evidence, decisions, links to commits. No side files, no scattered notes. **Its folder is its status** - changing status means moving the file with `git mv`, so the history of every move stays in git. The board is just `ls backlog/*/`.
 
+## Subtasks
+
+A big ticket is split into subtasks, each its own ticket. The **parent** has a `## Subtasks` section: one line per child, `[FR-NNN](FR-NNN-name.md) - what it is - status`. Each **child** has a `- **Parent:** [FR-NNN](FR-NNN-name.md)` line under `Created`. Links are by ID and file name relative to the same folder; a ticket's folder is its status, so when a ticket moves, fix the links to it (`ls backlog/*/FR-NNN-*` finds it) and update the status word in the parent's list. The parent stays open until its subtasks are decided or done.
+
 ## Statuses
 
 `new/` → `in-progress/` → `review/` → `closed/`, plus `blocked/` and `rejected/`.

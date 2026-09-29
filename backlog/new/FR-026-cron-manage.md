@@ -1,6 +1,7 @@
 # FR-026 cron/manage: read a user's crontab and write it whole, with per-user view/edit rules
 
 - **Created:** 2026-09-29, by the owner ("edit = we can fully write the cron file")
+- **Parent:** [FR-023](FR-023-linux-utilities-coverage-gap-analysis.md) - survey of everyday Linux utilities (this is subtask of it)
 - **Related:** FR-023 (research, section (c)), FR-025 (`timers/list`), `internal/tools/docker/manage` and its `containers:` grant (the grant pattern), FR-024 (description checklist, GUIDELINES.md §9)
 
 ## Description

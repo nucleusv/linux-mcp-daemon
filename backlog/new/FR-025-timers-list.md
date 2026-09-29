@@ -1,6 +1,7 @@
 # FR-025 timers/list: read systemd timers (what runs on a schedule, and when next)
 
 - **Created:** 2026-09-29, by the owner ("yes do timers, will they be resources? are they changeable?")
+- **Parent:** [FR-023](FR-023-linux-utilities-coverage-gap-analysis.md) - survey of everyday Linux utilities (this is subtask of it)
 - **Related:** FR-023 (ranked proposal, rank 1), `internal/tools/services/list` (same DBus code, mirrors its shape), FR-026 (`cron/manage`), FR-024 (description checklist in GUIDELINES.md §9 applies)
 
 ## Description
