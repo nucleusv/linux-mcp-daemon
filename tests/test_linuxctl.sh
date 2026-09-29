@@ -1,29 +1,60 @@
 #!/bin/bash
 set -e
+# noglob: run_tool holds a whole command in one unquoted string, so a pattern
+# like "kube*" must stay literal instead of expanding against the current dir.
+set -f
 
+# Everything target-specific is an env var; the defaults are the local
+# k8s stand (configs/daemon.yaml). Point it at a VPS stand, e.g. on the host:
+#   DAEMON_URL=https://localhost:9092 MCP_CA_CERT=/etc/mcpd-docker/configs/tls/mcpd.crt \
+#   TOKEN=... PRIV_TOKEN=... UNPRIV_TOKEN=... LINUXCTL=$(which linuxctl) \
+#   SERVICE=ssh.service SVC_PATTERN='ssh*' CURL_URL=https://example.com \
+#   LOGINS_MAY_FAIL=no bash test_linuxctl.sh
 DAEMON_URL=${DAEMON_URL:-"http://localhost:9091"}
 TOKEN=${TOKEN:-"my-test-token-123"}
-PRIV_TOKEN="my-privileged-token-123"
+PRIV_TOKEN=${PRIV_TOKEN:-"my-privileged-token-123"}
+UNPRIV_TOKEN=${UNPRIV_TOKEN:-"my-unprivileged-token-123"}
+SERVICE=${SERVICE:-"kubelet.service"}            # a unit that exists on the target
+SVC_PATTERN=${SVC_PATTERN:-"kube*"}              # matches at least that unit's family
+CURL_URL=${CURL_URL:-"http://127.0.0.1:9091/ping"}
+# logs/logins needs last/lastb: the minimal local kind node has neither, a normal host does.
+LOGINS_MAY_FAIL=${LOGINS_MAY_FAIL:-"yes"}
+# Optional: a container mcpd may exec into (docker/exec grant) to check `exec docker <c> -- ...`.
+DOCKER_EXEC_CONTAINER=${DOCKER_EXEC_CONTAINER:-""}
 
 echo "Testing linuxctl CLI (verb/group grammar - see plan/linuxctl-redesign.md)..."
 
-# Ensure we are in the project root
-cd "$(dirname "$0")/.."
+if [ -z "$LINUXCTL" ]; then
+    # Ensure we are in the project root
+    cd "$(dirname "$0")/.."
+    echo "Building linuxctl..."
+    go build -o linuxctl ./cmd/linuxctl
+    LINUXCTL=./linuxctl
+    trap 'rm -f linuxctl' EXIT
+fi
 
-# Build the CLI
-echo "Building linuxctl..."
-go build -o linuxctl ./cmd/linuxctl
+# lc <token> <linuxctl args...>
+lc() { "$LINUXCTL" -token "$1" -server "$DAEMON_URL" "${@:2}"; }
 
 # Test ping command
 echo "Running 'linuxctl ping'..."
-OUTPUT=$(./linuxctl -server "$DAEMON_URL" -token "$TOKEN" ping)
-
+OUTPUT=$(lc "$TOKEN" ping) || true
 if ! echo "$OUTPUT" | grep -q "Successfully connected to mcpd daemon!"; then
-    echo "❌ FAILED: linuxctl failed to ping the daemon."
+    echo "❌ FAILED: linuxctl failed to ping the daemon at $DAEMON_URL."
     echo "Output: $OUTPUT"
-    rm -f linuxctl
     exit 1
 fi
+
+# Discover what this target actually has, instead of assuming $DISK / eth0.
+DISK=$(lc "$PRIV_TOKEN" get disks --output json | python3 -c "
+import json,sys
+d=[b['name'] for b in json.load(sys.stdin)['blockdevices'] if b.get('type')=='disk']
+print(d[0] if d else 'vda')")
+IFACE=$(lc "$PRIV_TOKEN" get network interfaces --output json | python3 -c "
+import json,sys
+n=[i['name'] for i in json.load(sys.stdin) if i['name']!='lo']
+print(n[0] if n else 'eth0')")
+echo "Target: disk=$DISK interface=$IFACE service=$SERVICE"
 
 echo "==========================================="
 echo "   Testing Tools (JSON & Table outputs)    "
@@ -33,13 +64,14 @@ run_tool() {
     local cmd="$1"
     local name="$2"
     local allow_fail="${3:-no}"
+    local tok="${TOK:-$TOKEN}"
 
     for fmt in table wide yaml json; do
         echo "Testing Tool: $name ($fmt Output)"
         if [ "$allow_fail" = "yes" ]; then
-            ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" $cmd --output "$fmt" || echo "(Expected failure - see call site comment)"
+            lc "$tok" $cmd --output "$fmt" || echo "(Expected failure - see call site comment)"
         else
-            ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" $cmd --output "$fmt"
+            lc "$tok" $cmd --output "$fmt"
         fi
     done
 
@@ -61,14 +93,14 @@ run_tool "get disks free / --privileged true" "disks/free"
 run_tool "get disks" "disks/list (bare)"
 run_tool "get disks mounts" "disks/mounts"
 run_tool "get disks partitions" "disks/partitions"
-run_tool "get disks partitions vda" "disks/partitions (device filter)"
+run_tool "get disks partitions $DISK" "disks/partitions (device filter)"
 run_tool "get disks performance" "disks/performance (all devices)"
-run_tool "get disks performance vda" "disks/performance (one device)"
-run_tool "get disks health vda" "disks/health"
+run_tool "get disks performance $DISK" "disks/performance (one device)"
+run_tool "get disks health $DISK" "disks/health"
 run_tool "get processes --limit 5" "processes/list (bare)"
 run_tool "get network connections" "network/connections"
 run_tool "get network nslookup google.com" "network/nslookup"
-run_tool "get network curl http://127.0.0.1:9091/ping" "network/curl"
+run_tool "get network curl $CURL_URL" "network/curl"
 run_tool "get network arp" "network/arp"
 run_tool "get network ping 127.0.0.1" "network/ping"
 run_tool "get memory usage" "memory/usage"
@@ -78,21 +110,19 @@ run_tool "get kernel sysctl net.ipv4.ip_forward" "kernel/system-control (read)"
 run_tool "get logs dmesg --privileged true" "logs/dmesg"
 run_tool "get logs journal --lines 3 --privileged true" "logs/journal-control"
 run_tool "get logs journal --lines 3 --boot true --privileged true" "logs/journal-control (boot)"
-# allow_fail=yes: this environment's kind node has no last/lastb binaries at
-# all (a minimal LinuxKit node with no login mechanism) - see
-# investigations/README.md. Expected to fail here; would work on a normal host.
-run_tool "get logs logins --privileged true" "logs/logins" "yes"
+# logs/logins wraps last/lastb: the minimal local kind node has neither, so
+# there it is an expected failure (LOGINS_MAY_FAIL=yes, the default); on a
+# normal host set LOGINS_MAY_FAIL=no and it must pass.
+if [ "$LOGINS_MAY_FAIL" = "yes" ]; then
+    run_tool "get logs logins --privileged true" "logs/logins" "yes"
+else
+    run_tool "get logs logins --privileged true" "logs/logins"
+fi
 run_tool "get system os-release" "system/os-release"
 run_tool "get system packages" "system/packages"
 run_tool "get users --min_uid 1000" "users/list"
-# --pattern kube* not --pattern * : run_tool uses $cmd unquoted (word
-# splitting is required, since it's one string holding a whole multi-token
-# command) - a bare "*" is a real shell glob against the CURRENT DIRECTORY
-# at expansion time, not a literal token, and silently expands to every file
-# in the repo root as separate ignored arguments. "kube*" matches nothing
-# locally so bash leaves it literal, same trick the daemon's own live k8s
-# testing already relied on elsewhere this session.
-run_tool "get system services --pattern kube* --privileged true" "services/list (via system group)"
+# The pattern stays literal (set -f above): a bare * would expand against the cwd.
+run_tool "get system services --pattern $SVC_PATTERN --privileged true" "services/list (via system group)"
 
 echo "==========================================="
 echo "   Testing get-one vs get-many, describe,  "
@@ -102,49 +132,49 @@ echo "   handling, not 4x-format repetition)     "
 echo "==========================================="
 
 echo "Testing: get processes <pid> (one result, not the bare many-result form)"
-FIRST_PID=$(./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" get processes --limit 1 --output json | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['pid'])")
-./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" get processes "$FIRST_PID" --output json
+FIRST_PID=$(lc "$PRIV_TOKEN" get processes --limit 1 --output json | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['pid'])")
+lc "$PRIV_TOKEN" get processes "$FIRST_PID" --output json
 
 echo "Testing: get processes top (fixed cpu+memory+processes recipe)"
-./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" get processes top
+lc "$PRIV_TOKEN" get processes top
 
 echo "Testing: describe files /etc/hosts (aggregates stat+type)"
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" describe files /etc/hosts
+lc "$TOKEN" describe files /etc/hosts
 
-echo "Testing: describe disks vda"
-./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" describe disks vda
+echo "Testing: describe disks $DISK"
+lc "$PRIV_TOKEN" describe disks $DISK
 
 echo "Testing: describe processes <pid> (aggregates status+cmdline+limits, excludes environ)"
-./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" describe processes "$FIRST_PID"
+lc "$PRIV_TOKEN" describe processes "$FIRST_PID"
 
-echo "Testing: describe network interfaces eth0"
-./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" describe network interfaces eth0
+echo "Testing: describe network interfaces $IFACE"
+lc "$PRIV_TOKEN" describe network interfaces $IFACE
 
 echo "Testing: create/update files (mutations, scratch path only)"
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" create files /tmp/linuxctl-grammar-test.txt --content "hello"
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" update files /tmp/linuxctl-grammar-test.txt --content " world" --append true
+lc "$TOKEN" create files /tmp/linuxctl-grammar-test.txt --content "hello"
+lc "$TOKEN" update files /tmp/linuxctl-grammar-test.txt --content " world" --append true
 
 echo "Testing: update kernel sysctl (no-op - sets to its own current value)"
-CURRENT_IP_FORWARD=$(./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" get kernel sysctl net.ipv4.ip_forward | grep -o '[01]$')
-./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" update kernel sysctl net.ipv4.ip_forward "$CURRENT_IP_FORWARD" --privileged true
+CURRENT_IP_FORWARD=$(lc "$PRIV_TOKEN" get kernel sysctl net.ipv4.ip_forward | grep -o '[01]$')
+lc "$PRIV_TOKEN" update kernel sysctl net.ipv4.ip_forward "$CURRENT_IP_FORWARD" --privileged true
 
 echo "Testing: explain <group> meta-verb"
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" explain files
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" explain system
+lc "$TOKEN" explain files
+lc "$TOKEN" explain system
 
 echo "Testing: tool <name> direct escape hatch (symmetric with resource <uri>)"
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" tool files/list --path /tmp
+lc "$TOKEN" tool files/list --path /tmp
 
 echo "Testing: get mcp-api <tools|resources|prompts|info> meta-group"
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp-api tools > /tmp/mcp_tools_out.txt
+lc "$TOKEN" get mcp-api tools > /tmp/mcp_tools_out.txt
 grep -q "files/list" /tmp/mcp_tools_out.txt || { echo "❌ FAILED: get mcp-api tools missing files/list"; exit 1; }
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp-api resources > /tmp/mcp_resources_out.txt
+lc "$TOKEN" get mcp-api resources > /tmp/mcp_resources_out.txt
 grep -q "os://uname" /tmp/mcp_resources_out.txt || { echo "❌ FAILED: get mcp-api resources missing os://uname"; exit 1; }
 # prompts is a real MCP capability mcpd doesn't implement - this must report
 # that plainly, not silently succeed with an empty list or crash.
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp-api prompts > /tmp/mcp_prompts_out.txt
+lc "$TOKEN" get mcp-api prompts > /tmp/mcp_prompts_out.txt
 grep -q "does not implement" /tmp/mcp_prompts_out.txt || { echo "❌ FAILED: get mcp-api prompts did not report the missing capability"; exit 1; }
-./linuxctl -token "$TOKEN" -server "$DAEMON_URL" get mcp-api info > /tmp/mcp_info_out.txt
+lc "$TOKEN" get mcp-api info > /tmp/mcp_info_out.txt
 grep -q "protocolVersion" /tmp/mcp_info_out.txt || { echo "❌ FAILED: get mcp-api info missing protocolVersion"; exit 1; }
 echo "✅ get mcp-api tools/resources/prompts/info all correct"
 
@@ -157,16 +187,16 @@ run_resource() {
 
     echo "Testing Resource: $uri (Table Output)"
     if [ "$uri" = "devices://dmi" ]; then
-        ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" resource $uri --output table || echo "(Expected failure on some VMs)"
+        lc "$TOKEN" resource $uri --output table || echo "(Expected failure on some VMs)"
     else
-        ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" resource $uri --output table
+        lc "$TOKEN" resource $uri --output table
     fi
 
     echo "Testing Resource: $uri (JSON Output)"
     if [ "$uri" = "devices://dmi" ]; then
-        ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" resource $uri --output json || echo "(Expected failure on some VMs)"
+        lc "$TOKEN" resource $uri --output json || echo "(Expected failure on some VMs)"
     else
-        ./linuxctl -token "$TOKEN" -server "$DAEMON_URL" resource $uri --output json
+        lc "$TOKEN" resource $uri --output json
     fi
 
     sleep 0.3
@@ -179,7 +209,7 @@ run_resource "os://release"
 run_resource "os://uname"
 run_resource "network://interfaces"
 run_resource "network://routes"
-run_resource "network://interfaces/eth0"
+run_resource "network://interfaces/$IFACE"
 run_resource "file:///etc/hosts"
 run_resource "file:///etc/hosts/stat"
 run_resource "file:///etc/hosts/type"
@@ -188,9 +218,8 @@ run_resource "devices://pci"
 run_resource "devices://dmi"
 run_resource "kernel://modules"
 
-UNPRIV_TOKEN="my-unprivileged-token-123"
 echo "Testing unpriviliged user resource access (should fail)..."
-if ./linuxctl -token "$UNPRIV_TOKEN" -server "$DAEMON_URL" resource "devices://usb" --output json; then
+if lc "$UNPRIV_TOKEN" resource "devices://usb" --output json; then
     echo "❌ FAILED: unpriviliged user was able to access devices://usb"
     exit 1
 else
@@ -201,10 +230,43 @@ fi
 # privileged - testuser has no service:// grant in mcp-sudo.yaml (only the
 # "privileged" reference account does), so this checks it with that token
 # rather than expanding testuser's grants just for test coverage.
-echo "Testing Resource: service://kubelet.service/status (privileged token, JSON Output)"
-./linuxctl -token "$PRIV_TOKEN" -server "$DAEMON_URL" resource "service://kubelet.service/status" --output json
+echo "Testing Resource: service://$SERVICE/status (privileged token, JSON Output)"
+lc "$PRIV_TOKEN" resource "service://$SERVICE/status" --output json
+
+# Docker group (FR-011..FR-020): every tool is listed to every user, so this
+# runs whenever the privileged user is granted docker/containers; otherwise it
+# reports that it was skipped.
+echo "==========================================="
+echo "  Testing docker group (read + FR-015/16/18)"
+echo "==========================================="
+if lc "$PRIV_TOKEN" get docker containers >/dev/null 2>&1; then
+    for t in "get docker containers" "get docker networks" "get docker volumes" "get docker images"; do
+        TOK=$PRIV_TOKEN run_tool "$t" "docker: $t"
+    done
+    echo "Testing: get docker network bridge (FR-015: reads the template, not docker/containers)"
+    lc "$PRIV_TOKEN" get docker network bridge | grep -q '"Name": "bridge"' || { echo "❌ FAILED: get docker network bridge did not return the bridge network"; exit 1; }
+    echo "Testing: get docker networkz (FR-015: an unknown keyword is an error)"
+    if lc "$PRIV_TOKEN" get docker networkz >/dev/null 2>&1; then
+        echo "❌ FAILED: get docker networkz exited 0"; exit 1
+    fi
+    echo "Testing: get docker network bridge extra-word (FR-016: extra word is reported)"
+    lc "$PRIV_TOKEN" get docker network bridge extra-word 2>&1 >/dev/null | grep -q "extra argument" || { echo "❌ FAILED: no extra-argument warning"; exit 1; }
+    if [ -n "$DOCKER_EXEC_CONTAINER" ]; then
+        echo "Testing: exec docker $DOCKER_EXEC_CONTAINER -- echo hello (FR-018)"
+        lc "$PRIV_TOKEN" exec docker "$DOCKER_EXEC_CONTAINER" -- echo hello | grep -q "^hello$" || { echo "❌ FAILED: exec after -- did not print hello"; exit 1; }
+    else
+        echo "(skipped: exec check - set DOCKER_EXEC_CONTAINER to a container the privileged user may exec into)"
+    fi
+    echo "Testing: ungranted user gets a clear refusal (FR-020)"
+    if OUT=$(lc "$UNPRIV_TOKEN" get docker containers 2>&1); then
+        echo "(unprivileged user holds a docker grant on this target - refusal not checked)"
+    else
+        echo "$OUT" | grep -q "not authorized" || { echo "❌ FAILED: refusal does not say not authorized: $OUT"; exit 1; }
+        echo "✅ refused: $(echo "$OUT" | head -c 100)"
+    fi
+else
+    echo "(skipped: the privileged user has no docker grant on this target, or docker is not there)"
+fi
 
 echo "✅ SUCCESS: linuxctl successfully dynamically executed all tools and resources over SSE with format parsers!"
-# Clean up the binary
-rm -f linuxctl
 exit 0
