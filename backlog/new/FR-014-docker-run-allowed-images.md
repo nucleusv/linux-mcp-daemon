@@ -74,6 +74,7 @@ The owner's design, replacing named specs and the `containers:` name list:
     images:
       "ghcr.io/nucleusv/*":
         settings:
+          container_name: ["lab-*", "nucleusv-*"]         # names the agent may give the container
           memory: {max: 512m}                             # mandatory, up to this
           cpus:   {max: 1}
           ports:  {bind: 127.0.0.1, range: 18000-18999}   # loopback only, this port range
@@ -82,12 +83,14 @@ The owner's design, replacing named specs and the `containers:` name list:
           network: [bridge]                               # allowed networks; host is refused always
       "alpine:3.*":
         settings:
+          container_name: ["lab-shell-*"]
           memory: {max: 128m}
           network: [none]
           command: true
   ```
 - **Refused for every image, whatever the grant says:** `--privileged`, capabilities, devices, security options, cgroup parent, sysctls, host or container namespaces (`pid`, `net`, `ipc`, `uts`, `userns`), `--env-file`, `--entrypoint`, `--health-cmd`, `--restart always`, and any mount of the Docker socket, `/`, `/etc`, `/root`, `/usr`. Mounts are only possible where a pattern lists them (path allowlist, read-only enforced, `..` and symlinks resolved).
-- **No `containers:` list on `docker/run`.** The identity fence is automatic: every container it creates is named `mcpd-<mcpd user>-<name>` and labelled `mcpd.owner=<user>`, so no other user's `docker/manage`/`docker/exec` list can match it by accident; grant those tools on `mcpd-alice-*` where wanted.
+- **The container name is a setting, per image** (owner decision): `container_name: ["lab-*", ...]` is the list of name patterns the agent may choose from, for containers created from that image. The chosen name must match one of them, be valid (letters, digits, `-`, `_`, `.`, no leading `-`), and not already exist (Docker refuses duplicates). If `container_name` is not listed for an image, the agent cannot choose and mcpd generates `mcpd-<mcpd user>-<random>`. Every container also gets the label `mcpd.owner=<user>`. There is no separate `containers:` list on `docker/run`.
+- **Why the name pattern needs care (the identity fence):** a name the agent creates can match another user's `containers:` list on `docker/manage` or `docker/exec` (create `web-1`, and whoever holds `web-*` now controls a container this user made). So config load **warns** when a `container_name` pattern of one user can overlap a `containers:` pattern granted to any user on `docker/manage`, `docker/exec`, `docker/logs` or `docker/inspect`, naming both grants; the owner keeps run names in their own namespace (`lab-*`) that no other grant covers.
 - **`pull`:** default false (only images already on the host); allowing a pull is a per-image setting because a pull is arbitrary code arriving on the host.
 - **Open, proposed defaults:** the agent may remove only containers labelled with its own `mcpd.owner` (through `docker/manage` scoped to `mcpd-<user>-*`); a per-grant `max_containers` quota counted by that label; `rm: true` allowed as a setting; a TTL is out of scope.
 
@@ -98,7 +101,7 @@ CLI (mock-up): `linuxctl run docker ghcr.io/nucleusv/linux-mcp-daemon:0.5.0 --me
 - [ ] `docker/run` takes an image reference and the settings of the design above; nothing outside the listed settings reaches the Engine API - the `POST /containers/create` body is built by mcpd from the validated settings, never from raw caller fields.
 - [ ] Image matching: normalisation, `*`/`**` semantics, `allow_any_image` refusal, digest patterns (`@sha256:*`), and a clear message listing the patterns when nothing matches.
 - [ ] Per-image settings enforced default-deny with maxima (`memory`, `cpus`, `pids`), loopback-only port bindings within a range, allowed networks, mounts only from a listed read-only path allowlist; the always-refused list is refused at call time and at config load.
-- [ ] Automatic name `mcpd-<user>-<name>` and labels `mcpd.owner`, `mcpd.image-pattern`; `max_containers` quota by owner label.
+- [ ] `container_name` setting: the name must match the image pattern's list, be valid and unused; without the setting a generated `mcpd-<user>-<random>` name; labels `mcpd.owner`, `mcpd.image-pattern`; `max_containers` quota by owner label; a config-load warning for name patterns that overlap other grants' `containers:` lists.
 - [ ] `pull` false by default; when allowed for a pattern, audited.
 - [ ] `docker/run` is audited at any log level with user, image, resolved name and the applied settings (no env values).
 - [ ] The open defaults above settled by the owner and recorded.
@@ -114,7 +117,7 @@ CLI (mock-up): `linuxctl run docker ghcr.io/nucleusv/linux-mcp-daemon:0.5.0 --me
 | T2 | Settings default-deny | Go unit tests: an unlisted setting, a value over a maximum, a non-loopback bind, a network not allowed | each refused with the pattern and setting named | | |
 | T3 | Always-refused list | Go unit tests for every option in the list, at config load and at call time | refused, never forwarded | | |
 | T4 | Body built by mcpd | Go unit test against a fake Engine: caller-supplied raw `HostConfig` keys absent from the request | none forwarded | | |
-| T5 | Name and labels | Go unit test + live: `mcpd-<user>-<name>`, `mcpd.owner` present | as specified | | |
+| T5 | Name and labels | Go unit tests: allowed and refused names, invalid characters, generated fallback, overlap warning at config load; live: label `mcpd.owner` present | as specified | | |
 | T6 | Quota | Live, VPS 9091: `max_containers: 2`, run three times | third refused | | |
 | T7 | Audit | Live: journal line per run at info level, no env values | as specified | | |
 | T8 | No pull | Live: allowed pattern, image absent | refused "not present", no fetch | | |
@@ -129,3 +132,4 @@ CLI (mock-up): `linuxctl run docker ghcr.io/nucleusv/linux-mcp-daemon:0.5.0 --me
   FR-011, FR-013 and FR-012 come first, and this ticket only exists so the
   analysis is not lost in chat.
 - 2026-09-29 - redesigned with the owner: direct run gated by allowed image patterns with per-image allowed settings, no `containers:` list on `docker/run`, automatic `mcpd-<user>-` names, default-deny settings. Part of release v0.5.0 (FR-028); built after FR-026.
+- 2026-09-29 - owner: `container_name` belongs in the per-image settings (allowed name patterns), replacing the automatic `mcpd-<user>-` prefix as the default; the prefix stays only as the fallback when no name setting is listed. Added a config-load warning for overlap with other grants' container lists.
