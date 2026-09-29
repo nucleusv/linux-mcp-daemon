@@ -5,7 +5,7 @@
 
 ## Description
 
-Two new sections for the Medium article: (1) containers without handing over the Docker socket - real output and the `containers:` scoping; (2) crontabs - the design and the risks behind it. Medium blocks automated reads (HTTP 403), so the sections are written as standalone Markdown to paste in; the owner places them and matches the article's voice (send the article text if I should place them).
+Three new sections for the Medium article: (0) stdio - who can connect (Claude Code, Desktop, Inspector; not hosted/remote-only clients) and its limitations (never root, no per-agent identity, no shared audit log, the SSH key risk) - added at the owner's request; (1) containers without handing over the Docker socket - real output and the `containers:` scoping; (2) crontabs - the design and the risks behind it. Medium blocks automated reads (HTTP 403), so the sections are written as standalone Markdown to paste in; the owner places them and matches the article's voice (send the article text if I should place them).
 
 **Blocked on the release:** the Docker section could be published now (0.4.0 and later ship it), but the owner wants both added after the release. The crontab section is written as "what is coming" with intended output; once `crontabs` ships (FR-026) it has to be redone with **real** output captured from a stand.
 
@@ -27,3 +27,4 @@ Two new sections for the Medium article: (1) containers without handing over the
 ## Comments
 
 - 2026-09-29 - created in `blocked/` (waiting on the release). Draft written from real VPS output (Docker) and from the FR-026 design (crontabs); it deliberately avoids the VPN container that shares the test VPS.
+- 2026-09-29 - owner asked for a stdio section as well ("when Claude can connect, but write about limitations"): added to the draft, based on docs/website/docs/configuration/stdio-mode.md.
