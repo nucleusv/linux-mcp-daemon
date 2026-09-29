@@ -12,7 +12,7 @@ The next release after v0.4.1. The version is a proposal: new tools (`timers/lis
 - [FR-025](../review/FR-025-timers-list.md) - `timers/list` - review (built, deployed on all stands)
 - [FR-024](FR-024-glama-tool-quality-descriptions-annotations.md) - Glama tool quality: annotations (done), 46 rewritten descriptions (done, second read open), guide (done), 14 follow-up code bugs listed in its section E - in-progress
 - [FR-026](../new/FR-026-cron-manage.md) - crontabs: `get|update|edit crontabs`, per-user view/edit rules, worker as the target UID, resource templates - new
-- [FR-014](../new/FR-014-docker-run-allowed-images.md) - `docker/run` from named specs - new (the owner: in this release; security-heavy, built after FR-026)
+- [FR-014](../new/FR-014-docker-run-allowed-images.md) - `docker/run` from allowed images with per-image settings - new (the owner: in this release; security-heavy, built after FR-026)
 - Not in this release: FR-023's other proposals (ssh, certs, time, ...), FR-027 (the article, published after it).
 
 ## Acceptance criteria
