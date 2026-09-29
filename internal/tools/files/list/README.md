@@ -1,6 +1,6 @@
 # files/list
 
-Lists a directory like `ls -la`, natively from `lstat` - no `ls` binary.
+Lists the entries of ONE directory like `ls -l` (dotfiles, `.` and `..` are hidden unless `all: true`): type and permissions, link count, owner, group, size, modification time and symlink targets (symlinks are shown, never followed). Read-only, not recursive, no entry cap; `path` must be absolute. For a recursive or filtered search use `files/find`, for a directory's total size `disks/usage`, for a file's MIME type `files/filetype`. On permission denied retry with `privileged: true` if granted (root calls also need a `paths:` entry covering the path). Text output is `ls -l` lines (`Directory is empty.` when empty; `long: false` gives names only, directories suffixed `/`). `output_format: json` returns an array of objects (name, type, mode, mode_octal, links, owner, group, uid, gid, size, modified, is_dir, target), `[]` when empty.
 
 ```text
 total 24

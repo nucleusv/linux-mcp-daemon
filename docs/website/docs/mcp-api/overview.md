@@ -72,11 +72,11 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 ### Tools, by group
 
 **files**
-- [`files/list`](./tools/files/list) - Lists a directory like `ls -la` (permissions, owner, size, dates, symlink targets).
-- [`files/read`](./tools/files/read) - Precision reading of file contents with chunking/streaming support.
-- [`files/create`](./tools/files/create) - Create a new file or replace file contents.
+- [`files/list`](./tools/files/list) - Lists one directory like `ls -l` (permissions, owner, size, dates, symlink targets; dotfiles with `all`).
+- [`files/read`](./tools/files/read) - Reads a text file as raw text: by line range or byte range, default cap 10 KiB, binary refused.
+- [`files/create`](./tools/files/create) - Writes a whole file (creates parents, replaces existing content; empty content only touches).
 - [`files/update`](./tools/files/update) - Programmatically edit a file by appending text or replacing specific line ranges.
-- [`files/find`](./tools/files/find) - Search for files in a directory hierarchy.
+- [`files/find`](./tools/files/find) - Searches a directory tree by name, type, age or size (no result cap, so narrow it).
 - [`files/filetype`](./tools/files/filetype) - Determines a file's MIME type natively (what `file -b --mime-type` answers).
 - [`files/chmod`](./tools/files/chmod) - Changes permission bits (octal or symbolic); never follows symlinks.
 - [`files/chown`](./tools/files/chown) - Changes owner and/or group; never follows symlinks.
@@ -93,10 +93,10 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 **processes**
 - [`processes/list`](./tools/processes/list) - Lists running processes on the system.
 - [`processes/top`](./tools/processes/top) - A `top -b -n 1` snapshot: load, tasks, CPU and memory header plus all of top's columns.
-- [`processes/delete`](./tools/processes/delete) - Terminates a specific process by PID.
+- [`processes/delete`](./tools/processes/delete) - Sends one signal (default SIGTERM) to one PID; does not verify the process exited.
 
 **network**
-- [`network/nslookup`](./tools/network/nslookup) - Query DNS records natively.
+- [`network/nslookup`](./tools/network/nslookup) - Resolves A, AAAA, CNAME, TXT, MX, NS records through the host's resolver.
 - [`network/curl`](./tools/network/curl) - Transfer data from a URL using native HTTP client.
 - [`network/arp`](./tools/network/arp) - View the system ARP cache (IP to MAC address mappings).
 - [`network/ping`](./tools/network/ping) - Measure TCP reachability and latency to a host.
@@ -121,7 +121,7 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 - [`kernel/system-control`](./tools/kernel/system-control) - Reads or writes kernel parameters (sysctl equivalent) at runtime.
 
 **cpu**
-- [`cpu/list`](./tools/cpu/list) - Retrieves CPU topology and architecture.
+- [`cpu/list`](./tools/cpu/list) - Lists logical CPUs from `/proc/cpuinfo` (raw fields, architecture-dependent).
 - [`cpu/load-average`](./tools/cpu/load-average) - Retrieves system load averages (1m, 5m, 15m).
 
 **users**

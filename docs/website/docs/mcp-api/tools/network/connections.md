@@ -2,7 +2,7 @@
 
 **Tool Name**: `network/connections`
 
-Lists TCP and UDP sockets in every state with the processes that own them - what `ss -tuanp` shows - read natively from `/proc/net/{tcp,tcp6,udp,udp6}` and `/proc/<pid>/fd`, so it needs no `ss` on the host. For physical network links and IPs, use the `network://interfaces` resource.
+Lists TCP and UDP sockets in every state with their owning processes, like `ss -tuanp`, read natively from /proc/net (no ss needed). Read-only; unix and raw sockets are not included. `state` (case-insensitive, `_` and `-` interchangeable) filters by LISTEN (includes unconnected UDP), ESTABLISHED, TIME_WAIT, CLOSE_WAIT, SYN_SENT, ... or the groups connected/synchronized; an invalid state is an error listing the valid names. `port` matches the local OR peer port. The owning process (pid, fd) is shown only for sockets whose /proc/PID/fd you can read; other users' processes need `privileged: true` (needs a grant). Text output has `ss -tuanp` columns; `output_format: json` returns an array of objects (netid, state, recv_q, send_q, local_address, local_port, peer_address, peer_port, uid, inode, processes), `[]` when empty. For the ARP cache use `network/arp`, for interfaces and IPs the `network://interfaces` resource, for process details `processes/list`.
 
 | Argument | Meaning |
 |---|---|

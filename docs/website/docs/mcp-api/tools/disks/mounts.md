@@ -2,7 +2,7 @@
 
 **Tool Name**: `disks/mounts`
 
-Lists mounted filesystems (device, mount point, type, options) - equivalent to `mount`/`findmnt`'s basic view. Use disks/list for block devices instead.
+Lists mounted filesystems (device, mount point, type, options) from /proc/thread-self/mounts, sorted by mount point. Read-only. `fs_type` filters by exact type (`ext4`, `overlay`, `tmpfs`; no globs). It reads the daemon's own mount namespace, so in a container use `privileged: true` (needs a grant) to get the host's mounts. Text lines look like `/dev/sda1 on /mnt type ext4 (rw,...)`; `output_format: json` returns an array of objects (device, mount_point, fs_type, options), or `null` rather than `[]` when nothing matches (text is then empty). For block devices use `disks/list`, for the space used on a mount `disks/free`.
 
 When `mcpd` runs containerized, passing `privileged: true` automatically shows the real host's mount table instead of the daemon's own container's - see [Master Daemon Configuration](../../../configuration/daemon.md)'s `worker.containerized` setting.
 

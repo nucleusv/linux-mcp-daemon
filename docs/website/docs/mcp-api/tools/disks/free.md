@@ -2,7 +2,7 @@
 
 **Tool Name**: `disks/free`
 
-Returns disk space statistics of the filesystem holding a path, like df - in bytes, or like df -h with human_readable. Use disks/list to see all block devices.
+Reports space on the ONE filesystem holding `path` (statfs, like `df` for a single path): total, used and free bytes and use percent (`human_readable` for GiB). Read-only; `path` must be absolute. It does not name the device or mount point: use `disks/mounts` for that, `disks/list` for block devices, `disks/usage` to see which folders use the space. There is no all-filesystems mode; call it once per mount point. `free` is what non-root users can use, and `used` is total minus that. `inodes: true` returns inode counts as plain text and ignores `output_format` and `human_readable`. Text output is three lines; `output_format: json` returns an object (path, total_bytes, used_bytes, free_bytes, use_percent, plus total_human, used_human, free_human with `human_readable`). `privileged: true` (a grant, and a `paths:` entry for root) only for paths you cannot stat.
 
 | Parameter | Description |
 |---|---|

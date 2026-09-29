@@ -2,7 +2,7 @@
 
 **Tool Name**: `daemon/reload-config`
 
-Re-reads mcpd's config files - `daemon.yaml`, `users.yaml` and `mcp-sudo.yaml` - and applies them without restarting the daemon: users and tokens, per-user grants, rate limits and tool timeouts. It takes no arguments and returns what changed.
+Re-reads mcpd's config files (daemon.yaml, users.yaml, mcp-sudo.yaml) and applies them without a restart: users and tokens, per-user grants, rate limits and tool timeouts. The files themselves are edited on the host (linuxctl); this only reloads them. Mutating (replaces the in-memory config) and always needs `allowed: true` for `daemon/reload-config` in the caller's grant; there is no unprivileged mode. The files are validated strictly first (a misspelled key is an error): if any is invalid nothing changes and the error is returned. Sessions of removed users and of users whose token changed are closed, possibly the caller's own. Server settings (port, TLS, `worker.containerized`, Docker socket) still need a restart. Returns free text listing what changed. Takes no parameters; verify grants afterwards with `auth/sudo-rules`.
 
 - **It only reads the files.** They are edited on the host - with `linuxctl create|update|delete mcpd user` or `linuxctl edit mcpd config`, which call this tool afterwards themselves. There is deliberately no MCP tool that writes them.
 - **Validated first, strictly.** If any file is invalid - including a key mcpd doesn't know, such as `path:` for `paths:` - nothing changes, the daemon keeps running on the config it has, and the error is returned.

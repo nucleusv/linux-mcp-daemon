@@ -2,7 +2,7 @@
 
 **Tool Name**: `docker/volumes`
 
-Lists Docker volumes with driver, mountpoint and the containers currently mounting each (Docker reports only a refcount; the names are more useful, so this cross-references the container list). Read-only: no create, no remove - a volume is the one part of a Docker install that holds data nothing else can rebuild. Hint: for one volume's options and labels read volume://\<name\>/inspect. This tool always runs as root (the Docker socket is root-owned), so it takes no `privileged` argument - a call is refused unless this user's grant in mcp-sudo.yaml allows it.
+Lists Docker volumes with driver, mountpoint (a host path) and the names of the containers, running or stopped, that mount each. Read-only: volumes are never created or removed here. `pattern` is a glob on the volume name. Text is a block per volume; `output_format: json` (also yaml/table/wide) returns an array of objects (name, driver, mountpoint, created, scope, labels, options, in_use_by), `[]` when empty. `docker/prune` with target `volumes` removes anonymous unused volumes only. For one volume's details use the `volume://<name>/inspect` resource, for containers `docker/containers`. Always runs as root: no `privileged` argument, refused unless the grant has `allowed: true`.
 
 `In use by` is computed from the container list, so it names containers whether they are running or stopped - a stopped container still holds its volume. An empty list means no container mounts it, which is the closest thing to "safe to delete" this tool will tell you; deleting it is still someone else's job.
 

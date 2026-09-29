@@ -2,7 +2,7 @@
 
 **Tool Name**: `disks/health`
 
-Retrieves detailed SMART health data for a drive (equivalent to smartctl -j -a). Returns JSON containing self-assessment test results, temperature, wear leveling, and sector errors. Must be run as root (privileged: true). Use this to diagnose failing hardware.
+Returns a drive's SMART data as smartctl's JSON (wraps `smartctl -j -a`; the smartmontools package must be installed or the call fails saying so). Read-only, but normally needs root: use `privileged: true` (needs a grant), since without it smartctl usually cannot open the device. `device` is a bare kernel name such as `sda` or `nvme0n1`, never a path; find names with `disks/list`. The reply is smartctl's JSON verbatim (keys such as smart_status, temperature, ata_smart_attributes or nvme_smart_health_information_log vary by drive type); a non-zero smartctl exit is not an error when it printed JSON, and virtual disks report SMART as unsupported. For I/O counters use `disks/performance`.
 
 ## Example
 

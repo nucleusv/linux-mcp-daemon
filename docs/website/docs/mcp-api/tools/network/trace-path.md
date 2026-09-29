@@ -2,7 +2,7 @@
 
 **Tool Name**: `network/trace-path`
 
-Traces the network path to a host (equivalent to traceroute). Useful for debugging routing issues, identifying where packets are dropped, or measuring network latency across hops. Hint: Use network/ping for basic reachability before tracing the path.
+Traces the network path to a host by running the external `traceroute` binary (not tracepath; it must be installed on the host). Read-only, but it sends probe packets. `host` is a hostname or IP; `max_hops` defaults to traceroute's 30 and is capped at 255. There is no timeout parameter and the 30 s worker limit kills slow traces (30 hops x 3 probes can take minutes), so set a low `max_hops` such as 15. Non-responding hops show as `* * *`. Returns traceroute's raw text; there is no `output_format`. Use `network/ping` first for basic reachability, `network/nslookup` for DNS problems.
 
 ## Example
 

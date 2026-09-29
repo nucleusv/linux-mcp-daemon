@@ -2,7 +2,7 @@
 
 **Tool Name**: `logs/logins`
 
-Lists login history (wraps `last`) or failed login attempts (`type: "failed"`, wraps `lastb`). Returns raw text, not JSON - `last`/`lastb`'s output isn't safe to hand-parse into structured data reliably.
+Lists login history (wraps `last`) or failed login attempts (`type: "failed"`, wraps `lastb`). Read-only; returns raw text, not JSON. `limit` keeps the N most recent entries and `user` filters by username; the trailing `wtmp begins...` summary line is dropped and an empty history returns an empty line. `last`/`lastb` must be installed on the host. For account details use `users/list`, for authentication messages `logs/journal-control`.
 
 `type: "failed"` typically requires `privileged: true`, since `btmp` is usually root-only readable. When `mcpd` runs containerized, `privileged: true` also automatically reads the real host's login history - see [Master Daemon Configuration](../../../configuration/daemon.md)'s `worker.containerized` setting.
 

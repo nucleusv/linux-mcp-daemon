@@ -18,42 +18,42 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 	// between the authorization check and the call it authorizes.
 	sudoCfg := h.Sudo()
 	// Dynamically generate the tools list based on sudo rules.
-	listDesc := "Lists a directory like ls -la: file type and permissions, link count, owner, group, size, modification time and symlink targets (symlinks are shown, never followed)."
+	listDesc := "Lists the entries of ONE directory like `ls -l` (dotfiles, `.` and `..` are hidden unless `all: true`): type and permissions, link count, owner, group, size, modification time and symlink targets (symlinks are shown, never followed). Read-only, not recursive, no entry cap; `path` must be absolute. For a recursive or filtered search use `files/find`, for a directory's total size `disks/usage`, for a file's MIME type `files/filetype`. On permission denied retry with `privileged: true` if granted (root calls also need a `paths:` entry covering the path). Text output is `ls -l` lines (`Directory is empty.` when empty; `long: false` gives names only, directories suffixed `/`). `output_format: json` returns an array of objects (name, type, mode, mode_octal, links, owner, group, uid, gid, size, modified, is_dir, target), `[]` when empty."
 	if sudoCfg.CanRunAsRoot(session.User, "files/list") {
 		listDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
 	}
 
-	dfDesc := "Returns disk space statistics of the filesystem holding a path, like df - in bytes, or like df -h with human_readable. Use disks/list to see all block devices."
+	dfDesc := "Reports space on the ONE filesystem holding `path` (statfs, like `df` for a single path): total, used and free bytes and use percent (`human_readable` for GiB). Read-only; `path` must be absolute. It does not name the device or mount point: use `disks/mounts` for that, `disks/list` for block devices, `disks/usage` to see which folders use the space. There is no all-filesystems mode; call it once per mount point. `free` is what non-root users can use, and `used` is total minus that. `inodes: true` returns inode counts as plain text and ignores `output_format` and `human_readable`. Text output is three lines; `output_format: json` returns an object (path, total_bytes, used_bytes, free_bytes, use_percent, plus total_human, used_human, free_human with `human_readable`). `privileged: true` (a grant, and a `paths:` entry for root) only for paths you cannot stat."
 	if sudoCfg.CanRunAsRoot(session.User, "disks/free") {
 		dfDesc += " (Authorized for 'privileged: true')"
 	}
 
-	duDesc := "Calculates the disk space used by a directory, like du -s - in bytes, or like du -sh with human_readable. Use disks/free for overall partition stats."
+	duDesc := "Measures how much disk space a directory tree uses (native walk, like `du`). Read-only. For the free space of a whole filesystem use `disks/free`; to find individual big files use `files/find` with `size`. By default the reply is one grand total; `max_depth: N` also lists directories up to N levels deep, largest first; `all: true` adds a per-file list (text output only). Sizes are allocated blocks unless `apparent_size: true`; hard links count once, symlinks are never followed. `exclude` patterns containing `/` match the full path (`/proc`, `/var/lib/*`), others the base name. Unreadable directories are skipped silently, so an unprivileged total can under-count: use `privileged: true` (a grant with a `paths:` entry). Results are cached for 60 s per user and arguments. The shipped config allows 300 s, otherwise the default is 30 s. Text ends with `Total size of PATH: N`; `output_format: json` returns an object (path, total_size, human_size with `human_readable`, directory_sizes as a path-to-bytes map only when `max_depth` > 0)."
 	if sudoCfg.CanRunAsRoot(session.User, "disks/usage") {
 		duDesc += " (Authorized for 'privileged: true' to traverse protected subdirectories)"
 	}
 
-	filetypeDesc := "Determines a file's MIME type - the answer `file -b --mime-type` gives, detected natively from the file's first bytes (no file(1) needed). A symlink is reported as inode/symlink, not followed. Use files/stat for size/permissions/ownership instead."
+	filetypeDesc := "Returns a file's MIME type, like `file -b --mime-type`, detected natively from its first 8 KiB (no file(1) needed); read-only, `path` must be absolute. A symlink is reported as `inode/symlink` (never followed); directories, devices, fifos and sockets as `inode/...`. Use it before `files/read`, which refuses binary files. For size, permissions or ownership use `files/list`; for contents `files/read`. The reply is always one plain-text line (no `output_format`). `privileged: true` (a grant, and for root a `paths:` entry) reads files your account cannot."
 	if sudoCfg.CanRunAsRoot(session.User, "files/filetype") {
 		filetypeDesc += " (Hint: You are authorized to run this tool as root. Use 'privileged: true' if you receive permission denied errors on sensitive paths)."
 	}
 
-	pkgDesc := "Lists installed packages, auto-detecting the package manager (dpkg, apk; rpm-based systems aren't supported natively yet)."
+	pkgDesc := "Lists installed packages by parsing the package database (dpkg on Debian/Ubuntu, apk on Alpine); rpm-based systems return an error, not supported yet. Read-only. The whole list is returned with no cap (hundreds of entries), so filter with `name`: an exact name or a glob (`openssh-*`, `*ssl*`). Only packages with status installed are listed. Text has a header `N packages installed (dpkg)` and a NAME VERSION ARCH table; `output_format: json` returns an array of objects (name, version, architecture), `[]` when none; there are no description or size fields. For OS and kernel version use `system/os-release`."
 	if sudoCfg.CanRunAsRoot(session.User, "system/packages") {
 		pkgDesc += " (Authorized for 'privileged: true' - when this daemon runs containerized, that automatically queries the real host's packages, not this container's own image.)"
 	}
 
-	mountsDesc := "Lists mounted filesystems (device, mount point, type, options) - equivalent to `mount`/`findmnt`'s basic view. Use disks/list for block devices instead."
+	mountsDesc := "Lists mounted filesystems (device, mount point, type, options) from /proc/thread-self/mounts, sorted by mount point. Read-only. `fs_type` filters by exact type (`ext4`, `overlay`, `tmpfs`; no globs). It reads the daemon's own mount namespace, so in a container use `privileged: true` (needs a grant) to get the host's mounts. Text lines look like `/dev/sda1 on /mnt type ext4 (rw,...)`; `output_format: json` returns an array of objects (device, mount_point, fs_type, options), or `null` rather than `[]` when nothing matches (text is then empty). For block devices use `disks/list`, for the space used on a mount `disks/free`."
 	if sudoCfg.CanRunAsRoot(session.User, "disks/mounts") {
 		mountsDesc += " (Authorized for 'privileged: true' - when this daemon runs containerized, that automatically shows the real host's mount table, not this container's own.)"
 	}
 
-	usersDesc := "Lists user accounts from /etc/passwd (uid, gid, home, shell, group memberships). Never reads /etc/shadow - this reports account identity, not credentials."
+	usersDesc := "Lists local user accounts from /etc/passwd and /etc/group (uid, gid, home, shell, supplementary group memberships), sorted by uid. Read-only. Never reads /etc/shadow - this reports account identity, not credentials. Local files only: LDAP/SSSD users are not listed. `min_uid` (e.g. 1000) hides system accounts. Text lines look like `name (uid=N gid=N(group)) home=... shell=... groups=a,b`; `output_format: json` returns an array of objects (username, uid, gid, group_name, comment, home_dir, shell, groups). For who logged in use `logs/logins`, for your own root grants `auth/sudo-rules`."
 	if sudoCfg.CanRunAsRoot(session.User, "users/list") {
 		usersDesc += " (Authorized for 'privileged: true' - when this daemon runs containerized, that automatically lists the real host's users, not this container's own.)"
 	}
 
-	loginsDesc := "Lists login history (wraps `last`) or failed login attempts (`type: \"failed\"`, wraps `lastb`). Returns raw text, not JSON - last/lastb's output isn't safe to hand-parse into structured data reliably."
+	loginsDesc := "Lists login history (wraps `last`) or failed login attempts (`type: \"failed\"`, wraps `lastb`). Read-only; returns raw text, not JSON. `limit` keeps the N most recent entries and `user` filters by username; the trailing `wtmp begins...` summary line is dropped and an empty history returns an empty line. `last`/`lastb` must be installed on the host. For account details use `users/list`, for authentication messages `logs/journal-control`."
 	if sudoCfg.CanRunAsRoot(session.User, "logs/logins") {
 		loginsDesc += " (Authorized for 'privileged: true' - typically required for type: \"failed\", since btmp is usually root-only readable. When this daemon runs containerized, privileged also automatically reads the real host's login history.)"
 	}
@@ -68,8 +68,8 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format":  map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"path":           map[string]interface{}{"type": "string", "description": "Directory path to list"},
+						"output_format":  map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
+						"path":           map[string]interface{}{"type": "string", "description": "Absolute path of the directory to list"},
 						"all":            map[string]interface{}{"type": "boolean", "description": "Include dotfiles, . and .. (ls -a)"},
 						"long":           map[string]interface{}{"type": "boolean", "description": "Long listing like ls -l: type+permissions, links, owner, group, size, date, symlink target. Default true; false lists names only"},
 						"human_readable": map[string]interface{}{"type": "boolean", "description": "Sizes like 4.0K, 1.5M (ls -h); default is bytes"},
@@ -77,7 +77,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"reverse":        map[string]interface{}{"type": "boolean", "description": "Reverse the sort order (ls -r)"},
 						"dirs_first":     map[string]interface{}{"type": "boolean", "description": "List directories before files"},
 						"numeric_ids":    map[string]interface{}{"type": "boolean", "description": "Show numeric uid/gid instead of names (ls -n)"},
-						"privileged":     map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						"privileged":     map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused"},
 					},
 					"required": []string{"path"},
 				},
@@ -86,16 +86,16 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "files/read",
 				"tools_group":   "files",
 				"linuxctl_verb": "get",
-				"description":   "Precision reading of file contents with chunking/streaming support.",
+				"description":   "Reads a text file and returns its contents as raw text (no line numbers or metadata). Read-only; `path` must be absolute. To find a file use `files/find`, for size or mode `files/list`, to check whether it is binary `files/filetype` (binary files are refused with `cannot read binary file`). Selection: `start_line`/`end_line` (1-indexed, inclusive; `start_line` alone reads to the end, `end_line` alone starts at line 1) take precedence over the byte range `offset`/`limit`. With no selection, or `offset` without `limit`, at most 10240 bytes come back followed by a `[WARNING: File truncated ...]` line, so page large files with `start_line`/`end_line` or pass `limit`. There is no streaming: one call reads into memory, and a line over 64 KiB fails line mode. A `start_line` past the end is an error; an empty file returns an empty string. `privileged: true` (needs a grant, and a `paths:` entry for root) reads files your account cannot.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"path":       map[string]interface{}{"type": "string", "description": "Path to the file to read"},
-						"start_line": map[string]interface{}{"type": "integer", "description": "Starting line number (1-indexed). Takes precedence over byte offsets."},
-						"end_line":   map[string]interface{}{"type": "integer", "description": "Ending line number (inclusive)."},
-						"offset":     map[string]interface{}{"type": "integer", "description": "Starting byte offset."},
-						"limit":      map[string]interface{}{"type": "integer", "description": "Number of bytes to read."},
-						"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to read as root"},
+						"path":       map[string]interface{}{"type": "string", "description": "Absolute path of the file to read"},
+						"start_line": map[string]interface{}{"type": "integer", "description": "First line to return (1-indexed). With or without end_line it takes precedence over offset/limit; alone it reads to the end of the file"},
+						"end_line":   map[string]interface{}{"type": "integer", "description": "Last line to return (inclusive); alone it starts at line 1. Ignored if below start_line"},
+						"offset":     map[string]interface{}{"type": "integer", "description": "Byte offset to start at; ignored when start_line/end_line is given. Without limit at most 10240 bytes are returned"},
+						"limit":      map[string]interface{}{"type": "integer", "description": "Number of bytes to return (no upper cap). With no selection at all, the first 10240 bytes are returned"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused"},
 					},
 					"required": []string{"path"},
 				},
@@ -104,13 +104,13 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "files/create",
 				"tools_group":   "files",
 				"linuxctl_verb": "create",
-				"description":   "Create a new file or replace file contents.",
+				"description":   "Writes a whole file: creates it, or REPLACES the content of an existing one entirely. Mutating and not atomic. Missing parent directories are created (mode 0755); a new file gets mode 0644, an existing file keeps its mode. With `content` omitted or empty it only touches: creates an empty file or refreshes the modification time and never truncates an existing file. To change part of an existing file use `files/update` (append or replace lines); to check first whether a path exists use `files/list` or `files/find`; afterwards set mode or owner with `files/chmod`/`files/chown`. `content` is text and no trailing newline is added; `path` must be absolute. Writing where your account cannot needs `privileged: true` (a grant, and for root a `paths:` entry covering the path, which also refuses symlinks in the path; otherwise a symlink at the path is followed). Returns one line, `Successfully created and wrote to PATH` or `Successfully touched PATH`; failures are plain text such as `failed to write to file`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"path":       map[string]interface{}{"type": "string", "description": "Path to the file to create"},
-						"content":    map[string]interface{}{"type": "string", "description": "Text content to write to the file"},
-						"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to write as root"},
+						"path":       map[string]interface{}{"type": "string", "description": "Absolute path of the file; missing parent directories are created"},
+						"content":    map[string]interface{}{"type": "string", "description": "Text to write; replaces any existing content entirely, no newline is added. Omit or leave empty to only create an empty file or refresh its mtime (never truncates)"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused"},
 					},
 					"required": []string{"path"},
 				},
@@ -119,16 +119,16 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "files/update",
 				"tools_group":   "files",
 				"linuxctl_verb": "update",
-				"description":   "Programmatically edit a file by appending text or replacing specific line ranges.",
+				"description":   "Edits part of an EXISTING file in place: appends text or replaces an inclusive line range. Mutating and not atomic; the file keeps its mode and owner. To write a whole file use `files/create`; to see the lines first use `files/read` with `start_line`/`end_line`. With `append: true` exactly `content` is added at the end (no newline is added, include your own) and the file is created if missing, though not its parent directories; append wins over any line range. Otherwise `start_line` AND `end_line` are both required (1-indexed, `end_line` >= `start_line`), the file must exist, and those lines are replaced by `content` (one trailing newline of `content` is ignored; an `end_line` past the end is clamped; a `start_line` past the end adds `content` as a new last line). There is no insert or delete mode: replacing with empty `content` leaves one empty line. Returns `Successfully appended to PATH` or `Successfully updated lines A-B in PATH`, no diff. `path` must be absolute; `privileged: true` (a grant, and for root a `paths:` entry) edits files you cannot write.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"path":       map[string]interface{}{"type": "string", "description": "Path to the file to edit"},
-						"content":    map[string]interface{}{"type": "string", "description": "Text content to insert or append"},
-						"append":     map[string]interface{}{"type": "boolean", "description": "If true, appends the content to the end of the file"},
-						"start_line": map[string]interface{}{"type": "integer", "description": "Start of the line range to replace (1-indexed)"},
-						"end_line":   map[string]interface{}{"type": "integer", "description": "End of the line range to replace (inclusive)"},
-						"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to edit as root"},
+						"path":       map[string]interface{}{"type": "string", "description": "Absolute path of the file to edit"},
+						"content":    map[string]interface{}{"type": "string", "description": "Text to append, or to replace the line range with (no newline is added when appending)"},
+						"append":     map[string]interface{}{"type": "boolean", "description": "If true, append content at the end (creates the file if missing); takes precedence over start_line/end_line"},
+						"start_line": map[string]interface{}{"type": "integer", "description": "First line to replace (1-indexed); required together with end_line unless append is true"},
+						"end_line":   map[string]interface{}{"type": "integer", "description": "Last line to replace (inclusive, >= start_line; past the end of the file is clamped)"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused"},
 					},
 					"required": []string{"path", "content"},
 				},
@@ -137,19 +137,19 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "files/find",
 				"tools_group":   "files",
 				"linuxctl_verb": "find",
-				"description":   "Search for files in a directory hierarchy.",
+				"description":   "Searches a directory tree (default `/`) by name, type, age or size, like `find`. Read-only; never follows symlinks; skips `/proc`, `/sys`, `/dev` and `/run` when the search starts at `/` or above them (not when `path` is inside one). Use `files/list` to see one known directory and `disks/usage` to see which folders take the space. All filters are ANDed and none is required. There is NO result cap: `path: /` without a filter lists every file on the host, so give `name`, `type` or `max_depth`; the 30 s worker timeout applies. Syntax: `name` is a case-sensitive glob on the base name only (`*.log`, not a path); `type` is one of `f d l b c p s` or a comma list (`f,d`); `mtime` in days: `+7` older than 7 days, `-1` within the last day, `7` exactly 7 days; `size`: `+100M` larger, `-10k` smaller (units b c w k M G, rounded up); `max_depth` 1 = direct children, omitted or 0 = unlimited. Unreadable directories are skipped silently. Text output: one `SIZE PATH` line per match, sorted by path (no size for directories; empty output = no match). `output_format: json` returns an array of objects (path, size in bytes, type).",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"human_readable": map[string]interface{}{"type": "boolean", "description": "Sizes like 1.5 KiB; default is bytes"},
-						"output_format":  map[string]interface{}{"type": "string", "description": "Desired output format. Defaults to text"},
-						"path":           map[string]interface{}{"type": "string", "description": "Starting directory for the search. Defaults to '/'"},
-						"name":           map[string]interface{}{"type": "string", "description": "Glob pattern to match filenames"},
-						"type":           map[string]interface{}{"type": "string", "description": "File type ('f' for file, 'd' for directory, 'l' for symlink)"},
-						"mtime":          map[string]interface{}{"type": "string", "description": "Modification time (e.g. '+7' for older than 7 days)"},
-						"size":           map[string]interface{}{"type": "string", "description": "File size (e.g. '+100M' for larger than 100MB)"},
-						"max_depth":      map[string]interface{}{"type": "integer", "description": "Maximum depth for directory recursion"},
-						"privileged":     map[string]interface{}{"type": "boolean", "description": "Set to true to search as root"},
+						"human_readable": map[string]interface{}{"type": "boolean", "description": "Text output only: sizes like 1.5 KiB; default is bytes"},
+						"output_format":  map[string]interface{}{"type": "string", "description": "json (yaml, table and wide return the same JSON) gives an array of objects with path, size, type; default is text"},
+						"path":           map[string]interface{}{"type": "string", "description": "Absolute starting directory (default /). A large tree with no filter can take longer than the 30 s worker limit"},
+						"name":           map[string]interface{}{"type": "string", "description": "Glob on the file's base name only, case-sensitive, e.g. '*.log' (not a path pattern)"},
+						"type":           map[string]interface{}{"type": "string", "description": "f file, d directory, l symlink, b, c, p, s; or a comma list such as 'f,d'"},
+						"mtime":          map[string]interface{}{"type": "string", "description": "Days since modification: '+7' older than 7 days, '-1' within the last day, '7' exactly 7 days"},
+						"size":           map[string]interface{}{"type": "string", "description": "'+100M' larger than 100 MiB, '-10k' smaller than 10 KiB; units b c w k M G, rounded up to the unit"},
+						"max_depth":      map[string]interface{}{"type": "integer", "description": "Levels below path to descend (1 = direct children); omit or 0 for unlimited"},
+						"privileged":     map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused"},
 					},
 					"required": []string{},
 				},
@@ -163,7 +163,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 					"type": "object",
 					"properties": map[string]interface{}{
 						"path":       map[string]interface{}{"type": "string", "description": "Absolute path to the file"},
-						"privileged": map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused"},
 					},
 					"required": []string{"path"},
 				},
@@ -172,14 +172,14 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "files/chmod",
 				"tools_group":   "files",
 				"linuxctl_verb": "chmod",
-				"description":   "Changes a file's or directory's permission bits (chmod). Never follows symbolic links: a path containing a symlink in any component is refused, and recursive changes skip symlinks and report them. Numeric modes follow GNU chmod semantics (on directories a 4-digit mode keeps setuid/setgid; use 5 digits, e.g. 00755, to set them exactly).",
+				"description":   "Changes a file's or directory's permission bits (chmod). Mutating and idempotent; for owner or group use `files/chown`, to check the result `files/list`. Never follows symbolic links: a path containing a symlink in any component is refused, and recursive changes skip symlinks and report them. Numeric modes follow GNU chmod semantics (on directories a 4-digit mode keeps setuid/setgid; use 5 digits, e.g. 00755, to set them exactly); a bare `755` is octal. Changing a file you do not own needs `privileged: true` (a grant, and a `paths:` entry for root). Single change returns `PATH: 0644 (-rw-r--r--) -> 0755 (-rwxr-xr-x)`, or `... unchanged` if already set. A recursive run prints one line per changed entry, then `changed N, unchanged M` (plus skipped symlinks) and per-entry errors; it is not atomic, so partial success is possible.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"path":       map[string]interface{}{"type": "string", "description": "Absolute path"},
 						"mode":       map[string]interface{}{"type": "string", "description": "Octal (644, 0755, 4755) or symbolic (u+x, go-w, a=r, +X, u+s, +t; comma-separated)"},
 						"recursive":  map[string]interface{}{"type": "boolean", "description": "Also apply to everything below a directory (symlinks are skipped, never followed)"},
-						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - needed for files you don't own"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - needed for files you don't own. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path"},
 					},
 					"required": []string{"path", "mode"},
 				},
@@ -188,14 +188,14 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "files/chown",
 				"tools_group":   "files",
 				"linuxctl_verb": "chown",
-				"description":   "Changes a file's or directory's owner and/or group (chown). Never follows symbolic links: a path containing a symlink in any component is refused, and recursive changes skip symlinks and report them. Changing the owner requires privileged: true.",
+				"description":   "Changes a file's or directory's owner and/or group (chown). Mutating and idempotent; for permission bits use `files/chmod`, to check the result `files/list`. Never follows symbolic links: a path containing a symlink in any component is refused, and recursive changes skip symlinks and report them. Changing the owner requires `privileged: true` (a grant, and a `paths:` entry for root). `owner` is `user`, `user:group`, `:group` or `user:` (the user's login group), with names or numeric ids; names are looked up in the host's /etc/passwd and /etc/group and an unknown one fails (`no such user`). Returns `PATH: old -> new` as owner:group, or `unchanged`; a recursive run prints one line per changed entry then a summary with skipped symlinks and per-entry errors, and is not atomic.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"path":       map[string]interface{}{"type": "string", "description": "Absolute path"},
 						"owner":      map[string]interface{}{"type": "string", "description": "user, user:group, :group, or user: (the user's login group); names or numeric ids"},
 						"recursive":  map[string]interface{}{"type": "boolean", "description": "Also apply to everything below a directory (symlinks are skipped, never followed)"},
-						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - required to change ownership"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - required to change ownership. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path"},
 					},
 					"required": []string{"path", "owner"},
 				},
@@ -208,11 +208,11 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format":  map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
+						"output_format":  map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
 						"path":           map[string]interface{}{"type": "string", "description": "Absolute path to check"},
-						"inodes":         map[string]interface{}{"type": "boolean", "description": "List inode information instead of block usage (-i)"},
+						"inodes":         map[string]interface{}{"type": "boolean", "description": "Report inode counts instead of block usage (-i); the reply is always plain text and ignores output_format and human_readable"},
 						"human_readable": map[string]interface{}{"type": "boolean", "description": "Sizes like 53.2 GiB (df -h); default is bytes"},
-						"privileged":     map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						"privileged":     map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused"},
 					},
 					"required": []string{"path"},
 				},
@@ -226,16 +226,16 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 					"type": "object",
 					"properties": map[string]interface{}{
 						"human_readable":  map[string]interface{}{"type": "boolean", "description": "Sizes like du -h (4.0 KiB); default is bytes"},
-						"output_format":   map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"path":            map[string]interface{}{"type": "string", "description": "Target directory to measure"},
-						"max_depth":       map[string]interface{}{"type": "integer", "description": "How deep to recurse (0 for summarize only)"},
+						"output_format":   map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
+						"path":            map[string]interface{}{"type": "string", "description": "Absolute path of the directory to measure"},
+						"max_depth":       map[string]interface{}{"type": "integer", "description": "0 or omitted: grand total only; N: also list directories up to N levels deep, largest first"},
 						"one_file_system": map[string]interface{}{"type": "boolean", "description": "Skip directories on different file systems (-x)"},
-						"exclude":         map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Patterns to exclude"},
-						"all":             map[string]interface{}{"type": "boolean", "description": "Write counts for all files, not just directories (-a)"},
-						"apparent_size":   map[string]interface{}{"type": "boolean", "description": "Print apparent sizes rather than device usage (--apparent-size)"},
-						"threshold":       map[string]interface{}{"type": "integer", "description": "Exclude entries smaller than SIZE if positive, or greater than SIZE if negative (-t)"},
+						"exclude":         map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Patterns to skip: one containing '/' matches the full path (e.g. '/proc', '/var/lib/*'), others the base name (e.g. '*.tmp')"},
+						"all":             map[string]interface{}{"type": "boolean", "description": "Also list every file, largest first (text output only)"},
+						"apparent_size":   map[string]interface{}{"type": "boolean", "description": "Report logical file sizes instead of allocated disk blocks"},
+						"threshold":       map[string]interface{}{"type": "integer", "description": "Bytes: a positive value hides entries smaller than this, a negative value hides larger ones (printed lines only)"},
 						"separate_dirs":   map[string]interface{}{"type": "boolean", "description": "For directories do not include size of subdirectories (-S)"},
-						"privileged":      map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						"privileged":      map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused"},
 					},
 					"required": []string{"path"},
 				},
@@ -244,7 +244,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "processes/top",
 				"tools_group":   "processes",
 				"linuxctl_verb": "top",
-				"description":   "A snapshot like `top -b -n 1`: header with uptime, logged-in users, load average, task counts by state, CPU breakdown (us/sy/ni/id/wa/hi/si/st) and memory/swap (bytes; MiB with human_readable), followed by the process table with all of top's columns (PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND). %CPU is measured over a short sampling interval, as top does. Use processes/list for a plain listing, processes/delete to signal a process.",
+				"description":   "Snapshot like `top -b -n 1`, read from `/proc`: header (uptime, users, load average, task counts by state, CPU us/sy/ni/id/wa/hi/si/st, memory and swap) plus the process table (PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND), sorted by `sort_by` (default cpu). Read-only. %CPU is measured over `interval_ms` (default 1000, max 10000), so the call takes about that long. For a lighter PID list or a single PID use `processes/list`; to signal a process `processes/delete`; for memory totals only `memory/usage`; for which process owns a port `network/connections`. `limit` defaults to all processes; `user` is an exact username. Sizes are bytes (MiB with `human_readable`). `output_format`: default and `table` give top's layout, `wide` adds PPID, THR and full command lines, `json`/`yaml` return an object with `summary` and `processes` (memory in bytes).",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -254,7 +254,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"user":           map[string]interface{}{"type": "string", "description": "Only this user's processes"},
 						"interval_ms":    map[string]interface{}{"type": "integer", "description": "%CPU sampling interval in milliseconds (default 1000, max 10000)"},
 						"output_format":  map[string]interface{}{"type": "string", "description": "Default/table: top's own layout. wide: adds PPID, THR and full command lines (like top -c). json/yaml: structured {summary, processes}, memory in bytes (mem_bytes, swap_bytes, virt_bytes, res_bytes, shr_bytes)"},
-						"privileged":     map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						"privileged":     map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused"},
 					},
 				},
 			},
@@ -262,17 +262,17 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "processes/list",
 				"tools_group":   "processes",
 				"linuxctl_verb": "get",
-				"description":   "Lists running processes on the system. Use this to find a PID, then use the process://{pid}/{target} resource for deep metrics or processes/delete to kill it.",
+				"description":   "Lists processes (PID, PPID, user, state, RSS, command) read from `/proc`. Read-only. Use it to find a PID, filter by `user` or one `pid`, or sort by memory. For the CPU/memory header and %CPU on every row use `processes/top`; for the process that owns a port `network/connections`; to signal a process `processes/delete`; for deep per-PID metrics the `process://<pid>/<target>` resource. Sorted by PID unless `sort_by` is `mem` (RSS, largest first) or `cpu` (samples for 0.5 s, so the call takes at least that long, and only then does `cpu_percent` appear); `limit` applies after sorting. Kernel threads appear as `[name]`. Command lines can contain secrets passed as arguments. Text output is a table; `output_format: json` returns an array of objects (pid, user, comm, state, ppid, rss_bytes, cmdline, cpu_percent). Sizes are bytes unless `human_readable`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"human_readable": map[string]interface{}{"type": "boolean", "description": "RSS like 10Mi; default is bytes"},
-						"output_format":  map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"user":           map[string]interface{}{"type": "string", "description": "Filter by username"},
+						"output_format":  map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
+						"user":           map[string]interface{}{"type": "string", "description": "Exact username"},
 						"pid":            map[string]interface{}{"type": "integer", "description": "Filter to a single specific PID"},
-						"sort_by":        map[string]interface{}{"type": "string", "description": "Sort by cpu, mem, or pid"},
-						"limit":          map[string]interface{}{"type": "integer", "description": "Limit returned processes"},
-						"privileged":     map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						"sort_by":        map[string]interface{}{"type": "string", "description": "pid (default), mem (RSS, largest first) or cpu (samples for 0.5 s)"},
+						"limit":          map[string]interface{}{"type": "integer", "description": "Maximum rows returned, applied after sorting"},
+						"privileged":     map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused"},
 					},
 				},
 			},
@@ -280,14 +280,14 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "processes/delete",
 				"tools_group":   "processes",
 				"linuxctl_verb": "delete",
-				"description":   "Terminates a specific process by PID.",
+				"description":   "Sends ONE signal to ONE process by PID (kill(2)); the default SIGTERM asks the process to exit. Mutating and not idempotent: it returns as soon as the signal is delivered and does not check that the process exited, and signalling a PID that is gone fails with `no such process`. Allowed `signal` values: SIGTERM, SIGKILL, SIGHUP, SIGINT, SIGQUIT, SIGUSR1, SIGUSR2, SIGSTOP, SIGCONT, SIGABRT (SIG prefix optional, case-insensitive, numbers rejected), so it can also pause (SIGSTOP) and resume (SIGCONT). Refuses PID 1 and the mcpd daemon itself. Another user's process fails with `not permitted` unless `privileged: true` (needs a grant). Find the PID first with `processes/list` or `processes/top`. To stop a managed service use `services/manage` (systemd may restart a killed one), for a container `docker/manage`. Returns one text line, `Successfully sent signal SIGTERM to process N`; `output_format` has no effect.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"pid":           map[string]interface{}{"type": "integer", "description": "The PID to kill"},
-						"signal":        map[string]interface{}{"type": "string", "description": "Signal to send (e.g., SIGTERM, SIGKILL)"},
-						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root to kill other user's processes"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Ignored - the reply is always text"},
+						"pid":           map[string]interface{}{"type": "integer", "description": "PID to signal (positive integer; PID 1 and mcpd itself are refused)"},
+						"signal":        map[string]interface{}{"type": "string", "description": "SIGTERM (default), SIGKILL, SIGHUP, SIGINT, SIGQUIT, SIGUSR1, SIGUSR2, SIGSTOP, SIGCONT or SIGABRT; SIG prefix optional, case-insensitive"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root to signal other users' processes. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused"},
 					},
 					"required": []string{"pid"},
 				},
@@ -296,12 +296,12 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "network/nslookup",
 				"tools_group":   "network",
 				"linuxctl_verb": "nslookup",
-				"description":   "Query DNS records natively.",
+				"description":   "Resolves DNS records for a hostname through the host's resolver (/etc/resolv.conf; a DNS server cannot be chosen), so answers may come from a local cache. Read-only, but it sends queries off-host. `record_type` (case-insensitive) is A, AAAA, CNAME, TXT, MX, NS or ANY; the default ANY is not a DNS ANY query but runs the CNAME, A/AAAA, TXT, MX and NS lookups in turn. Other types (SOA, PTR, SRV) are rejected, and `host` must be a name: an IP address is not reverse-resolved. Always returns JSON: an object with `host` and `records` (array of objects with `type` and `value`; an MX value looks like `10 mail.example.com.`). Empty `records` means the name exists but has no record of that type; a name that does not exist is an error (`HOST: no such host`). To test reachability use `network/ping`, to fetch a URL `network/curl`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"host":        map[string]interface{}{"type": "string"},
-						"record_type": map[string]interface{}{"type": "string", "description": "e.g. A, TXT, MX, CNAME, NS, or ANY"},
+						"host":        map[string]interface{}{"type": "string", "description": "Hostname to resolve, e.g. example.com (an IP address is not reverse-resolved)"},
+						"record_type": map[string]interface{}{"type": "string", "description": "A, AAAA, CNAME, TXT, MX, NS or ANY (default ANY: all of these are looked up in turn)"},
 					},
 					"required": []string{"host"},
 				},
@@ -310,16 +310,16 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "network/curl",
 				"tools_group":   "network",
 				"linuxctl_verb": "curl",
-				"description":   "Transfer data from a URL using native HTTP client.",
+				"description":   "Makes one HTTP(S) request with Go's HTTP client and returns status, headers and body. NOT read-only: any `method` (default GET) is sent as given, so POST, PUT or DELETE change the remote system. Follows redirects (up to 10); a non-2xx status is not an error, check `status_code`. The default timeout is 10 s (`timeout`, whole seconds) and the 30 s worker limit caps anything larger. The body is cut at `max_body` (default 1 MiB, max 10 MiB) and `truncated` is then true. `insecure` skips TLS verification. The daemon's proxy environment is honored unless the user has a `network:` policy in mcp-sudo.yaml; such a policy applies to every call and redirect hop, and a blocked destination fails to connect. Header and body values are redacted in the audit log. Returns JSON with `status_code`, `status`, `headers` (values comma-joined), `body`, `truncated`; `output_format` is ignored. For DNS use `network/nslookup`, for TCP reachability `network/ping`, for local files `files/read`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"url":      map[string]interface{}{"type": "string"},
-						"method":   map[string]interface{}{"type": "string"},
+						"url":      map[string]interface{}{"type": "string", "description": "Full URL including scheme, e.g. https://example.com/api"},
+						"method":   map[string]interface{}{"type": "string", "description": "HTTP method, default GET; any method is sent as given"},
 						"body":     map[string]interface{}{"type": "string", "description": "Request body"},
 						"headers":  map[string]interface{}{"type": "object", "description": "Request headers, e.g. {\"Content-Type\": \"application/json\"}", "additionalProperties": map[string]interface{}{"type": "string"}},
 						"insecure": map[string]interface{}{"type": "boolean", "description": "Skip TLS certificate verification"},
-						"timeout":  map[string]interface{}{"type": "number"},
+						"timeout":  map[string]interface{}{"type": "number", "description": "Whole seconds (default 10; the 30 s worker limit caps it)"},
 						"max_body": map[string]interface{}{"type": "integer", "description": "Return at most this many bytes of the response body (default 1048576 = 1 MiB, max 10 MiB); a cut body has truncated: true"},
 					},
 					"required": []string{"url"},
@@ -329,11 +329,11 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "network/arp",
 				"tools_group":   "network",
 				"linuxctl_verb": "arp",
-				"description":   "View the system ARP cache (IP to MAC address mappings).",
+				"description":   "Shows the kernel's ARP cache (IPv4 address to MAC address) from /proc/net/arp in the daemon's network namespace. Read-only. It is a cache, not a scan: only hosts contacted recently appear, and IPv6 neighbours are not included. `interface` is an exact device name (`eth0`); omit it for all. For sockets and connections use `network/connections`, for reachability `network/ping`. Always returns JSON: an array of objects (ip_address, hw_type and flags as raw hex such as `0x1`, hw_address, mask, device). When nothing matches the output is `null`, not `[]`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"interface": map[string]interface{}{"type": "string"},
+						"interface": map[string]interface{}{"type": "string", "description": "Exact interface name such as eth0; omit for all interfaces"},
 					},
 				},
 			},
@@ -341,13 +341,13 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "network/ping",
 				"tools_group":   "network",
 				"linuxctl_verb": "ping",
-				"description":   "Measure TCP reachability and latency to a host.",
+				"description":   "Tests TCP reachability: opens one TCP connection to `host:port` and closes it. This is NOT ICMP, so it needs a listening port (default 80) and says nothing about other ports or ICMP. Single attempt, no loss statistics; latency includes DNS resolution. Read-only, but it connects off-host and honors the user's `network:` policy in mcp-sudo.yaml. `timeout` is whole seconds (default 5). A failed connect is not a tool error: the JSON has `success: false` and an `error` text. Returns JSON with host, port, success, latency_ms and error. For DNS only use `network/nslookup`, for the hop path `network/trace-path`, for an HTTP check `network/curl`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"host":    map[string]interface{}{"type": "string"},
-						"port":    map[string]interface{}{"type": "number", "description": "Defaults to 80"},
-						"timeout": map[string]interface{}{"type": "number"},
+						"host":    map[string]interface{}{"type": "string", "description": "Hostname or IP address to connect to"},
+						"port":    map[string]interface{}{"type": "number", "description": "TCP port, whole number (default 80)"},
+						"timeout": map[string]interface{}{"type": "number", "description": "Seconds, whole number (default 5)"},
 					},
 					"required": []string{"host"},
 				},
@@ -356,14 +356,14 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "network/connections",
 				"tools_group":   "network",
 				"linuxctl_verb": "connections",
-				"description":   "Lists TCP and UDP sockets in every state with their owning processes, like `ss -tuanp` - read natively from /proc/net (no ss needed). Owning processes of other users' sockets are shown only with privileged: true. state filters by LISTEN (includes unconnected UDP), ESTABLISHED, TIME_WAIT, ... or the groups connected/synchronized. Hint: For physical network links and IPs, use the network://interfaces resource.",
+				"description":   "Lists TCP and UDP sockets in every state with their owning processes, like `ss -tuanp`, read natively from /proc/net (no ss needed). Read-only; unix and raw sockets are not included. `state` (case-insensitive, `_` and `-` interchangeable) filters by LISTEN (includes unconnected UDP), ESTABLISHED, TIME_WAIT, CLOSE_WAIT, SYN_SENT, ... or the groups connected/synchronized; an invalid state is an error listing the valid names. `port` matches the local OR peer port. The owning process (pid, fd) is shown only for sockets whose /proc/PID/fd you can read; other users' processes need `privileged: true` (needs a grant). Text output has `ss -tuanp` columns; `output_format: json` returns an array of objects (netid, state, recv_q, send_q, local_address, local_port, peer_address, peer_port, uid, inode, processes), `[]` when empty. For the ARP cache use `network/arp`, for interfaces and IPs the `network://interfaces` resource, for process details `processes/list`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
 						"state":         map[string]interface{}{"type": "string", "description": "Filter by TCP state, case-insensitive (LISTEN/listening, ESTABLISHED, TIME_WAIT, CLOSE_WAIT, SYN_SENT, ...). Omit to list all sockets - active connections and listening ports."},
-						"port":          map[string]interface{}{"type": "integer", "description": "Filter by port"},
-						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root to see PIDs of other users"},
+						"port":          map[string]interface{}{"type": "integer", "description": "Match sockets whose local or peer port equals this"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root to see PIDs of other users. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused"},
 					},
 				},
 			},
@@ -371,13 +371,13 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "memory/usage",
 				"tools_group":   "memory",
 				"linuxctl_verb": "usage",
-				"description":   "Returns memory and swap utilization information. Use cpu/load-average to check compute load.",
+				"description":   "Reports memory and swap use from /proc/meminfo. Read-only. `used` is total - free - (buffers + cached + reclaimable slab); `available` is the kernel's MemAvailable. Text output is a `free`-like table with Mem: and Swap: rows (bytes, or e.g. `1.8Gi` with `human_readable`); `detailed: true` returns the raw /proc/meminfo instead, but only for text output (it is ignored with `output_format: json`). JSON (also yaml/table/wide) returns an object (total, used, free, shared, buffCache, available, swap_total, swap_used, swap_free) in bytes; `human_readable` is ignored there. For per-process memory use `processes/top` or `processes/list`, for CPU load `cpu/load-average`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"human_readable": map[string]interface{}{"type": "boolean", "description": "Sizes like free -h (1.8Gi); default is bytes"},
-						"output_format":  map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"detailed":       map[string]interface{}{"type": "boolean", "description": "Set to true to return raw /proc/meminfo instead of summary"},
+						"output_format":  map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
+						"detailed":       map[string]interface{}{"type": "boolean", "description": "Return the raw /proc/meminfo instead of the summary (text output only; ignored with output_format json)"},
 					},
 				},
 			},
@@ -385,13 +385,13 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "services/manage",
 				"tools_group":   "system",
 				"linuxctl_verb": "services",
-				"description":   "Control systemd services (start, stop, restart, enable, disable). To get detailed service properties and state, read the service://{name}/status resource. To view service logs, use the logs/journal-control tool.",
+				"description":   "Starts, stops, restarts, reloads, enables or disables ONE systemd service over D-Bus (`.service` is appended when missing). Mutating. Ordinary users are usually refused by polkit, so `privileged: true` (needs a grant in mcp-sudo.yaml) is normally required. start, stop, restart and reload wait for the systemd job and return `Job N completed with status: done` (or failed, canceled, timeout, dependency, skipped); a slow one can hit the 30 s worker limit. `reload` asks the service to re-read its config without stopping it, only if the unit supports it. `enable` and `disable` only change whether it starts at boot; they do not start or stop it. To see state use `services/list` or the `service://<name>/status` resource, for logs `logs/journal-control`, for containers `docker/manage`, for a raw signal to a PID `processes/delete`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"service":    map[string]interface{}{"type": "string", "description": "Service name (e.g., 'kubelet.service')"},
-						"action":     map[string]interface{}{"type": "string", "enum": []string{"start", "stop", "restart", "reload", "enable", "disable"}, "description": "Action to perform on the service"},
-						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root"},
+						"service":    map[string]interface{}{"type": "string", "description": "Unit name; '.service' is appended if missing (e.g. 'kubelet' or 'kubelet.service')"},
+						"action":     map[string]interface{}{"type": "string", "enum": []string{"start", "stop", "restart", "reload", "enable", "disable"}, "description": "start, stop, restart and reload wait for the systemd job; enable and disable only change start at boot"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root. Normally required (polkit); needs a grant for this tool in mcp-sudo.yaml"},
 					},
 					"required": []string{"service", "action"},
 				},
@@ -400,15 +400,15 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "services/list",
 				"tools_group":   "system",
 				"linuxctl_verb": "services",
-				"description":   "Lists systemd services with optional filtering. Output includes ActiveState, LoadState, and SubState.",
+				"description":   "Lists systemd `.service` units that systemd currently has loaded, with load, active and sub state (D-Bus ListUnits). Read-only. An installed but never-loaded unit file may be missing, and timers, sockets and other unit types are not included. `pattern` supports only a leading and/or trailing `*` (`kube*`, `*ssh*`); without `*` it is an exact unit name including `.service`. The state filters are exact strings: `active_state` active/failed/inactive, `sub_state` running/exited/dead, `load_state` loaded/not-found. Text output is a block per unit plus a hint line, or `No services found matching the criteria.`; `output_format: json` returns an array of objects (name, description, load_state, active_state, sub_state), `[]` when empty. To change a service use `services/manage`, for one unit's details the `service://<name>/status` resource, for its logs `logs/journal-control`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"pattern":       map[string]interface{}{"type": "string", "description": "Wildcard pattern to match service names (e.g., 'kube*', '*ssh*')"},
-						"active_state":  map[string]interface{}{"type": "string", "description": "Filter by active state (e.g., 'active', 'failed', 'inactive')"},
-						"load_state":    map[string]interface{}{"type": "string", "description": "Filter by load state (e.g., 'loaded', 'not-found')"},
-						"sub_state":     map[string]interface{}{"type": "string", "description": "Filter by sub state (e.g., 'running', 'exited', 'dead')"},
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, table, wide). Defaults to text"},
+						"pattern":       map[string]interface{}{"type": "string", "description": "Only a leading and/or trailing * is supported ('kube*', '*ssh*'); without * an exact unit name including '.service'"},
+						"active_state":  map[string]interface{}{"type": "string", "description": "Exact state: 'active', 'failed' or 'inactive'"},
+						"load_state":    map[string]interface{}{"type": "string", "description": "Exact state: 'loaded' or 'not-found'"},
+						"sub_state":     map[string]interface{}{"type": "string", "description": "Exact state: 'running', 'exited' or 'dead'"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
 						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root (may be required depending on policies)"},
 					},
 					"required": []string{},
@@ -418,19 +418,19 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "logs/journal-control",
 				"tools_group":   "logs",
 				"linuxctl_verb": "journal",
-				"description":   "Queries the systemd journal (journalctl equivalent). Requires privileged: true in containerized deployments, since journalctl only exists on the host, never in this daemon's own image.",
+				"description":   "Reads the systemd journal (wraps `journalctl -n LINES --no-pager`). Read-only. Returns the last `lines` entries (default 100, the only size limit), oldest first unless `reverse`. Filter with `unit` (`sshd.service`), `since`/`until` in journalctl syntax (`1 hour ago`, `yesterday`, `2026-09-29 10:00`), `boot: true` (current boot) or `boot_offset` (-1 = previous boot; takes precedence over `boot`). Without root an ordinary user sees only their own entries unless in the `systemd-journal` or `adm` group. Requires privileged: true in containerized deployments (needs a grant), since journalctl only exists on the host, never in this daemon's own image. Plain text by default; `output_format: json` gives one JSON object per line (journalctl -o json), not an array. For kernel messages use `logs/dmesg`, for logins `logs/logins`, for container output `docker/logs`, for unit state `services/list`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"unit":          map[string]interface{}{"type": "string", "description": "Filter by systemd unit (e.g., 'kubelet.service')"},
-						"lines":         map[string]interface{}{"type": "integer", "description": "Number of lines to tail (default: 100)"},
-						"since":         map[string]interface{}{"type": "string", "description": "Filter logs since a specific time (e.g., '1 hour ago', 'today')"},
+						"lines":         map[string]interface{}{"type": "integer", "description": "Number of entries to tail (default 100; the only size limit)"},
+						"since":         map[string]interface{}{"type": "string", "description": "journalctl time syntax, e.g. '1 hour ago', 'today', '2026-09-29 10:00'"},
 						"until":         map[string]interface{}{"type": "string", "description": "Filter logs until a specific time (e.g., 'yesterday', '12:00')"},
 						"reverse":       map[string]interface{}{"type": "boolean", "description": "Output newest entries first"},
 						"boot":          map[string]interface{}{"type": "boolean", "description": "Restrict output to the current boot (journalctl -b)"},
 						"boot_offset":   map[string]interface{}{"type": "integer", "description": "Select a prior boot relative to the current one, e.g. -1 for the previous boot (implies boot)"},
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json). Defaults to text"},
-						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root and join the host mount namespace - required in containerized deployments"},
+						"output_format": map[string]interface{}{"type": "string", "description": "json returns one JSON object per line (journalctl -o json); default is plain text"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root and join the host mount namespace - required in containerized deployments (needs a grant for this tool in mcp-sudo.yaml)"},
 					},
 				},
 			},
@@ -438,13 +438,13 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "logs/dmesg",
 				"tools_group":   "logs",
 				"linuxctl_verb": "dmesg",
-				"description":   "Read the kernel ring buffer for hardware/driver logs.",
+				"description":   "Reads the kernel ring buffer (wraps `dmesg --human`, relative timestamps). Read-only. Output is cut to the LAST 30 KiB with a `[WARNING: Output truncated to last 30KB]` prefix and cannot be paged; narrow it with `level`, a comma list of emerg, alert, crit, err, warn, notice, info, debug (`err,warn`). On hosts with `kernel.dmesg_restrict=1` an unprivileged call fails (dmesg's error is returned); use `privileged: true` (needs a grant). `output_format` is accepted and ignored: the reply is always plain text. For older history or service logs use `logs/journal-control`, for login records `logs/logins`, for drive faults `disks/health`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"level":         map[string]interface{}{"type": "string", "description": "Filter by log level (e.g., 'err,warn')"},
-						"output_format": map[string]interface{}{"type": "string", "description": "Output format"},
-						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root"},
+						"level":         map[string]interface{}{"type": "string", "description": "Comma-separated levels from emerg, alert, crit, err, warn, notice, info, debug (e.g. 'err,warn')"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Ignored - the reply is always plain text"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root - needed when kernel.dmesg_restrict=1. Needs a grant for this tool in mcp-sudo.yaml"},
 					},
 				},
 			},
@@ -459,7 +459,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 						"type":       map[string]interface{}{"type": "string", "enum": []string{"success", "failed"}, "description": "\"success\" (default, wraps `last`) or \"failed\" (wraps `lastb`)"},
 						"limit":      map[string]interface{}{"type": "integer", "description": "Only return this many most recent entries"},
 						"user":       map[string]interface{}{"type": "string", "description": "Only return entries for this username"},
-						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - typically required for type: \"failed\""},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - typically required for type \"failed\". Needs a grant for this tool in mcp-sudo.yaml"},
 					},
 				},
 			},
@@ -467,14 +467,14 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "kernel/system-control",
 				"tools_group":   "kernel",
 				"linuxctl_verb": "sysctl",
-				"description":   "Reads or writes kernel parameters (sysctl equivalent) at runtime, natively via /proc/sys. Writes require privileged: true, and may be restricted per user (read-only, or only certain keys) by mcp-sudo.yaml.",
+				"description":   "Reads or writes a kernel parameter (sysctl) at runtime through /proc/sys. With `value` omitted it reads: `key` (dotted `net.ipv4.ip_forward` or slash form; a directory such as `net.ipv4` prints its subtree) returns `key = value` lines, and `read_all: true` (only when `key` is empty) prints every parameter, thousands of lines, uncapped. Reading needs no grant. With `value` it WRITES: that needs `privileged: true` and a grant, is refused for keys outside the user's `sysctl.write_keys` globs in mcp-sudo.yaml, and the reply shows the value the kernel now holds. Writes last until reboot; nothing is persisted to /etc/sysctl.d. For OS and kernel version use `system/os-release`, for memory figures `memory/usage`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"key":        map[string]interface{}{"type": "string", "description": "Kernel parameter name, dotted (net.ipv4.ip_forward) or slash form (net/ipv4/conf/eth0.100/rp_filter). A directory (e.g. net.ipv4) reads its whole subtree."},
-						"value":      map[string]interface{}{"type": "string", "description": "Value to set for the parameter. If omitted, reads the parameter."},
-						"read_all":   map[string]interface{}{"type": "boolean", "description": "If true, reads all available parameters. Ignored if key is set."},
-						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - required for writes"},
+						"value":      map[string]interface{}{"type": "string", "description": "Value to write (single line). If omitted, the parameter is read. Writing needs privileged: true and a matching sysctl.write_keys grant"},
+						"read_all":   map[string]interface{}{"type": "boolean", "description": "Only when key is empty: read every parameter (thousands of lines, uncapped)"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - required for writes. Needs a grant for this tool in mcp-sudo.yaml"},
 					},
 				},
 			},
@@ -482,12 +482,12 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "cpu/list",
 				"tools_group":   "cpu",
 				"linuxctl_verb": "get",
-				"description":   "Retrieves CPU topology and architecture. See cpu/load-average for current utilization.",
+				"description":   "Lists the machine's CPUs from /proc/cpuinfo. Read-only. Text output shows the number of logical processors and, for the FIRST processor only, vendor, model name, MHz (or BogoMIPS) and cache size. `output_format: json` (also yaml/table/wide) returns an array with one object per logical CPU using /proc/cpuinfo's own field names, which differ by architecture (x86 `model name`, `cpu MHz`, `flags`; ARM `CPU implementer`). It does not report sockets, cores or threads separately, and `topology_only` has no effect. For current load use `cpu/load-average`, for per-process CPU `processes/top`, for OS and kernel `system/os-release`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"topology_only": map[string]interface{}{"type": "boolean", "description": "Only return basic core topology"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
+						"topology_only": map[string]interface{}{"type": "boolean", "description": "Has no effect: accepted but ignored, the output is the same"},
 					},
 				},
 			},
@@ -495,23 +495,23 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "cpu/load-average",
 				"tools_group":   "cpu",
 				"linuxctl_verb": "load-average",
-				"description":   "Retrieves system load averages (1m, 5m, 15m). See cpu/list for hardware topology.",
+				"description":   "Returns the 1, 5 and 15 minute load averages from sysinfo(2). Read-only; the only parameter is `output_format`. Load counts runnable plus uninterruptible tasks, not CPU percent: compare it with the number of logical CPUs from `cpu/list`. Text is `Load Average: 0.52, 0.48, 0.45`; `output_format: json` (also yaml/table/wide) returns an object with numbers `1_min`, `5_min`, `15_min`. For per-process CPU use `processes/top`, for memory `memory/usage`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"}},
+						"output_format": map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"}},
 				},
 			},
 			map[string]interface{}{
 				"name":          "disks/list",
 				"tools_group":   "disks",
 				"linuxctl_verb": "get",
-				"description":   "Lists block devices as a tree (equivalent to lsblk): disks, their partitions, and LVM/dm-crypt/RAID volumes nested under the devices they're built on, with MAJ:MIN, RM, SIZE, RO, TYPE and MOUNTPOINTS. json/yaml output is the same tree under \"blockdevices\" (like lsblk -J), with nested \"children\". To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool. (Use 'privileged: true' in containerized deployments to see the host's mount points.)",
+				"description":   "Lists block devices as a tree (like `lsblk`): disks, partitions, and LVM/dm-crypt/RAID volumes nested under the devices they are built on, with MAJ:MIN, RM, SIZE, RO, TYPE and MOUNTPOINTS, read from /sys/class/block (no lsblk needed). Read-only. Empty devices and RAM disks are hidden unless `all: true`; SIZE is in bytes unless `human_readable`. `output_format: json` (also yaml/table/wide) returns an object `blockdevices`, an array of objects (name, kname, maj:min, rm, size, size_bytes, ro, type, mountpoints) with nested `children`. In containerized deployments use `privileged: true` (needs a grant) to see the host's mount points. For free space or inodes use `disks/free`, for folder sizes `disks/usage`, for the mount table `disks/mounts`, for partition boundaries `disks/partitions`, for I/O counters `disks/performance`, for SMART `disks/health`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"human_readable": map[string]interface{}{"type": "boolean", "description": "SIZE like lsblk (60G); default is bytes (lsblk -b)"},
-						"output_format":  map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
+						"output_format":  map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
 						"all":            map[string]interface{}{"type": "boolean", "description": "Include empty devices and RAM disks (lsblk -a)"},
 						"privileged":     map[string]interface{}{"type": "boolean", "description": "Run as root - in containerized deployments, reads the host's mount table for MOUNTPOINTS"},
 					},
@@ -525,9 +525,9 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
-						"fs_type":       map[string]interface{}{"type": "string", "description": "Only include mounts of this filesystem type (e.g. 'ext4', 'overlay', 'tmpfs')"},
-						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
+						"fs_type":       map[string]interface{}{"type": "string", "description": "Exact filesystem type, no globs (e.g. 'ext4', 'overlay', 'tmpfs')"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused"},
 					},
 				},
 			},
@@ -535,12 +535,12 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "disks/performance",
 				"tools_group":   "disks",
 				"linuxctl_verb": "performance",
-				"description":   "Retrieves granular block device I/O performance metrics (equivalent to iostat). Provides read/write sectors, merged operations, and I/O wait times in milliseconds. Use disks/list first to find valid block devices. If you want static capacity instead, use disks/free.",
+				"description":   "Returns block-device I/O counters from /proc/diskstats: reads and writes completed and merged, sectors (512 bytes) and milliseconds spent, in-flight I/Os and weighted I/O time. Values are CUMULATIVE since boot, not rates and not iostat's per-interval figures; there is no %util or await, so sample twice and subtract to get a rate. Read-only. Without `device` all devices are listed except `loop*` and `ram*`; a name such as `sda` (find them with `disks/list`) selects one, and an unknown name gives `no such block device`. Text output is a table; `output_format: json` and `yaml` (real YAML here) return an array of objects with 14 fields (major, minor, device_name, reads_completed, ..., weighted_time_ios_ms). For capacity use `disks/free`, for SMART health `disks/health`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table). Defaults to text"},
-						"device":        map[string]interface{}{"type": "string", "description": "Optional specific block device to query (e.g., 'sda')"},
+						"output_format": map[string]interface{}{"type": "string", "description": "json or yaml (real YAML) for structured output; default is a text table"},
+						"device":        map[string]interface{}{"type": "string", "description": "Block device name such as 'sda' (see disks/list); omit for all except loop* and ram*"},
 					},
 				},
 			},
@@ -548,12 +548,12 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "disks/health",
 				"tools_group":   "disks",
 				"linuxctl_verb": "health",
-				"description":   "Retrieves detailed SMART health data for a drive (equivalent to smartctl -j -a). Returns JSON containing self-assessment test results, temperature, wear leveling, and sector errors. Must be run as root (privileged: true). Use this to diagnose failing hardware.",
+				"description":   "Returns a drive's SMART data as smartctl's JSON (wraps `smartctl -j -a`; the smartmontools package must be installed or the call fails saying so). Read-only, but normally needs root: use `privileged: true` (needs a grant), since without it smartctl usually cannot open the device. `device` is a bare kernel name such as `sda` or `nvme0n1`, never a path; find names with `disks/list`. The reply is smartctl's JSON verbatim (keys such as smart_status, temperature, ata_smart_attributes or nvme_smart_health_information_log vary by drive type); a non-zero smartctl exit is not an error when it printed JSON, and virtual disks report SMART as unsupported. For I/O counters use `disks/performance`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"device":     map[string]interface{}{"type": "string", "description": "Specific block device to query (e.g., 'sda')"},
-						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - required to read SMART data"},
+						"device":     map[string]interface{}{"type": "string", "description": "Bare kernel device name such as 'sda' or 'nvme0n1' (never a path)"},
+						"privileged": map[string]interface{}{"type": "boolean", "description": "Run as root - required to read SMART data. Needs a grant for this tool in mcp-sudo.yaml"},
 					},
 					"required": []string{"device"},
 				},
@@ -562,11 +562,11 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "disks/partitions",
 				"tools_group":   "disks",
 				"linuxctl_verb": "partitions",
-				"description":   "Retrieves partition boundaries for a drive (start/size, in sectors and bytes), parsed natively from /sys/class/block - no fdisk dependency. Use this to understand the low-level geometry and partition boundaries of a disk.",
+				"description":   "Lists the partitions of a disk with start sector and size in sectors and bytes, read natively from /sys/class/block (no fdisk). Read-only. `device` names the PARENT DISK (`sda`, `nvme0n1`), not a partition; without it every disk's partitions are listed. A sector size of 512 bytes is assumed. It does not report partition type, label, UUID or filesystem: use `disks/list` or `disks/mounts` for those, and `disks/list` to find device names. A named disk without partitions is an error (`no partitions found for device`). Output is a text table; when `output_format` is set to any non-empty value (the parameter is accepted although not listed in the schema) it is an indented JSON array of objects (device, parent_disk, number, start_sector, size_sectors, size_bytes).",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"device": map[string]interface{}{"type": "string", "description": "Optional specific block device to query (e.g., 'sda')"},
+						"device": map[string]interface{}{"type": "string", "description": "Parent disk name such as 'sda' or 'nvme0n1' (not a partition); omit for all disks"},
 					},
 				},
 			},
@@ -574,12 +574,12 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "network/trace-path",
 				"tools_group":   "network",
 				"linuxctl_verb": "trace-path",
-				"description":   "Traces the network path to a host (equivalent to traceroute). Useful for debugging routing issues, identifying where packets are dropped, or measuring network latency across hops. Hint: Use network/ping for basic reachability before tracing the path.",
+				"description":   "Traces the network path to a host by running the external `traceroute` binary (not tracepath; it must be installed on the host). Read-only, but it sends probe packets. `host` is a hostname or IP; `max_hops` defaults to traceroute's 30 and is capped at 255. There is no timeout parameter and the 30 s worker limit kills slow traces (30 hops x 3 probes can take minutes), so set a low `max_hops` such as 15. Non-responding hops show as `* * *`. Returns traceroute's raw text; there is no `output_format`. Use `network/ping` first for basic reachability, `network/nslookup` for DNS problems.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"host":     map[string]interface{}{"type": "string", "description": "Target hostname or IP"},
-						"max_hops": map[string]interface{}{"type": "integer", "description": "Maximum number of hops (optional)"},
+						"host":     map[string]interface{}{"type": "string", "description": "Target hostname or IP address"},
+						"max_hops": map[string]interface{}{"type": "integer", "description": "Maximum hops (default 30, capped at 255); keep it low, the 30 s worker limit kills slow traces"},
 					},
 					"required": []string{"host"},
 				},
@@ -588,11 +588,11 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "system/os-release",
 				"tools_group":   "system",
 				"linuxctl_verb": "os-release",
-				"description":   "Retrieves Linux distribution and kernel version.",
+				"description":   "Returns the Linux distribution and kernel version: the contents of /etc/os-release plus the uname line (system, host name, release, version, machine). Read-only. In a containerized daemon /etc/os-release is the container image's, not the host's. Text has an `OS Release Info:` block with the raw file and a `Kernel Info:` line; `output_format: json` (also yaml/table/wide) returns an object with `os_release` (the raw file text, not parsed into fields) and `kernel` (the uname line). For CPU details use `cpu/list`, for kernel parameters `kernel/system-control`.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"}},
+						"output_format": map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"}},
 				},
 			},
 			map[string]interface{}{
@@ -603,9 +603,9 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
 						"name":          map[string]interface{}{"type": "string", "description": "Only packages whose name matches this glob or exact name (e.g. 'openssh-*', '*ssl*', 'curl')"},
-						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused"},
 					},
 				},
 			},
@@ -617,9 +617,9 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"},
+						"output_format": map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"},
 						"min_uid":       map[string]interface{}{"type": "integer", "description": "Only include users with UID >= this value (e.g. 1000 to exclude system accounts)"},
-						"privileged":    map[string]interface{}{"type": "boolean", "description": "Set to true to run as root"},
+						"privileged":    map[string]interface{}{"type": "boolean", "description": "Run as root. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused"},
 					},
 				},
 			},
@@ -627,11 +627,11 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 				"name":          "auth/sudo-rules",
 				"tools_group":   "auth",
 				"linuxctl_verb": "sudo-rules",
-				"description":   "Returns your authorized tools and privileges from mcp-sudo.yaml.",
+				"description":   "Shows which tools YOU may run as root: your `privileged` grants from mcp-sudo.yaml with their `paths`, `containers`, `prune`, `network` and `sysctl` restrictions. It does not list which tools you may call at all: unprivileged calls need no grant, except docker/* and daemon/reload-config, which always do. Read-only and answered by the daemon itself. Call it before a `privileged: true` request or after a permission-denied error. Text is `Your authorized privileged tools:` followed by JSON; `output_format: json` returns only that JSON, whose keys are capitalised Go field names (Tools, Resources, Allowed, Paths, Containers, Prune, Network, Sysctl). No grants gives `You have no privileged tools authorized in mcp-sudo.yaml.` (JSON: `{}`). After an operator edits grants, `daemon/reload-config` applies them.",
 				"inputSchema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"output_format": map[string]interface{}{"type": "string", "description": "Desired output format (e.g. json, yaml, table, wide). Defaults to text"}},
+						"output_format": map[string]interface{}{"type": "string", "description": "Use json for structured output (yaml, table and wide return the same JSON); default is text"}},
 				},
 			},
 		},
@@ -643,7 +643,7 @@ func (h *RPCHandler) HandleToolsList(session *Session, resp *JSONRPCResponse) {
 		"name":          "daemon/reload-config",
 		"tools_group":   "daemon",
 		"linuxctl_verb": "reload",
-		"description":   "Re-reads mcpd's config files (daemon.yaml, users.yaml, mcp-sudo.yaml) and applies them without restarting mcpd: users and tokens, per-user grants, rate limits and tool timeouts. It only reads the files - they are edited on the host (linuxctl). They are validated first, strictly (a misspelled key is an error): if any is invalid, nothing changes and the error is returned. Returns what changed (users added/removed, tokens and grants changed). Sessions of removed users, and of users whose token changed, are closed. Server settings (port, TLS, worker.containerized) still need a restart. Only for users granted daemon/reload-config in mcp-sudo.yaml.",
+		"description":   "Re-reads mcpd's config files (daemon.yaml, users.yaml, mcp-sudo.yaml) and applies them without a restart: users and tokens, per-user grants, rate limits and tool timeouts. The files themselves are edited on the host (linuxctl); this only reloads them. Mutating (replaces the in-memory config) and always needs `allowed: true` for `daemon/reload-config` in the caller's grant; there is no unprivileged mode. The files are validated strictly first (a misspelled key is an error): if any is invalid nothing changes and the error is returned. Sessions of removed users and of users whose token changed are closed, possibly the caller's own. Server settings (port, TLS, `worker.containerized`, Docker socket) still need a restart. Returns free text listing what changed. Takes no parameters; verify grants afterwards with `auth/sudo-rules`.",
 		"inputSchema": map[string]interface{}{
 			"type":       "object",
 			"properties": map[string]interface{}{},

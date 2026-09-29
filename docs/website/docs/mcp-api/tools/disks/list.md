@@ -2,7 +2,7 @@
 
 **Tool Name**: `disks/list`
 
-Lists block devices as a tree (equivalent to `lsblk`): disks, their partitions, and LVM/dm-crypt/RAID volumes nested under the devices they're built on, with MAJ:MIN, RM, SIZE, RO, TYPE and MOUNTPOINTS. `json`/`yaml` output is the same tree under `blockdevices` (the shape of `lsblk -J`), with nested `children`. To check remaining free space or inode usage, use the disks/free tool. To check which folders are taking up the most space, use the disks/usage tool.
+Lists block devices as a tree (like `lsblk`): disks, partitions, and LVM/dm-crypt/RAID volumes nested under the devices they are built on, with MAJ:MIN, RM, SIZE, RO, TYPE and MOUNTPOINTS, read from /sys/class/block (no lsblk needed). Read-only. Empty devices and RAM disks are hidden unless `all: true`; SIZE is in bytes unless `human_readable`. `output_format: json` (also yaml/table/wide) returns an object `blockdevices`, an array of objects (name, kname, maj:min, rm, size, size_bytes, ro, type, mountpoints) with nested `children`. In containerized deployments use `privileged: true` (needs a grant) to see the host's mount points. For free space or inodes use `disks/free`, for folder sizes `disks/usage`, for the mount table `disks/mounts`, for partition boundaries `disks/partitions`, for I/O counters `disks/performance`, for SMART `disks/health`.
 
 | Parameter | Description |
 |---|---|

@@ -2,7 +2,7 @@
 
 **Tool Name**: `arp`
 
-Displays the ARP cache.
+Shows the kernel's ARP cache (IPv4 address to MAC address) from /proc/net/arp in the daemon's network namespace. Read-only. It is a cache, not a scan: only hosts contacted recently appear, and IPv6 neighbours are not included. `interface` is an exact device name (`eth0`); omit it for all. For sockets and connections use `network/connections`, for reachability `network/ping`. Always returns JSON: an array of objects (ip_address, hw_type and flags as raw hex such as `0x1`, hw_address, mask, device). When nothing matches the output is `null`, not `[]`.
 
 ## Example
 

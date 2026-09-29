@@ -2,7 +2,7 @@
 
 **Tool Name**: `processes/top`
 
-A snapshot like `top -b -n 1`, read natively from `/proc` - no `top` or `ps` binary. The header shows the time, uptime, logged-in users, load average, task counts by state, CPU breakdown and memory/swap - in bytes by default, in MiB like top with `human_readable`; below it, the process table with all of top's columns: `PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND`.
+Snapshot like `top -b -n 1`, read from `/proc`: header (uptime, users, load average, task counts by state, CPU us/sy/ni/id/wa/hi/si/st, memory and swap) plus the process table (PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND), sorted by `sort_by` (default cpu). Read-only. %CPU is measured over `interval_ms` (default 1000, max 10000), so the call takes about that long. For a lighter PID list or a single PID use `processes/list`; to signal a process `processes/delete`; for memory totals only `memory/usage`; for which process owns a port `network/connections`. `limit` defaults to all processes; `user` is an exact username. Sizes are bytes (MiB with `human_readable`). `output_format`: default and `table` give top's layout, `wide` adds PPID, THR and full command lines, `json`/`yaml` return an object with `summary` and `processes` (memory in bytes).
 
 `%CPU` is measured the way top measures it: CPU time used over a short sampling interval (default 1 second), not an average since the process started. Like top, it is per core, so a busy multi-threaded process can exceed 100%.
 

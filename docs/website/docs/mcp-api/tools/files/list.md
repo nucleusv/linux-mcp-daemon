@@ -2,7 +2,7 @@
 
 **Tool Name**: `files/list`
 
-Lists a directory like `ls -la`: file type and permissions (setuid/setgid/sticky as `s`/`S`/`t`/`T`), link count, owner, group, size (`major, minor` for devices), date (time for the last six months, year otherwise), and symlink targets. Entries are `lstat`ed - a symlink is shown with its target, never followed. The output matches GNU `ls -la` column for column.
+Lists the entries of ONE directory like `ls -l` (dotfiles, `.` and `..` are hidden unless `all: true`): type and permissions, link count, owner, group, size, modification time and symlink targets (symlinks are shown, never followed). Read-only, not recursive, no entry cap; `path` must be absolute. For a recursive or filtered search use `files/find`, for a directory's total size `disks/usage`, for a file's MIME type `files/filetype`. On permission denied retry with `privileged: true` if granted (root calls also need a `paths:` entry covering the path). Text output is `ls -l` lines (`Directory is empty.` when empty; `long: false` gives names only, directories suffixed `/`). `output_format: json` returns an array of objects (name, type, mode, mode_octal, links, owner, group, uid, gid, size, modified, is_dir, target), `[]` when empty. Permission strings show setuid/setgid/sticky as `s`/`S`/`t`/`T`; device sizes appear as `major, minor`; the date shows the time for the last six months and the year otherwise.
 
 | Parameter | Meaning |
 |---|---|

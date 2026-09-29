@@ -2,7 +2,7 @@
 
 **Tool Name**: `logs/journal-control`
 
-Queries the systemd journal (`journalctl` equivalent).
+Reads the systemd journal (wraps `journalctl -n LINES --no-pager`). Read-only. Returns the last `lines` entries (default 100, the only size limit), oldest first unless `reverse`. Filter with `unit` (`sshd.service`), `since`/`until` in journalctl syntax (`1 hour ago`, `yesterday`, `2026-09-29 10:00`), `boot: true` (current boot) or `boot_offset` (-1 = previous boot; takes precedence over `boot`). Without root an ordinary user sees only their own entries unless in the `systemd-journal` or `adm` group. Requires privileged: true in containerized deployments (needs a grant), since journalctl only exists on the host, never in this daemon's own image. Plain text by default; `output_format: json` gives one JSON object per line (journalctl -o json), not an array. For kernel messages use `logs/dmesg`, for logins `logs/logins`, for container output `docker/logs`, for unit state `services/list`.
 
 ## Parameters
 

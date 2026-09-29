@@ -2,7 +2,7 @@
 
 **Tool Name**: `ping`
 
-Sends ICMP echo requests.
+Tests TCP reachability: opens one TCP connection to `host:port` and closes it. This is NOT ICMP, so it needs a listening port (default 80) and says nothing about other ports or ICMP. Single attempt, no loss statistics; latency includes DNS resolution. Read-only, but it connects off-host and honors the user's `network:` policy in mcp-sudo.yaml. `timeout` is whole seconds (default 5). A failed connect is not a tool error: the JSON has `success: false` and an `error` text. Returns JSON with host, port, success, latency_ms and error. For DNS only use `network/nslookup`, for the hop path `network/trace-path`, for an HTTP check `network/curl`.
 
 ## Example
 

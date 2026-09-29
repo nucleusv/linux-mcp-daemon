@@ -2,7 +2,7 @@
 
 **Tool Name**: `kernel/system-control`
 
-Reads or writes kernel parameters (sysctl equivalent) at runtime.
+Reads or writes a kernel parameter (sysctl) at runtime through /proc/sys. With `value` omitted it reads: `key` (dotted `net.ipv4.ip_forward` or slash form; a directory such as `net.ipv4` prints its subtree) returns `key = value` lines, and `read_all: true` (only when `key` is empty) prints every parameter, thousands of lines, uncapped. Reading needs no grant. With `value` it WRITES: that needs `privileged: true` and a grant, is refused for keys outside the user's `sysctl.write_keys` globs in mcp-sudo.yaml, and the reply shows the value the kernel now holds. Writes last until reboot; nothing is persisted to /etc/sysctl.d. For OS and kernel version use `system/os-release`, for memory figures `memory/usage`.
 
 ## Example
 

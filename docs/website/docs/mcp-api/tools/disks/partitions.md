@@ -2,7 +2,7 @@
 
 **Tool Name**: `disks/partitions`
 
-Retrieves partition boundaries for a block device (conceptually `fdisk -l`), parsed natively from `/sys/class/block` - this daemon does not wrap the `fdisk` binary. Returns each partition's device name, parent disk, partition number, and start/size in both sectors and bytes. No root required.
+Lists the partitions of a disk with start sector and size in sectors and bytes, read natively from /sys/class/block (no fdisk). Read-only. `device` names the PARENT DISK (`sda`, `nvme0n1`), not a partition; without it every disk's partitions are listed. A sector size of 512 bytes is assumed. It does not report partition type, label, UUID or filesystem: use `disks/list` or `disks/mounts` for those, and `disks/list` to find device names. A named disk without partitions is an error (`no partitions found for device`). Output is a text table; when `output_format` is set to any non-empty value (the parameter is accepted although not listed in the schema) it is an indented JSON array of objects (device, parent_disk, number, start_sector, size_sectors, size_bytes).
 
 ## Parameters
 

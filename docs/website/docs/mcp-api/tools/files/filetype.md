@@ -2,7 +2,7 @@
 
 **Tool Name**: `files/filetype`
 
-Determines a file's MIME type - the answer `file -b --mime-type` gives - detected natively from the file's first 8 KiB, so it needs no `file(1)` on the host. Use `files/stat` for size, permissions and ownership instead. Also available as the `file://{path}/type` resource.
+Returns a file's MIME type, like `file -b --mime-type`, detected natively from its first 8 KiB (no file(1) needed); read-only, `path` must be absolute. A symlink is reported as `inode/symlink` (never followed); directories, devices, fifos and sockets as `inode/...`. Use it before `files/read`, which refuses binary files. For size, permissions or ownership use `files/list`; for contents `files/read`. The reply is always one plain-text line (no `output_format`). `privileged: true` (a grant, and for root a `paths:` entry) reads files your account cannot.
 
 - Directories, devices, FIFOs, sockets and empty files get `file`'s `inode/*` types; a **symlink is reported as `inode/symlink`, not followed** (as `file` does).
 - ELF binaries: `application/x-executable`, `application/x-pie-executable`, `application/x-sharedlib`, `application/x-object`, `application/x-coredump`.

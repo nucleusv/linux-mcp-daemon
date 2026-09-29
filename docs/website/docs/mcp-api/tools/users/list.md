@@ -2,7 +2,7 @@
 
 **Tool Name**: `users/list`
 
-Lists user accounts from `/etc/passwd` (uid, gid, home, shell, group memberships). Never reads `/etc/shadow` - this reports account identity, not credentials.
+Lists local user accounts from /etc/passwd and /etc/group (uid, gid, home, shell, supplementary group memberships), sorted by uid. Read-only. Never reads /etc/shadow - this reports account identity, not credentials. Local files only: LDAP/SSSD users are not listed. `min_uid` (e.g. 1000) hides system accounts. Text lines look like `name (uid=N gid=N(group)) home=... shell=... groups=a,b`; `output_format: json` returns an array of objects (username, uid, gid, group_name, comment, home_dir, shell, groups). For who logged in use `logs/logins`, for your own root grants `auth/sudo-rules`.
 
 When `mcpd` runs containerized, passing `privileged: true` automatically lists the real host's users instead of the daemon's own container's - see [Master Daemon Configuration](../../../configuration/daemon.md)'s `worker.containerized` setting.
 

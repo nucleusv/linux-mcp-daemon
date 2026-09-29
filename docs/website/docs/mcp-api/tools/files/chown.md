@@ -2,7 +2,7 @@
 
 **Tool Name**: `files/chown`
 
-Changes owner and/or group, like `chown` - natively, no `chown` binary. Changing a file's owner requires `privileged: true`.
+Changes a file's or directory's owner and/or group (chown). Mutating and idempotent; for permission bits use `files/chmod`, to check the result `files/list`. Never follows symbolic links: a path containing a symlink in any component is refused, and recursive changes skip symlinks and report them. Changing the owner requires `privileged: true` (a grant, and a `paths:` entry for root). `owner` is `user`, `user:group`, `:group` or `user:` (the user's login group), with names or numeric ids; names are looked up in the host's /etc/passwd and /etc/group and an unknown one fails (`no such user`). Returns `PATH: old -> new` as owner:group, or `unchanged`; a recursive run prints one line per changed entry then a summary with skipped symlinks and per-entry errors, and is not atomic.
 
 **Symlinks are never followed** - same guarantee as [`files/chmod`](./chmod): the path is walked component by component with `openat(O_PATH|O_NOFOLLOW)`, any symlink in it is refused, and ownership changes on exactly the verified object (`fchownat(fd, "", AT_EMPTY_PATH)`). With `recursive`, symlinks inside the tree are skipped and reported.
 

@@ -2,7 +2,7 @@
 
 **Tool Name**: `files/chmod`
 
-Changes permission bits, like `chmod` - natively, no `chmod` binary.
+Changes a file's or directory's permission bits (chmod). Mutating and idempotent; for owner or group use `files/chown`, to check the result `files/list`. Never follows symbolic links: a path containing a symlink in any component is refused, and recursive changes skip symlinks and report them. Numeric modes follow GNU chmod semantics (on directories a 4-digit mode keeps setuid/setgid; use 5 digits, e.g. 00755, to set them exactly); a bare `755` is octal. Changing a file you do not own needs `privileged: true` (a grant, and a `paths:` entry for root). Single change returns `PATH: 0644 (-rw-r--r--) -> 0755 (-rwxr-xr-x)`, or `... unchanged` if already set. A recursive run prints one line per changed entry, then `changed N, unchanged M` (plus skipped symlinks) and per-entry errors; it is not atomic, so partial success is possible.
 
 **Symlinks are never followed.** The path is resolved one component at a time with `openat(O_PATH|O_NOFOLLOW)`, each step relative to the directory the previous step opened, and the mode is changed on exactly the object that was checked. A symlink anywhere in the path - the target itself or any directory on the way - is refused. With `recursive`, symlinks inside the tree are skipped and listed, never followed. This keeps a `privileged: true` chmod from being redirected by a planted symlink (say `/tmp/x -> /etc/shadow`) to a file outside the user's allowed paths.
 

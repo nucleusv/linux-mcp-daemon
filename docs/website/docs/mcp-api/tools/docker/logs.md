@@ -2,7 +2,7 @@
 
 **Tool Name**: `docker/logs`
 
-Reads one container's logs - the shape logs/journal-control has for systemd units. Both streams interleaved in the order Docker recorded them (`stdout: false` or `stderr: false` drops one), last 100 lines unless `lines` says otherwise, and never a follow: this returns what is there and ends. Answers are capped at 1 MiB; ask for a smaller tail rather than a bigger answer. Which containers it may touch comes from the `containers:` list in this user's grant, not from the call. This tool always runs as root (the Docker socket is root-owned), so it takes no `privileged` argument - a call is refused unless this user's grant in mcp-sudo.yaml allows it.
+Reads one container's recent logs, the container counterpart of `logs/journal-control`: stdout and stderr interleaved in Docker's order, the last `lines` lines (default 100), never a follow. Read-only. `since`/`until` take a unix timestamp (`1759005000`) or an RFC3339 time; `stdout` and `stderr` default to true (both false returns nothing); `timestamps` prefixes each line. The answer is capped at 1 MiB and an oversized tail is cut at the END without a marker, so the newest lines can be lost: ask for fewer `lines`. Only containers in the grant's `containers:` list; always runs as root, refused unless the grant has `allowed: true`. Plain log text by default (`Container X (ID) has no log output for this selection.` when empty); `output_format: json` returns container, id, lines, logs. To run a command use `docker/exec`; for host logs `logs/journal-control`.
 
 Two things about the Engine API worth knowing before reading an answer:
 
