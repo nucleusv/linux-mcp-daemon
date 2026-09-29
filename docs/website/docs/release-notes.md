@@ -21,6 +21,10 @@ user testuser is not authorized to run docker/exec: the Docker socket is root-ow
 
 A wrong call no longer looks like a typo (`no read target ...`), and `get mcp-api tools`, `linuxctl` tab completion and any client's tool list show the same surface to every user. What a user may *do* is unchanged - it is still decided by [mcp-sudo.yaml](./configuration/mcp-sudo). The four Docker resource templates were already listed to everyone; the tools now match them.
 
+### New: SSE keepalive
+
+An idle `/sse` stream now gets a `: ping` comment line every 20 seconds (`server.sse_keepalive_seconds` in [`daemon.yaml`](./configuration/daemon), read at startup). Bridges such as `mcp-remote` - what Claude Desktop uses - drop a stream that is silent for 300 seconds, reconnect with a new session and lose the calls in flight, for example while the agent waits for a human's approval. Clients ignore comment lines, so nothing else changes. Open sessions still survive a config reload; only the sessions of removed users, or users whose token changed, are closed.
+
 ### Tests
 
 `tests/test_linuxctl.sh` runs against any target - local k8s by default, a VPS stand through environment variables - and has a docker section.
