@@ -95,7 +95,7 @@ func editCrontab(authToken string, positional []string, flags map[string]interfa
 	if isErr {
 		msg := out
 		if strings.Contains(msg, "changed since you read it") {
-			msg += "\nYour edit is not saved; it is still in " + tmp.Name() + " - copy it before this command exits, or run edit again."
+			msg += "\nYour edit was not saved; it is kept in " + tmp.Name() + " (read the crontab again, merge, and update)."
 		}
 		fmt.Fprintln(os.Stderr, msg)
 		os.Exit(1)
