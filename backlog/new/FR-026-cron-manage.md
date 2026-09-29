@@ -20,7 +20,7 @@ One tool, **`cron/manage`**, shown in `linuxctl` as the group **`crontabs`** (`t
 ### Whose crontab, and who decides
 
 - **Own crontab (no sudo, no grant).** The daemon decides the target: the authenticated mcpd user's pinned OS account. The per-call worker already runs with that UID, so `crontab -l` and `crontab -` (no `-u`) act on exactly that user; no user name travels from the caller. A `user` equal to the caller's own account behaves like omitting it.
-- **Another user's crontab (sudo).** `privileged: true` (root worker, a grant), and the target must match a per-user rule in the grant. The master validates the name (charset, account exists), checks the rule, and injects the verified name in a reserved argument (delete-then-set, as `_containers` is for docker); the root worker runs `crontab -u <verified name>`. A caller-supplied reserved key is dropped.
+- **Another user's crontab (sudo).** `privileged: true` here means "act on another account, with the grant" - the worker is **not** root. The master validates the target (allowed characters, starts with a letter or digit, the account exists), checks the named rule, resolves the account's UID and groups, and starts the worker **with that UID** (the spawner learns to take a master-chosen UID instead of only the caller's). The worker runs plain `crontab -l` / `crontab -` (no `-u`), exactly as that user would. Consequences: `/etc/cron.allow` and `cron.deny` are enforced by `crontab` itself for that user (no bypass to code), there is no `-u <name>` argument to inject, and a compromised worker holds one user's rights, not root's. `root` is the one target that runs as UID 0 - view only (see the rules). Not available in stdio mode (it never switches UID): there only your own crontab works. A caller-supplied reserved argument is dropped as for docker.
 - **Per-user rules - named accounts only, no wildcards** (owner decision):
   ```yaml
   cron/manage:
@@ -44,7 +44,7 @@ One tool, **`cron/manage`**, shown in `linuxctl` as the group **`crontabs`** (`t
 
 ## Acceptance criteria
 
-- [ ] `cron/manage` (`internal/tools/cron/manage/`): read, list (privileged, no user), write; registered in `cmd/mcpd/main.go` and `internal/rpc/tools.go` (schema with `tools_group: "crontabs"`, description per GUIDELINES.md §9, router) and in `internal/rpc/annotations.go` (destructive, non-idempotent-safe values per the analysis); `users:` rules parsed and validated in `internal/config/sudo.go`.
+- [ ] `cron/manage` (`internal/tools/cron/manage/`): read, list (privileged, no user), write; the spawner extended to start a worker as a master-chosen UID (with the account's groups), used only for this tool; registered in `cmd/mcpd/main.go` and `internal/rpc/tools.go` (schema with `tools_group: "crontabs"`, description per GUIDELINES.md §9, router) and in `internal/rpc/annotations.go` (destructive, non-idempotent-safe values per the analysis); `users:` rules parsed and validated in `internal/config/sudo.go`.
 - [ ] Resource template `crontab://{user}` in `internal/rpc/resources.go`, same permission check and worker as the tool.
 - [ ] `linuxctl`: `get`, `update`, `edit`, `describe` for `crontabs` as in the table; `user` added to the positional priority list without changing other commands.
 - [ ] Own crontab works unprivileged with no grant; another user's needs root and a matching rule; unmatched user, missing `view`/`edit`, invalid crontab (old one kept), `if_match` mismatch, `update` without `--content` give clear errors; the list shows only viewable users.
@@ -60,7 +60,7 @@ One tool, **`cron/manage`**, shown in `linuxctl` as the group **`crontabs`** (`t
 |---|---|---|---|---|---|
 | T1 | Rules matching | Go unit test: named account, unlisted account, view-only, edit-only (implies view), root named view-only / root with edit (load error) / root unnamed, own account ignores rules, empty `users:` | allow/refuse as specified | | |
 | T2 | Strict config | `ParseSudoConfig` strict: no `users:`, an entry with no flags, a key with `*`/`?`/`[` or an invalid name, `root` with `edit` | load error; non-strict fails closed | | |
-| T3 | Target injection | Go unit test: caller-supplied reserved keys dropped; own-account `user` treated as own; another user needs root | as specified | | |
+| T3 | Target and UID | Go unit tests: caller-supplied reserved keys dropped; own-account `user` treated as own; the worker for another user is started with that account's UID and groups, and for `root` with UID 0 on a read only; a write aimed at root is refused in the master | as specified | | |
 | T4 | Read/write/list | Go unit test with a fake `crontab` binary and a fake spool dir: read, list (filtered by view), write, invalid file keeps old, `if_match` mismatch | as specified | | |
 | T5 | linuxctl grammar | Go unit tests on `Resolve`: `get crontabs`, `get crontabs test_user`, `update crontabs ...`, `describe crontabs ...`; existing `get processes <pid>` unchanged | resolves as in the table | | |
 | T6 | Live, own crontab | VPS 9092 as an unprivileged user with an account on the host: `update`, `get`, back to empty | round trip exact, crontab left empty | | |
@@ -73,3 +73,4 @@ One tool, **`cron/manage`**, shown in `linuxctl` as the group **`crontabs`** (`t
 - 2026-09-29 - owner asked for the risks to be written into the docs: section "Crontabs" (planned) added to permissions-and-risks.md and a pointer in the overview; the warning box on the tool and command pages is an acceptance criterion above and lands with the implementation.
 - 2026-09-29 - owner: remove the asterisk from the cron rules; a privileged listing shows only the crontabs of accounts with `view`. Design now: named accounts only (no globs, no precedence, root only when named); entry flags default to false, `edit` implies `view`.
 - 2026-09-29 - owner: root is allowed if named, but `view` only for now (an `edit` rule for root is refused at load). Revisit if a real need for scheduling as root appears.
+- 2026-09-29 - owner: the worker for another user's crontab runs as that user's UID (no root, no `crontab -u`); root is the same mechanism with UID 0, view only. Replaces the earlier "root worker + `crontab -u`" design; it also removes the cron.deny-bypass and `-u` injection risks.
