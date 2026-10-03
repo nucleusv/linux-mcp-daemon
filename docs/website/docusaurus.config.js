@@ -51,6 +51,25 @@ const config = {
     locales: ['en'],
   },
 
+  // Offline search: the index is built with the site, so every published
+  // version (/next/, /vX.Y.Z/, the root) searches its own pages only.
+  themes: [
+    [
+      '@easyops-cn/docusaurus-search-local',
+      /** @type {import("@easyops-cn/docusaurus-search-local").PluginOptions} */
+      ({
+        hashed: true,
+        docsRouteBasePath: '/',
+        indexDocs: true,
+        indexBlog: false,
+        indexPages: false,
+        highlightSearchTermsOnTargetPage: true,
+        explicitSearchResultPath: true,
+        searchResultLimits: 8,
+      }),
+    ],
+  ],
+
   presets: [
     [
       'classic',
