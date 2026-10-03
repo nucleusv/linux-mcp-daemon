@@ -7,6 +7,65 @@ sidebar_label: 'Release Notes'
 
 What changed in each release, and what to do when upgrading. Every release, with its binaries, packages and the full commit list, is on [GitHub Releases](https://github.com/nucleusv/linux-mcp-daemon/releases).
 
+## 0.5.0
+
+**One breaking change: the Docker resource templates were renamed.** Everything else in this release needs no changes to your configs.
+
+### Breaking: Docker resource templates are prefixed with `docker-`
+
+`container://`, `image://` and `volume://` are now `docker-container://`, `docker-image://` and `docker-volume://`. `docker-network://` already had the prefix, so all four now match, and the bare nouns stay free. **There are no aliases**: the old names are `unknown resource`, and a user whose `resources:` grant in `mcp-sudo.yaml` still lists them cannot read the new ones.
+
+| 0.4.1 | 0.5.0 |
+|---|---|
+| `container://{name}/{view}` | `docker-container://{name}/{view}` |
+| `image://{name}/inspect` | `docker-image://{name}/inspect` |
+| `volume://{name}/inspect` | `docker-volume://{name}/inspect` |
+| `docker-network://{name}/inspect` | unchanged |
+
+Rename the keys under `resources:` in each user's grant. This command does it, then restart or reload the daemon (the `docker/inspect` grant under `tools:` does not change):
+
+```bash
+sed -i -E 's#^(\s+)(container|image|volume)://:#\1docker-\2://:#' /etc/mcpd/configs/mcp-sudo.yaml
+systemctl restart mcpd        # or: linuxctl reload daemon
+```
+
+The keyword forms of `linuxctl` (`linuxctl get docker container web-1 status`) are unchanged; only the explicit `linuxctl resource <uri>` form and raw `resources/read` calls use the new names. See [Docker templates](./mcp-api/resource-templates/Docker%20Container%20Introspection) and [mcp-sudo.yaml](./configuration/mcp-sudo).
+
+### New: crontabs - `cron/manage` and `crontab://`
+
+Read, list and replace crontabs: `linuxctl get crontabs`, `linuxctl update crontabs --content "$(cat mycron.txt)"`, and `linuxctl edit crontabs`, which opens `$EDITOR` like `crontab -e` and refuses to save if the crontab changed in the meantime. The `crontab://{user}/text` and `/info` resource template reads the same data.
+
+- **Your own crontab needs no grant.** Another account's needs `privileged: true` and a rule naming it in your `cron/manage` grant: `users: {deploy: {view: true, edit: true}}`. Rules name accounts one by one (no wildcards), `edit` implies `view`, and `root` can be viewed but never edited.
+- **It runs as the target account**, through the `crontab` command, so `cron.allow` and `cron.deny` still apply and the syntax is checked by `crontab` itself. A stale `if_match` hash is refused.
+- **Writing a crontab schedules commands as that user, and the job outlives the session and the token.** mcpd stores the text exactly as given and does not inspect it; the named `edit` rule is the only control. Every write is audit-logged (size, lines, hash, never the content). Read the [crontab risks](./configuration/permissions-and-risks#crontabs) before granting `edit`.
+
+See [`cron/manage`](./mcp-api/tools/cron/manage) and [`crontab://`](./mcp-api/resource-templates/Crontab).
+
+### New: `timers/list` - systemd timers
+
+Lists the systemd timers of the host with the unit each starts, its schedule, next and last run, and last result. Read-only; `services/list` never showed them. See [`timers/list`](./mcp-api/tools/timers/list).
+
+### New: MCP annotations on every tool
+
+`tools/list` now carries `title`, `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint` for all 48 tools, so a client can decide what needs a confirmation.
+
+### Changed: all tool descriptions rewritten
+
+Every description now says what the tool is for, when to use a sibling instead, its side effects and grants, how parameters interact and what comes back. Several descriptions that overstated what a tool does were corrected.
+
+### Image: `cron` included
+
+The container image now has the `crontab` command, so `cron/manage` works in the Docker and Kubernetes deployments. Inside a container a call sees the container's own crontabs.
+
+### Fixed
+
+- `timers/list` reported the next run of monotonic timers (`OnBootSec=`, `OnUnitActiveSec=`) as `never`.
+- The crontab worker resolves the target account in its own namespace: a master running in a container numbers accounts differently from the host.
+
+### Docs
+
+Real READMEs for every resource template, the [`docker/manage`](./mcp-api/tools/docker/manage) page lists all seven actions, and the [command reference](./linuxctl/command-reference) is in alphabetical order with `timers` and `crontabs` as their own sections.
+
 ## 0.4.1
 
 Upgrading from 0.4.0 needs no changes to your configs.
