@@ -14,14 +14,13 @@ Read, list and replace crontabs (`cron/manage`). **Writing a crontab schedules c
 ```bash
 linuxctl get crontabs                                   # my own crontab, as `crontab -l` prints it
 linuxctl get crontabs --output json                     # user, exists, lines, jobs, bytes, sha256, content
-linuxctl update crontabs --content-file mycron.txt    # replace my whole crontab; "-" reads stdin
-linuxctl update crontabs --clear                       # delete it on purpose (an empty --content is refused)
+linuxctl update crontabs --content "$(cat mycron.txt)"  # replace my whole crontab
 linuxctl edit crontabs                                  # open in $EDITOR; the write is refused if it changed meanwhile
 
 # another account: --privileged true plus a rule naming it in the cron/manage grant
 linuxctl get crontabs --privileged true                 # accounts I may view that have a crontab
 linuxctl get crontabs test_user --privileged true
-linuxctl update crontabs test_user --privileged true --content-file test_user.cron
+linuxctl update crontabs test_user --privileged true --content "$(cat test_user.cron)"
 linuxctl resource crontab://test_user/info              # metadata as JSON, same rules
 ```
 

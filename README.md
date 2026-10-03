@@ -264,14 +264,13 @@ Read, list and replace crontabs with the `crontab` command's own rules (`cron.al
 
 ```bash
 linuxctl get crontabs                                  # my own crontab, exactly as `crontab -l` prints it
-linuxctl update crontabs --content-file mycron.txt   # replace my whole crontab (the file is read by linuxctl, not by your shell)
-linuxctl update crontabs --clear                      # delete it on purpose; an empty --content is refused
+linuxctl update crontabs --content "$(cat mycron.txt)" # replace my whole crontab
 linuxctl edit crontabs                                 # open it in $EDITOR, write back if unchanged meanwhile
 
 # another user's crontab: sudo plus a rule naming that account in mcp-sudo.yaml
 linuxctl get crontabs --privileged true                # the users you may view that have a crontab
 linuxctl get crontabs test_user --privileged true
-linuxctl update crontabs test_user --privileged true --content-file test_user.cron
+linuxctl update crontabs test_user --privileged true --content "$(cat test_user.cron)"
 ```
 
 ### Introspecting the MCP protocol itself

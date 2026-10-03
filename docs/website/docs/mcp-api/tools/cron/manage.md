@@ -50,7 +50,7 @@ The same data is available as the [`crontab://{user}/{view}`](../../resource-tem
 Your own crontab needs no grant (output from an Ubuntu 24.04 VPS, as `fr-test`):
 
 ```bash
-linuxctl update crontabs --content-file mycron.txt
+linuxctl update crontabs --content "$(cat mycron.txt)"
 ```
 ```text
 Crontab of fr-test replaced: 4 lines, sha256 9703f4a065f38cb417e1cf8040dc24eb25332c0f919155869e2f2fc894e6bb77 (was e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)
@@ -120,33 +120,6 @@ linuxctl update crontabs --content "# other" --if_match 000000000000000000000000
 the crontab changed since you read it (its sha256 is now 9703f4a065f38cb417e1cf8040dc24eb25332c0f919155869e2f2fc894e6bb77, you passed 0) - read it again
 ```
 
-The text goes to the daemon as-is and is stored as data; nothing in it is interpreted. `--content-file PATH` (`-` for stdin) makes `linuxctl` read the file itself, so the text never passes through your shell the way `--content "$(cat file)"` does. A crontab with `$(…)`, backticks, `;` and `|` in it is stored verbatim (checked live):
-
-```text
-$ cat mycron.txt
-# deploy $(echo NOT-RUN) `id`
-0 4 * * * /usr/local/bin/x.sh; echo a | cat
-
-$ linuxctl update crontabs --content-file mycron.txt
-Crontab of fr-test replaced: 2 lines, sha256 077be1faa641dffdc1d764d7a70f15cd4eb157c31db637c7d3060f2a5fa9de7f (was e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)
-
-$ linuxctl get crontabs
-# deploy $(echo NOT-RUN) `id`
-0 4 * * * /usr/local/bin/x.sh; echo a | cat
-```
-
-An empty crontab is refused unless you ask for it, because a failed `--content "$(cat missing.txt)"` hands over an empty string:
-
-```text
-$ linuxctl update crontabs --content "$(cat missing.txt)"
-Error: refusing to replace the crontab with an empty one (a missing or empty file?): to delete it on purpose, pass --clear
-
-$ linuxctl update crontabs --clear
-Crontab of fr-test replaced: 0 lines, sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 (was 077be1faa641dffdc1d764d7a70f15cd4eb157c31db637c7d3060f2a5fa9de7f)
-```
-
-`--content-file` works the same for `files/create` and `files/update` (`linuxctl create files /tmp/x --content-file local.txt`).
-
 `linuxctl edit crontabs` works like `crontab -e`, in your `$VISUAL`, `$EDITOR` or `vi` (arguments are allowed: `EDITOR="code --wait"`). It reads the crontab and its hash, opens a private copy (mode 0600), and writes back only if you changed it:
 
 ```text
@@ -172,7 +145,7 @@ USER             LINES  MODIFIED
 testuser         2      2026-10-03T13:08:22Z
 ```
 ```bash
-linuxctl update crontabs testuser --privileged true --content-file testuser.cron
+linuxctl update crontabs testuser --privileged true --content "$(cat testuser.cron)"
 ```
 ```text
 Crontab of testuser replaced: 2 lines, sha256 c81476659b4f3988d850cb8ed1d4e3cd8b0fd8f3f136604b50eb2fb5ffee3bbb (was 0a12fac05663da5bf57a142703afa5b3249857f837a3cdbd64d0dcdb4b0117e3)
