@@ -33,3 +33,18 @@
   --ifm-background-color: #0b1120;
   --ifm-navbar-background-color: #0f172a;
 }
+
+/* Warning boxes: a muted amber instead of Infima's vivid yellow. */
+.alert--warning {
+  --ifm-alert-background-color: #fbf6e4;
+  --ifm-alert-border-color: #e3d49b;
+  --ifm-alert-foreground-color: #4f4521;
+  --ifm-code-background: rgba(120, 96, 20, 0.08);
+}
+
+[data-theme='dark'] .alert--warning {
+  --ifm-alert-background-color: rgba(214, 180, 70, 0.09);
+  --ifm-alert-border-color: rgba(214, 180, 70, 0.45);
+  --ifm-alert-foreground-color: #e6dcb4;
+  --ifm-code-background: rgba(214, 180, 70, 0.14);
+}

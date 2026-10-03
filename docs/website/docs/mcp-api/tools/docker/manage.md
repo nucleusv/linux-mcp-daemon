@@ -6,7 +6,7 @@ Changes a container's lifecycle: start, stop, restart, kill, pause, unpause or r
 
 The `containers:` list in the grant is the whole authorization boundary - it is matched in the worker, against both the name and the resolved ID, before anything is sent to the socket. A grant with no `containers:` list refuses everything.
 
-:::danger[A wildcard grant can take down mcpd itself]
+:::warning[A wildcard grant can take down mcpd itself]
 
 When `mcpd` runs as a container on the same Docker daemon, `containers: ["*"]` matches **its own container** too.
 
