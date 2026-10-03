@@ -120,6 +120,22 @@ linuxctl update crontabs --content "# other" --if_match 000000000000000000000000
 the crontab changed since you read it (its sha256 is now 9703f4a065f38cb417e1cf8040dc24eb25332c0f919155869e2f2fc894e6bb77, you passed 0) - read it again
 ```
 
+`linuxctl edit crontabs` works like `crontab -e`, in your `$VISUAL`, `$EDITOR` or `vi` (arguments are allowed: `EDITOR="code --wait"`). It reads the crontab and its hash, opens a private copy (mode 0600), and writes back only if you changed it:
+
+```text
+$ EDITOR=vim linuxctl edit crontabs            # added one line, saved
+Crontab of fr-test replaced: 3 lines, sha256 38e324f76ed654e162931ee1134501b30b8541e0e722031301e08e70e2a12173 (was bae7af7f9180bd04a29ad9a3ce2a2700389bb803accc3dcd804f624c91e90a4f)
+
+$ EDITOR=vim linuxctl edit crontabs            # closed without changes
+No changes to the crontab of fr-test.
+
+$ EDITOR=vim linuxctl edit crontabs            # someone else changed it while the editor was open
+the crontab changed since you read it (its sha256 is now c35594bcd30d33a8c7b5b77c26186d6e3103b2f6ee4586449f4b51bab0208b91, you passed 38e324f76ed654e162931ee1134501b30b8541e0e722031301e08e70e2a12173) - read it again
+Your edit was not saved; it is kept in /tmp/crontab-1234.txt (read the crontab again, merge, and update).
+```
+
+For another account add the name and `--privileged true`: `linuxctl edit crontabs test_user --privileged true`.
+
 Another account's crontab, as a user whose `cron/manage` grant has `testuser: {view, edit}`, `unpriviliged: {view}` and `root: {view}`:
 ```bash
 linuxctl get crontabs --privileged true          # accounts with a crontab that you may view
