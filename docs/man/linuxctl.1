@@ -171,7 +171,7 @@ Read and replace crontabs (writing one schedules commands as that user; another 
 .br
 .B linuxctl edit crontabs
 .br
-.B linuxctl update crontabs test_user --privileged true --content "$(cat t.cron)"
+.B linuxctl update crontabs test_user --privileged true --content\-file t.cron
 .PP
 Query the systemd journal for the current boot only (requires \fB\-\-privileged true\fR in containerized deployments, since journalctl only exists on the host):
 .IP

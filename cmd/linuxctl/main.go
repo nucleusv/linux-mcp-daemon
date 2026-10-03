@@ -281,6 +281,10 @@ func main() {
 			toolArgs[k] = v
 		}
 		coerceFlagTypes(action.Tool.InputSchema, toolArgs)
+		if err := applyContentFlags(action.Tool.Name, action.Tool.InputSchema, toolArgs, os.Stdin); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 		if len(remaining) > 0 {
 			fmt.Fprintf(os.Stderr, "Warning: %d extra argument(s) ignored: %s\n", len(remaining), strings.Join(remaining, " "))
 		}
