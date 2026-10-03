@@ -127,7 +127,7 @@ const config = {
         ],
       },
       footer: {
-        style: 'dark',
+        style: 'light',
         copyright: `Copyright © ${new Date().getFullYear()} NucleusV. Built with Docusaurus.`,
       },
       prism: {
