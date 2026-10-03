@@ -99,9 +99,9 @@ func dockerFixture() Registry {
 			{Name: "docker/images", ToolsGroup: "docker", LinuxctlVerb: "images"},
 		},
 		Templates: []TemplateDef{
-			{URITemplate: "container://{name}/{view}", Name: "Docker Container Introspection", Group: "docker", LinuxctlVerb: "container"},
-			{URITemplate: "image://{name}/inspect", Name: "Docker Image Inspect", Group: "docker", LinuxctlVerb: "image"},
-			{URITemplate: "volume://{name}/inspect", Name: "Docker Volume Inspect", Group: "docker", LinuxctlVerb: "volume"},
+			{URITemplate: "docker-container://{name}/{view}", Name: "Docker Container Introspection", Group: "docker", LinuxctlVerb: "container"},
+			{URITemplate: "docker-image://{name}/inspect", Name: "Docker Image Inspect", Group: "docker", LinuxctlVerb: "image"},
+			{URITemplate: "docker-volume://{name}/inspect", Name: "Docker Volume Inspect", Group: "docker", LinuxctlVerb: "volume"},
 			{URITemplate: "docker-network://{name}/inspect", Name: "Docker Network Inspect", Group: "docker", LinuxctlVerb: "network"},
 			// Same LinuxctlVerb as the network://interfaces resource below,
 			// deliberately - one interface's detail vs. the plain list, a
@@ -123,14 +123,14 @@ func dockerFixture() Registry {
 func TestResolveGetMatchesTemplateByKeyword(t *testing.T) {
 	reg := dockerFixture()
 	cases := []struct {
-		rest     []string
-		wantURI  string
-		wantPos  []string
+		rest    []string
+		wantURI string
+		wantPos []string
 	}{
 		{[]string{"network", "appnet"}, "docker-network://{name}/inspect", []string{"appnet"}},
-		{[]string{"volume", "app-data"}, "volume://{name}/inspect", []string{"app-data"}},
-		{[]string{"image", "nginx"}, "image://{name}/inspect", []string{"nginx"}},
-		{[]string{"container", "web-1", "status"}, "container://{name}/{view}", []string{"web-1", "status"}},
+		{[]string{"volume", "app-data"}, "docker-volume://{name}/inspect", []string{"app-data"}},
+		{[]string{"image", "nginx"}, "docker-image://{name}/inspect", []string{"nginx"}},
+		{[]string{"container", "web-1", "status"}, "docker-container://{name}/{view}", []string{"web-1", "status"}},
 	}
 	for _, c := range cases {
 		action, err := Resolve(reg, "get", "docker", c.rest)

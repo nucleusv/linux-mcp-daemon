@@ -119,8 +119,8 @@ func TestDockerToolsAreListedToEveryone(t *testing.T) {
 	for _, tool := range dockerTools() {
 		got[tool.(map[string]interface{})["name"].(string)] = true
 	}
-	// docker/inspect is the internal worker behind the container:// / image://
-	// / volume:// templates, never a listed tool.
+	// docker/inspect is the internal worker behind the docker-container:// / docker-image://
+	// / docker-volume:// templates, never a listed tool.
 	want := 0
 	for name := range config.DockerTools {
 		if name == "docker/inspect" {

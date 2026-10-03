@@ -1,10 +1,10 @@
 # Docker Image Inspect
 
-**URI Template**: `image://{name}/inspect`
+**URI Template**: `docker-image://{name}/inspect`
 
 Full configuration of one Docker image (layers, env, entrypoint, labels, digests). The name may be a tag (nginx:alpine), a repository path (ghcr.io/org/api:v1) or an image ID. Hint: list images with the docker/images tool.
 
-A read needs two grants in [mcp-sudo.yaml](../../configuration/mcp-sudo.md): the template itself (`image://{name}/inspect`) and the internal worker it spawns (`docker/inspect`). There is no `containers:` list here - an image is not a container - so the grant is all or nothing. A registry path with slashes is fine; `..` in a reference is refused rather than cleaned, so a name can never address another Engine API endpoint.
+A read needs two grants in [mcp-sudo.yaml](../../configuration/mcp-sudo.md): the template itself (`docker-image://{name}/inspect`) and the internal worker it spawns (`docker/inspect`). There is no `containers:` list here - an image is not a container - so the grant is all or nothing. A registry path with slashes is fine; `..` in a reference is refused rather than cleaned, so a name can never address another Engine API endpoint.
 
 ## Example
 
@@ -14,7 +14,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 <summary><b>linuxctl</b></summary>
 
 ```bash
-linuxctl resource image://nginx:alpine/inspect
+linuxctl resource docker-image://nginx:alpine/inspect
 ```
 
 Output (Docker-in-Docker test host, abridged - the full answer is 70 lines, adding every layer digest, `Metadata` and `Descriptor`):
@@ -84,7 +84,7 @@ curl -N -s --cacert mcpd.crt -H "Authorization: Bearer $MCP_TOKEN" https://local
 curl -s --cacert mcpd.crt -X POST "https://localhost:9091/message?session_id=<from step 1>" \
   -H "Authorization: Bearer $MCP_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "image://nginx:alpine/inspect"}}'
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "docker-image://nginx:alpine/inspect"}}'
 ```
 
 Response (abridged the same way):
@@ -97,7 +97,7 @@ Response (abridged the same way):
       {
         "mimeType": "application/json",
         "text": "{\n  \"Id\": \"sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2\",\n  \"RepoTags\": [\n    \"nginx:alpine\"\n  ],\n  \"Created\": \"2026-09-22T22:09:50.079077168Z\",\n  \"Architecture\": \"arm64\",\n  \"Os\": \"linux\",\n  \"Size\": 92962093\n}",
-        "uri": "image://nginx:alpine/inspect"
+        "uri": "docker-image://nginx:alpine/inspect"
       }
     ]
   }

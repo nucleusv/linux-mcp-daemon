@@ -144,7 +144,7 @@ Without a `sysctl:` block, writes are unrestricted - the default, unchanged. (An
 
 Every `docker/*` tool is root or nothing - the Docker socket is root-owned and all-or-nothing - so the daemon forces `privileged: true` on the call and refuses it outright without `allowed: true` here. Every `docker/*` tool is listed in `tools/list` for every user, like all other tools; without its grant the call fails with an error that names the missing grant (`user X is not authorized to run docker/exec: ... needs allowed: true ...`), before anything reaches the socket. `daemon/reload-config` behaves the same way.
 
-The tools that name one container (`docker/manage`, `docker/logs`, `docker/exec`, and `docker/inspect`, the internal worker behind `container://`) take a `containers:` list of name or ID globs. It is matched in the worker, against both the name given and the resolved full ID, before anything is sent to the socket:
+The tools that name one container (`docker/manage`, `docker/logs`, `docker/exec`, and `docker/inspect`, the internal worker behind `docker-container://`) take a `containers:` list of name or ID globs. It is matched in the worker, against both the name given and the resolved full ID, before anything is sent to the socket:
 
 ```yaml
 users:
@@ -388,8 +388,8 @@ users:
           allowed: true
         processes/read:  # internal: the worker behind process://
           allowed: true
-        # Worker behind container://, image://, volume:// and docker-network://.
-        # Its containers: list scopes container:// reads exactly as
+        # Worker behind docker-container://, docker-image://, docker-volume:// and docker-network://.
+        # Its containers: list scopes docker-container:// reads exactly as
         # docker/manage's scopes that tool - reading one container's full
         # inspect is not nothing (env vars, mounts, labels), so it is granted
         # separately from docker/containers.
@@ -440,14 +440,14 @@ users:
         process://:
           - ""
         # The docker templates. "" grants every name; which containers a
-        # container:// read may actually reach is then decided by the
+        # docker-container:// read may actually reach is then decided by the
         # docker/inspect grant's containers: list above - a privileged read
         # needs both grants, as for file:// and service://.
-        container://:
+        docker-container://:
           - ""
-        image://:
+        docker-image://:
           - ""
-        volume://:
+        docker-volume://:
           - ""
         # Prefixed on purpose: network:// above is the host's own networking,
         # so a Docker network cannot have the bare scheme.

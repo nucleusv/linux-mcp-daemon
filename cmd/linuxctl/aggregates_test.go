@@ -19,8 +19,8 @@ func TestBuildDescribeURIsLeftover(t *testing.T) {
 		{"file exact", "file:///{path}", []string{"/etc/hosts"}, 2, nil},
 		{"process pid only", "process://{pid}/{target}", []string{"1"}, 3, nil},
 		{"process extra", "process://{pid}/{target}", []string{"1", "x"}, 3, []string{"x"}},
-		{"container view", "container://{name}/{view}", []string{"web", "logs"}, 1, nil},
-		{"container extra", "container://{name}/{view}", []string{"web", "logs", "x"}, 1, []string{"x"}},
+		{"container view", "docker-container://{name}/{view}", []string{"web", "logs"}, 1, nil},
+		{"container extra", "docker-container://{name}/{view}", []string{"web", "logs", "x"}, 1, []string{"x"}},
 		{"service extra", "service://{name}/status", []string{"sshd", "x"}, 1, []string{"x"}},
 	}
 	for _, c := range cases {

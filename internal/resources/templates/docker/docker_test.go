@@ -25,7 +25,7 @@ func TestBothGrantsRequired(t *testing.T) {
       tools:
         docker/inspect: {allowed: true, containers: ["*"]}
 `)
-	if _, _, err := Handle("container://web-1/status", "ops", noScheme); err == nil || !strings.Contains(err.Error(), `"container://"`) {
+	if _, _, err := Handle("docker-container://web-1/status", "ops", noScheme); err == nil || !strings.Contains(err.Error(), `"docker-container://"`) {
 		t.Errorf("a missing scheme grant should name the scheme, got %v", err)
 	}
 
@@ -36,9 +36,9 @@ func TestBothGrantsRequired(t *testing.T) {
       resources:
         # A whole-scheme grant is the empty prefix, as in the shipped config;
         # a literal "*" would grant only a container actually named "*".
-        "container://": [""]
+        "docker-container://": [""]
 `)
-	if _, _, err := Handle("container://web-1/status", "ops", noWorker); err == nil || !strings.Contains(err.Error(), "docker/inspect") {
+	if _, _, err := Handle("docker-container://web-1/status", "ops", noWorker); err == nil || !strings.Contains(err.Error(), "docker/inspect") {
 		t.Errorf("a missing worker grant should name docker/inspect, got %v", err)
 	}
 }
@@ -55,9 +55,9 @@ func TestURIParsing(t *testing.T) {
       tools: {}
 `)
 	for _, tc := range []struct{ uri, want string }{
-		{"container://web-1/history", "unknown view"},
+		{"docker-container://web-1/history", "unknown view"},
 		{"network://bridge/inspect", "unknown resource"},
-		{"container://", "no name"},
+		{"docker-container://", "no name"},
 		{"container:/web-1", "unknown resource"},
 	} {
 		if _, _, err := Handle(tc.uri, "ops", cfg); err == nil || !strings.Contains(err.Error(), tc.want) {
@@ -69,10 +69,10 @@ func TestURIParsing(t *testing.T) {
 	// scheme - which is how these assert what each URI parsed to without
 	// spawning a worker.
 	for _, tc := range []struct{ uri, scheme string }{
-		{"container://web-1/status", "container://"},
-		{"container://web-1", "container://"},
-		{"image://ghcr.io/org/api:v1/inspect", "image://"},
-		{"volume://pgdata/inspect", "volume://"},
+		{"docker-container://web-1/status", "docker-container://"},
+		{"docker-container://web-1", "docker-container://"},
+		{"docker-image://ghcr.io/org/api:v1/inspect", "docker-image://"},
+		{"docker-volume://pgdata/inspect", "docker-volume://"},
 		{"docker-network://bridge/inspect", "docker-network://"},
 	} {
 		_, _, err := Handle(tc.uri, "ops", cfg)
@@ -117,9 +117,9 @@ func TestSchemeGrantIsScoped(t *testing.T) {
       tools:
         docker/inspect: {allowed: true, containers: ["web-*"]}
       resources:
-        "container://": ["web-1"]
+        "docker-container://": ["web-1"]
 `)
-	if _, _, err := Handle("container://db-1/status", "ops", cfg); err == nil || !strings.Contains(err.Error(), `"container://"`) {
+	if _, _, err := Handle("docker-container://db-1/status", "ops", cfg); err == nil || !strings.Contains(err.Error(), `"docker-container://"`) {
 		t.Errorf("a container outside the resources: list should be refused, got %v", err)
 	}
 }

@@ -2,7 +2,7 @@
 
 **Tool Name**: `docker/volumes`
 
-Lists Docker volumes with driver, mountpoint (a host path) and the names of the containers, running or stopped, that mount each. Read-only: volumes are never created or removed here. `pattern` is a glob on the volume name. Text is a block per volume; `output_format: json` (also yaml/table/wide) returns an array of objects (name, driver, mountpoint, created, scope, labels, options, in_use_by), `[]` when empty. `docker/prune` with target `volumes` removes anonymous unused volumes only. For one volume's details use the `volume://<name>/inspect` resource, for containers `docker/containers`. Always runs as root: no `privileged` argument, refused unless the grant has `allowed: true`.
+Lists Docker volumes with driver, mountpoint (a host path) and the names of the containers, running or stopped, that mount each. Read-only: volumes are never created or removed here. `pattern` is a glob on the volume name. Text is a block per volume; `output_format: json` (also yaml/table/wide) returns an array of objects (name, driver, mountpoint, created, scope, labels, options, in_use_by), `[]` when empty. `docker/prune` with target `volumes` removes anonymous unused volumes only. For one volume's details use the `docker-volume://<name>/inspect` resource, for containers `docker/containers`. Always runs as root: no `privileged` argument, refused unless the grant has `allowed: true`.
 
 `In use by` is computed from the container list, so it names containers whether they are running or stopped - a stopped container still holds its volume. An empty list means no container mounts it, which is the closest thing to "safe to delete" this tool will tell you; deleting it is still someone else's job.
 
@@ -24,7 +24,7 @@ app-data
   Mountpoint: /var/lib/docker/volumes/app-data/_data
   In use by: web-1
 
-Hint: For one volume's options and labels, read volume://<name>/inspect
+Hint: For one volume's options and labels, read docker-volume://<name>/inspect
 ```
 
 ```bash
@@ -77,7 +77,7 @@ Response:
     "content": [
       {
         "type": "text",
-        "text": "app-data\n  Driver: local | Scope: local\n  Mountpoint: /var/lib/docker/volumes/app-data/_data\n  In use by: web-1\n\nHint: For one volume's options and labels, read volume://<name>/inspect\n"
+        "text": "app-data\n  Driver: local | Scope: local\n  Mountpoint: /var/lib/docker/volumes/app-data/_data\n  In use by: web-1\n\nHint: For one volume's options and labels, read docker-volume://<name>/inspect\n"
       }
     ]
   }

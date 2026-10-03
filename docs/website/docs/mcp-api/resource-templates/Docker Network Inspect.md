@@ -4,7 +4,7 @@
 
 Full configuration of one Docker network: driver, scope, IPAM (subnets, gateways, IP ranges), options, labels and every attached container's name, IPv4/IPv6 address and MAC. Read-only - nothing here connects, disconnects or removes. Hint: list networks with the [docker/networks](../tools/docker/networks.md) tool.
 
-The scheme is deliberately prefixed. `network://` is already the **host's own** networking - `network://interfaces`, `network://routes`, `network://interfaces/{name}` - so a Docker network cannot have the bare noun the way a container, image or volume does. That asymmetry with `container://`, `image://` and `volume://` is the whole reason for the `docker-` prefix; inside the docker group the keyword is still the plain noun (`linuxctl get docker network appnet`).
+The scheme is deliberately prefixed. `network://` is already the **host's own** networking - `network://interfaces`, `network://routes`, `network://interfaces/{name}` - so a Docker network cannot have the bare noun the way a container, image or volume does. That asymmetry with `docker-container://`, `docker-image://` and `docker-volume://` is the whole reason for the `docker-` prefix; inside the docker group the keyword is still the plain noun (`linuxctl get docker network appnet`).
 
 A read needs two grants in [mcp-sudo.yaml](../../configuration/mcp-sudo.md): the template itself (`docker-network://`) and the internal worker it spawns (`docker/inspect`). A network name is a single identifier, so a slash in it is refused rather than cleaned - the name can never address another Engine API endpoint.
 

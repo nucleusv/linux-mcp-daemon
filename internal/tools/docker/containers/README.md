@@ -16,4 +16,4 @@ Root or nothing: the socket is `srw-rw---- root docker`, so the daemon forces `p
 
 Unlike `docker/logs`, `docker/exec` and `docker/manage`, it names no container, so it needs no `containers:` list — it lists every container on the host.
 
-`linuxctl get docker containers` calls this tool (the bare `linuxctl get docker` resolves identically - `containers` is docker's bare-reachable default). For one container's own view, read `container://<name>/status`.
+`linuxctl get docker containers` calls this tool (the bare `linuxctl get docker` resolves identically - `containers` is docker's bare-reachable default). For one container's own view, read `docker-container://<name>/status`.

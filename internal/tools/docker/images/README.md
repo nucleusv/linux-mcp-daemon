@@ -12,4 +12,4 @@ Untagged intermediate layers are hidden unless `all: true`.
 ## Usage & Permissions
 Root or nothing: needs `docker/images: {allowed: true}` in the caller's grant in `configs/mcp-sudo.yaml`. It names no container, so no `containers:` list applies.
 
-`linuxctl get docker images` calls this tool. For one image's full config, read `image://<ref>/inspect`.
+`linuxctl get docker images` calls this tool. For one image's full config, read `docker-image://<ref>/inspect`.

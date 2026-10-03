@@ -1,10 +1,10 @@
-// Package docker serves the container://, image://, volume:// and
+// Package docker serves the docker-container://, docker-image://, docker-volume:// and
 // docker-network:// resource templates. All four spawn one internal worker,
 // docker/inspect, the way service://{name}/status spawns services/status.
 //
 // A docker read is privileged or nothing - the socket is root-owned - so it
 // needs both grants ARCHITECTURE.md describes: the scheme in `resources:`, and
-// `docker/inspect` in `tools:` (whose `containers:` list scopes container://
+// `docker/inspect` in `tools:` (whose `containers:` list scopes docker-container://
 // reads, exactly as it scopes docker/manage).
 package docker
 
@@ -18,26 +18,24 @@ import (
 	"github.com/nucleusv/linux-mcp-daemon/internal/worker"
 )
 
-// containerViews are the four things container://{name}/<view> can return.
+// containerViews are the four things docker-container://{name}/<view> can return.
 var containerViews = map[string]bool{"inspect": true, "status": true, "stats": true, "top": true}
 
 // schemes maps each kind this handler serves to the resources: key that grants
 // it. scripts/check_docs.sh reads these literals to know which grants the
 // reference config must list.
-// docker-network:// is the one prefixed scheme here, deliberately asymmetric
-// with the other three: network:// is already the host's own networking
-// (network://interfaces, network://routes), so a Docker network cannot have the
-// bare noun. Renaming the other three for symmetry would be churn.
+// Every scheme carries the docker- prefix: network:// is already the host's own
+// networking (network://interfaces, network://routes), so the bare nouns stay free.
 var schemes = map[string]string{
-	"container":      "container://",
-	"image":          "image://",
-	"volume":         "volume://",
+	"container":      "docker-container://",
+	"image":          "docker-image://",
+	"volume":         "docker-volume://",
 	"docker-network": "docker-network://",
 }
 
 // Handle reads one of the docker templates. uri is
-// container://{name}/{status|inspect|stats|top}, image://{ref}/inspect or
-// volume://{name}/inspect.
+// docker-container://{name}/{status|inspect|stats|top}, docker-image://{ref}/inspect or
+// docker-volume://{name}/inspect.
 func Handle(uri string, sessionUser string, sudoConfig *config.SudoConfig) (string, string, error) {
 	kind, rest, ok := strings.Cut(uri, "://")
 	if !ok {
@@ -58,7 +56,7 @@ func Handle(uri string, sessionUser string, sudoConfig *config.SudoConfig) (stri
 			name, view = rest[:i], rest[i+1:]
 		}
 		if !containerViews[view] {
-			return "", "", fmt.Errorf("unknown view %q for %s: use container://%s/status, /inspect, /stats or /top", view, uri, name)
+			return "", "", fmt.Errorf("unknown view %q for %s: use docker-container://%s/status, /inspect, /stats or /top", view, uri, name)
 		}
 	default: // image, volume, docker-network
 		// An image reference legitimately contains "/" (ghcr.io/org/img), so
@@ -77,7 +75,7 @@ func Handle(uri string, sessionUser string, sudoConfig *config.SudoConfig) (stri
 	}
 	// Grant 2: the worker behind the template.
 	if !sudoConfig.CanRunAsRoot(sessionUser, "docker/inspect") {
-		return "", "", fmt.Errorf("reading %s also needs `docker/inspect: {allowed: true, containers: [...]}` in this user's tools: in mcp-sudo.yaml - that is the internal worker these templates spawn, and its containers: list is what scopes container:// reads", uri)
+		return "", "", fmt.Errorf("reading %s also needs `docker/inspect: {allowed: true, containers: [...]}` in this user's tools: in mcp-sudo.yaml - that is the internal worker these templates spawn, and its containers: list is what scopes docker-container:// reads", uri)
 	}
 
 	// The worker's kinds are the plain nouns; only the URI scheme is prefixed.

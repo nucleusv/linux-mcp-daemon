@@ -1,6 +1,6 @@
 // Package networks lists Docker networks. Read-only by construction: no
 // create, no remove, no connect/disconnect - removing a network is prune's
-// job, and a container's membership is already in container://{name}/inspect.
+// job, and a container's membership is already in docker-container://{name}/inspect.
 package networks
 
 import (

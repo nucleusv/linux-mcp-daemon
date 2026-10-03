@@ -19,7 +19,7 @@ The `status` view exists because a raw inspect is several hundred lines of confi
 ## Usage & Permissions
 A privileged resource read needs **two** grants (see `ARCHITECTURE.md`), and there is no unprivileged fallback here because the socket is root-owned:
 
-1. the scheme in `resources:` — `container://`, `image://` or `volume://`;
+1. the scheme in `resources:` — `docker-container://`, `docker-image://` or `docker-volume://`;
 2. `docker/inspect: {allowed: true, containers: [...]}` in `tools:`.
 
 For `kind: container` the grant's `containers:` list is passed in as `_containers` and enforced by the same `docker.Authorize` path `docker/manage` uses: resolve first, then match canonical name *and* ID, act on the ID.

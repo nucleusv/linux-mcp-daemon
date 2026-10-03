@@ -171,7 +171,7 @@ Reading and writing crontabs (`linuxctl get|update|edit crontabs`) is being buil
 - [`process://{pid}/{target}`](./resource-templates/Process Introspection) - Reads process metadata from procfs.
 
 **docker**
-- [`container://{name}/{view}`](./resource-templates/Docker Container Introspection) - One Docker container's own view of itself (status, inspect, stats, top).
-- [`image://{name}/inspect`](./resource-templates/Docker Image Inspect) - Full configuration of one Docker image (layers, env, entrypoint, labels, digests).
-- [`volume://{name}/inspect`](./resource-templates/Docker Volume Inspect) - Driver, mountpoint, options and labels of one Docker volume.
+- [`docker-container://{name}/{view}`](./resource-templates/Docker Container Introspection) - One Docker container's own view of itself (status, inspect, stats, top).
+- [`docker-image://{name}/inspect`](./resource-templates/Docker Image Inspect) - Full configuration of one Docker image (layers, env, entrypoint, labels, digests).
+- [`docker-volume://{name}/inspect`](./resource-templates/Docker Volume Inspect) - Driver, mountpoint, options and labels of one Docker volume.
 - [`docker-network://{name}/inspect`](./resource-templates/Docker Network Inspect) - IPAM, options, labels and every attached container's address and MAC for one Docker network. Prefixed on purpose: `network://` is the host's own networking.

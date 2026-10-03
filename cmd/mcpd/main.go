@@ -174,7 +174,7 @@ func main() {
 			"docker/networks":       dockernetworks.List,
 			"docker/prune":          dockerprune.Prune,
 			// docker/inspect is not a callable tool: it is the single worker
-			// behind the container://, image:// and volume:// templates.
+			// behind the docker-container://, docker-image:// and docker-volume:// templates.
 			"docker/inspect": dockerinspect.Inspect,
 		}
 

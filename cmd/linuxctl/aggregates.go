@@ -72,7 +72,7 @@ func buildDescribeURIs(tpl TemplateDef, positional []string) ([]string, []string
 		}
 		return []string{"crontab://" + name + "/info", "crontab://" + name + "/text"}, extra
 
-	case "container://{name}/{view}":
+	case "docker-container://{name}/{view}":
 		// Two placeholders, usually one argument: default to the computed
 		// summary, which is what "describe" means everywhere else.
 		name, view := "", "status"

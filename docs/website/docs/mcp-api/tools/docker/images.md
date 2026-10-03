@@ -2,7 +2,7 @@
 
 **Tool Name**: `docker/images`
 
-Lists Docker images through the Engine API on the local socket: tags, ID, size, creation time. Read-only (no pull, build or remove). Untagged intermediate layers are hidden unless `all: true`; untagged images that are shown appear as `<none>:<none>`. `pattern` is a glob on any tag or repository (`nginx*`, `*/api:*`). Text is tag lines with `ID | Size | Created`; `output_format: json` (also yaml/table/wide) returns an array of objects (id, full_id, repo_tags, repo_digests, size_bytes, created, containers = how many containers use it, labels), `[]` when empty. To delete unused images use `docker/prune` (target `images`, dangling only); for containers `docker/containers`; for one image's config the `image://<ref>/inspect` resource. Always runs as root: no `privileged` argument, refused unless the grant has `allowed: true`.
+Lists Docker images through the Engine API on the local socket: tags, ID, size, creation time. Read-only (no pull, build or remove). Untagged intermediate layers are hidden unless `all: true`; untagged images that are shown appear as `<none>:<none>`. `pattern` is a glob on any tag or repository (`nginx*`, `*/api:*`). Text is tag lines with `ID | Size | Created`; `output_format: json` (also yaml/table/wide) returns an array of objects (id, full_id, repo_tags, repo_digests, size_bytes, created, containers = how many containers use it, labels), `[]` when empty. To delete unused images use `docker/prune` (target `images`, dangling only); for containers `docker/containers`; for one image's config the `docker-image://<ref>/inspect` resource. Always runs as root: no `privileged` argument, refused unless the grant has `allowed: true`.
 
 Sizes are Docker's own per-image size, which counts shared layers once per image - the numbers do not add up to the disk the images occupy together.
 
@@ -28,7 +28,7 @@ redis:alpine
 busybox:latest
   ID: fd7dc98638c8 | Size: 5.9 MiB | Created: 2026-05-13 02:21:49 UTC
 
-Hint: For one image's layers, env and entrypoint, read image://<name>/inspect
+Hint: For one image's layers, env and entrypoint, read docker-image://<name>/inspect
 ```
 
 `-o json` adds the digests, the labels and the number of containers using the image:

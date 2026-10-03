@@ -83,7 +83,7 @@ func List(argsJSON []byte) (string, error) {
 	if text.Len() == 0 {
 		return "No images found matching the criteria.", nil
 	}
-	text.WriteString("Hint: For one image's layers, env and entrypoint, read image://<name>/inspect\n")
+	text.WriteString("Hint: For one image's layers, env and entrypoint, read docker-image://<name>/inspect\n")
 	return text.String(), nil
 }
 

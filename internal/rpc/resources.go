@@ -176,7 +176,7 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 				"mimeType":      "text/plain",
 			},
 			map[string]interface{}{
-				"uriTemplate":   "container://{name}/{view}",
+				"uriTemplate":   "docker-container://{name}/{view}",
 				"name":          "Docker Container Introspection",
 				"group":         "docker",
 				"linuxctl_verb": "container",
@@ -184,7 +184,7 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 				"mimeType":      "application/json",
 			},
 			map[string]interface{}{
-				"uriTemplate":   "image://{name}/inspect",
+				"uriTemplate":   "docker-image://{name}/inspect",
 				"name":          "Docker Image Inspect",
 				"group":         "docker",
 				"linuxctl_verb": "image",
@@ -192,7 +192,7 @@ func (h *RPCHandler) HandleResourcesTemplatesList(resp *JSONRPCResponse) {
 				"mimeType":      "application/json",
 			},
 			map[string]interface{}{
-				"uriTemplate":   "volume://{name}/inspect",
+				"uriTemplate":   "docker-volume://{name}/inspect",
 				"name":          "Docker Volume Inspect",
 				"group":         "docker",
 				"linuxctl_verb": "volume",
@@ -295,9 +295,9 @@ func (h *RPCHandler) HandleResourcesRead(session *Session, req JSONRPCRequest, r
 			content, mimeType, readErr = service.Handle(params.URI, session.User, sudoCfg)
 		case strings.HasPrefix(params.URI, "crontab://"):
 			content, mimeType, readErr = h.readCrontabResource(session, sudoCfg, params.URI)
-		case strings.HasPrefix(params.URI, "container://"),
-			strings.HasPrefix(params.URI, "image://"),
-			strings.HasPrefix(params.URI, "volume://"),
+		case strings.HasPrefix(params.URI, "docker-container://"),
+			strings.HasPrefix(params.URI, "docker-image://"),
+			strings.HasPrefix(params.URI, "docker-volume://"),
 			// Prefixed, and listed after network://interfaces above, so the
 			// host's networking keeps the bare scheme - see the docker
 			// templates package for why the asymmetry is deliberate.

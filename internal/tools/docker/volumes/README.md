@@ -11,4 +11,4 @@ Read-only: no create, no remove. A volume is the one part of a Docker install ho
 ## Usage & Permissions
 Root or nothing: needs `docker/volumes: {allowed: true}` in the caller's grant in `configs/mcp-sudo.yaml`. It names no container, so no `containers:` list applies — but a mountpoint under `/var/lib/docker/volumes/…` is a real host path, readable with `files/read` by anyone granted that.
 
-`linuxctl get docker volumes` calls this tool. For one volume's options and labels, read `volume://<name>/inspect`.
+`linuxctl get docker volumes` calls this tool. For one volume's options and labels, read `docker-volume://<name>/inspect`.

@@ -87,7 +87,7 @@ func List(argsJSON []byte) (string, error) {
 	for _, w := range answer.Warnings {
 		fmt.Fprintf(&text, "Warning: %s\n", w)
 	}
-	text.WriteString("Hint: For one volume's options and labels, read volume://<name>/inspect\n")
+	text.WriteString("Hint: For one volume's options and labels, read docker-volume://<name>/inspect\n")
 	return text.String(), nil
 }
 

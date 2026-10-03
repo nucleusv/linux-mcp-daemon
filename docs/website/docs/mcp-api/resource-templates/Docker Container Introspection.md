@@ -1,6 +1,6 @@
 # Docker Container Introspection
 
-**URI Template**: `container://{name}/{view}`
+**URI Template**: `docker-container://{name}/{view}`
 
 One Docker container's own view of itself, chosen with `{view}`:
 
@@ -13,7 +13,7 @@ One Docker container's own view of itself, chosen with `{view}`:
 
 Hint: list containers with the docker/containers tool first.
 
-A read of this template needs two grants in [mcp-sudo.yaml](../../configuration/mcp-sudo.md): the template itself (`container://{name}/{view}`) and the internal worker it spawns (`docker/inspect`). The `containers:` list on the template's grant is enforced the same way `docker/manage`'s is - against the name and the resolved ID, before the socket is dialled.
+A read of this template needs two grants in [mcp-sudo.yaml](../../configuration/mcp-sudo.md): the template itself (`docker-container://{name}/{view}`) and the internal worker it spawns (`docker/inspect`). The `containers:` list on the template's grant is enforced the same way `docker/manage`'s is - against the name and the resolved ID, before the socket is dialled.
 
 ## Example
 
@@ -25,7 +25,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 `status` is the computed view - the one worth reading first. Docker reports a start timestamp and a wall of config; this reports the state, the uptime derived from it, and only the limits actually set:
 
 ```bash
-linuxctl resource container://web-1/status
+linuxctl resource docker-container://web-1/status
 ```
 
 Output (Docker-in-Docker test host):
@@ -70,7 +70,7 @@ A container with a healthcheck also reports `health` and `health_failing_streak`
 `top` is the process table from inside the container, keyed by Docker's own column titles:
 
 ```bash
-linuxctl resource container://web-1/top
+linuxctl resource docker-container://web-1/top
 ```
 
 Output:
@@ -120,7 +120,7 @@ Output:
 `stats` is one snapshot - `stream=false`, so it returns and ends rather than holding a connection open. Docker's own metrics, 100 lines of them; abridged here:
 
 ```bash
-linuxctl resource container://web-1/stats
+linuxctl resource docker-container://web-1/stats
 ```
 
 Output (abridged - the full answer includes every cgroup memory counter, `blkio_stats` and `precpu_stats`):
@@ -183,7 +183,7 @@ curl -N -s --cacert mcpd.crt -H "Authorization: Bearer $MCP_TOKEN" https://local
 curl -s --cacert mcpd.crt -X POST "https://localhost:9091/message?session_id=<from step 1>" \
   -H "Authorization: Bearer $MCP_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "container://web-1/top"}}'
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "docker-container://web-1/top"}}'
 ```
 
 Response (abridged to two of the five processes):
@@ -196,7 +196,7 @@ Response (abridged to two of the five processes):
       {
         "mimeType": "application/json",
         "text": "{\n  \"processes\": [\n    {\n      \"command\": \"nginx: master process nginx -g daemon off;\",\n      \"pid\": \"12895\",\n      \"time\": \"0:00\",\n      \"user\": \"root\"\n    },\n    {\n      \"command\": \"nginx: worker process\",\n      \"pid\": \"12947\",\n      \"time\": \"0:00\",\n      \"user\": \"101\"\n    }\n  ],\n  \"titles\": [\n    \"PID\",\n    \"USER\",\n    \"TIME\",\n    \"COMMAND\"\n  ]\n}",
-        "uri": "container://web-1/top"
+        "uri": "docker-container://web-1/top"
       }
     ]
   }

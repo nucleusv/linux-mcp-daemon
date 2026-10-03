@@ -105,7 +105,7 @@ func List(argsJSON []byte) (string, error) {
 	if text.Len() == 0 {
 		return "No containers found matching the criteria.", nil
 	}
-	text.WriteString("Hint: For one container's runtime summary, read container://<name>/status; for the full config, container://<name>/inspect.\n")
+	text.WriteString("Hint: For one container's runtime summary, read docker-container://<name>/status; for the full config, docker-container://<name>/inspect.\n")
 	return text.String(), nil
 }
 

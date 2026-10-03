@@ -2,7 +2,7 @@
 
 **Tool Name**: `docker/containers`
 
-Lists Docker containers through the Engine API on the local socket (no `docker` CLI needed): name, image, state, status, ports. Read-only. Only running containers unless `all: true`; `state` (created, running, paused, exited, ...) filters to one state and implies `all`; `pattern` is a glob on the container name (`web-*`); `limit` returns the newest N. Every container is listed: the grant's `containers:` list applies only to docker/manage, docker/logs and docker/exec. Text is a block per container plus a hint line, or `No containers found matching the criteria.`; `output_format: json` (also yaml/table/wide) returns an array of objects (name, names, id, full_id, image, image_id, command, state, status, created, ports, labels), `[]` when empty. For logs use `docker/logs`, to start or stop `docker/manage`, for one container's details the `container://<name>/status` resource. Always runs as root: no `privileged` argument, refused unless the user's grant has `allowed: true`.
+Lists Docker containers through the Engine API on the local socket (no `docker` CLI needed): name, image, state, status, ports. Read-only. Only running containers unless `all: true`; `state` (created, running, paused, exited, ...) filters to one state and implies `all`; `pattern` is a glob on the container name (`web-*`); `limit` returns the newest N. Every container is listed: the grant's `containers:` list applies only to docker/manage, docker/logs and docker/exec. Text is a block per container plus a hint line, or `No containers found matching the criteria.`; `output_format: json` (also yaml/table/wide) returns an array of objects (name, names, id, full_id, image, image_id, command, state, status, created, ports, labels), `[]` when empty. For logs use `docker/logs`, to start or stop `docker/manage`, for one container's details the `docker-container://<name>/status` resource. Always runs as root: no `privileged` argument, refused unless the user's grant has `allowed: true`.
 
 Every `docker/*` tool needs `allowed: true` in its own grant in [mcp-sudo.yaml](../../../configuration/mcp-sudo.md) - without the grant the tool is still listed, but calling it fails with an error naming the missing grant, the way `daemon/reload-config` does. `docker/containers` is a plain listing, so it has no `containers:` allowlist: a user who may list at all sees every container on the host. When `mcpd` runs containerized, point `worker.docker_socket` in [daemon.yaml](../../../configuration/daemon.md) at the socket as the worker sees it.
 
@@ -28,7 +28,7 @@ Output (Docker-in-Docker test host):
   Image: busybox
   Status: Up 6 hours
 
-Hint: For one container's runtime summary, read container://<name>/status; for the full config, container://<name>/inspect.
+Hint: For one container's runtime summary, read docker-container://<name>/status; for the full config, docker-container://<name>/inspect.
 ```
 
 A stopped container only shows with `--all`:
@@ -52,7 +52,7 @@ Output:
   Image: busybox
   Status: Up 6 hours
 
-Hint: For one container's runtime summary, read container://<name>/status; for the full config, container://<name>/inspect.
+Hint: For one container's runtime summary, read docker-container://<name>/status; for the full config, docker-container://<name>/inspect.
 ```
 
 `-o json` adds the fields the text view leaves out - full ID, image ID, creation time, the entrypoint command and labels:
@@ -113,7 +113,7 @@ Response:
     "content": [
       {
         "type": "text",
-        "text": "[exited] db-1 (80d3cf9c8b3c)\n  Image: redis:alpine\n  Status: Exited (0) Less than a second ago\n\n[running] web-1 (e36aeba4369a)\n  Image: nginx:alpine\n  Status: Up 5 minutes\n  Ports: 0.0.0.0:8080->80/tcp, :::8080->80/tcp\n\n[running] logger-1 (b2171b5ad4e6)\n  Image: busybox\n  Status: Up 6 hours\n\nHint: For one container's runtime summary, read container://<name>/status; for the full config, container://<name>/inspect.\n"
+        "text": "[exited] db-1 (80d3cf9c8b3c)\n  Image: redis:alpine\n  Status: Exited (0) Less than a second ago\n\n[running] web-1 (e36aeba4369a)\n  Image: nginx:alpine\n  Status: Up 5 minutes\n  Ports: 0.0.0.0:8080->80/tcp, :::8080->80/tcp\n\n[running] logger-1 (b2171b5ad4e6)\n  Image: busybox\n  Status: Up 6 hours\n\nHint: For one container's runtime summary, read docker-container://<name>/status; for the full config, docker-container://<name>/inspect.\n"
       }
     ]
   }

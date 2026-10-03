@@ -1,10 +1,10 @@
 # Docker Volume Inspect
 
-**URI Template**: `volume://{name}/inspect`
+**URI Template**: `docker-volume://{name}/inspect`
 
 Driver, mountpoint, options and labels of one Docker volume. Hint: list volumes - with the containers mounting each - using the docker/volumes tool.
 
-A read needs two grants in [mcp-sudo.yaml](../../configuration/mcp-sudo.md): the template itself (`volume://{name}/inspect`) and the internal worker it spawns (`docker/inspect`). A volume name is a single identifier, so a slash in it is refused rather than cleaned - the name can never address another Engine API endpoint.
+A read needs two grants in [mcp-sudo.yaml](../../configuration/mcp-sudo.md): the template itself (`docker-volume://{name}/inspect`) and the internal worker it spawns (`docker/inspect`). A volume name is a single identifier, so a slash in it is refused rather than cleaned - the name can never address another Engine API endpoint.
 
 Which container mounts a volume is not in this answer; Docker keeps only a refcount. The `docker/volumes` tool cross-references the container list and reports the names.
 
@@ -16,7 +16,7 @@ Every example below shows the equivalent `linuxctl` command and the raw MCP JSON
 <summary><b>linuxctl</b></summary>
 
 ```bash
-linuxctl resource volume://app-data/inspect
+linuxctl resource docker-volume://app-data/inspect
 ```
 
 Output (Docker-in-Docker test host):
@@ -46,7 +46,7 @@ curl -N -s --cacert mcpd.crt -H "Authorization: Bearer $MCP_TOKEN" https://local
 curl -s --cacert mcpd.crt -X POST "https://localhost:9091/message?session_id=<from step 1>" \
   -H "Authorization: Bearer $MCP_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "volume://app-data/inspect"}}'
+  -d '{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "docker-volume://app-data/inspect"}}'
 ```
 
 Response:
@@ -59,7 +59,7 @@ Response:
       {
         "mimeType": "application/json",
         "text": "{\n  \"CreatedAt\": \"2026-09-27T10:04:49Z\",\n  \"Driver\": \"local\",\n  \"Labels\": null,\n  \"Mountpoint\": \"/var/lib/docker/volumes/app-data/_data\",\n  \"Name\": \"app-data\",\n  \"Options\": null,\n  \"Scope\": \"local\"\n}",
-        "uri": "volume://app-data/inspect"
+        "uri": "docker-volume://app-data/inspect"
       }
     ]
   }

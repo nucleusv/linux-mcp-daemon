@@ -467,7 +467,7 @@ $ linuxctl get docker containers
   Image: busybox
   Status: Up 6 hours
 
-Hint: For one container's runtime summary, read container://<name>/status; for the full config, container://<name>/inspect.
+Hint: For one container's runtime summary, read docker-container://<name>/status; for the full config, docker-container://<name>/inspect.
 # --all adds the stopped ones; --state running / --name web filter; -o json adds
 # full_id, image_id, labels, command - "name" is the primary name, "names" every alias
 
@@ -481,7 +481,7 @@ redis:alpine
 busybox:latest
   ID: fd7dc98638c8 | Size: 5.9 MiB | Created: 2026-05-13 02:21:49 UTC
 
-Hint: For one image's layers, env and entrypoint, read image://<name>/inspect
+Hint: For one image's layers, env and entrypoint, read docker-image://<name>/inspect
 # --pattern 'nginx*' filters; -o json adds digests, labels and how many containers use each
 
 $ linuxctl get docker volumes
@@ -490,7 +490,7 @@ app-data
   Mountpoint: /var/lib/docker/volumes/app-data/_data
   In use by: web-1
 
-Hint: For one volume's options and labels, read volume://<name>/inspect
+Hint: For one volume's options and labels, read docker-volume://<name>/inspect
 
 $ linuxctl get docker networks
 none (c345b29bca19)
@@ -610,7 +610,7 @@ $ linuxctl prune docker image         # typo
 unknown prune target "image": use one of containers, images, volumes, networks, build-cache
 ```
 
-One container's, image's, volume's or network's own view comes from the resource templates, reachable two ways: the explicit `linuxctl resource container://web-1/status` (also `/inspect`, `/stats`, `/top`), `image://nginx:alpine/inspect`, `volume://app-data/inspect`, `docker-network://appnet/inspect` - or `get docker <keyword> <name> [view]`, which resolves to the same template: `get docker container web-1 status`, `get docker image nginx:alpine`, `get docker volume app-data`, `get docker network appnet`. A keyword that matches nothing in the group - a typo, or a made-up word - is a refusal, never a guess at what you meant:
+One container's, image's, volume's or network's own view comes from the resource templates, reachable two ways: the explicit `linuxctl resource docker-container://web-1/status` (also `/inspect`, `/stats`, `/top`), `docker-image://nginx:alpine/inspect`, `docker-volume://app-data/inspect`, `docker-network://appnet/inspect` - or `get docker <keyword> <name> [view]`, which resolves to the same template: `get docker container web-1 status`, `get docker image nginx:alpine`, `get docker volume app-data`, `get docker network appnet`. A keyword that matches nothing in the group - a typo, or a made-up word - is a refusal, never a guess at what you meant:
 
 ```bash
 $ linuxctl get docker networkz

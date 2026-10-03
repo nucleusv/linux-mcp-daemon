@@ -280,8 +280,8 @@ users:
           allowed: true
         processes/read:  # internal: the worker behind process://
           allowed: true
-        # Worker behind container://, image://, volume:// and docker-network://.
-        # Its containers: list scopes container:// reads exactly as
+        # Worker behind docker-container://, docker-image://, docker-volume:// and docker-network://.
+        # Its containers: list scopes docker-container:// reads exactly as
         # docker/manage's scopes that tool - reading one container's full
         # inspect is not nothing (env vars, mounts, labels), so it is granted
         # separately from docker/containers.
@@ -332,14 +332,14 @@ users:
         process://:
           - ""
         # The docker templates. "" grants every name; which containers a
-        # container:// read may actually reach is then decided by the
+        # docker-container:// read may actually reach is then decided by the
         # docker/inspect grant's containers: list above - a privileged read
         # needs both grants, as for file:// and service://.
-        container://:
+        docker-container://:
           - ""
-        image://:
+        docker-image://:
           - ""
-        volume://:
+        docker-volume://:
           - ""
         # Prefixed on purpose: network:// above is the host's own networking,
         # so a Docker network cannot have the bare scheme.

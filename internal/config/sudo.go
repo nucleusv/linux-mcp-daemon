@@ -291,7 +291,7 @@ func (c *SudoConfig) GetAllowedPruneTargets(username, toolName string) []string 
 // docker/images, docker/volumes, docker/networks) name none, so `containers:`
 // on those is a config error rather than a silent no-op.
 //
-// docker/inspect is the internal worker behind the container:// templates, so
+// docker/inspect is the internal worker behind the docker-container:// templates, so
 // its grant is what scopes those reads.
 var ContainerTools = map[string]bool{
 	"docker/manage": true, "docker/logs": true, "docker/exec": true, "docker/inspect": true,

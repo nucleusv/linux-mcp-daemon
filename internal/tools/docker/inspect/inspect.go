@@ -1,6 +1,6 @@
 // Package inspect is the single internal worker behind every docker resource
-// template: container://{name}/{status,inspect,stats,top}, image://{name}/inspect
-// and volume://{name}/inspect. One worker rather than one per scheme, the same
+// template: docker-container://{name}/{status,inspect,stats,top}, docker-image://{name}/inspect
+// and docker-volume://{name}/inspect. One worker rather than one per scheme, the same
 // way services/status serves service://{name}/status.
 //
 // It is not registered as a callable tool; it is spawned by the template
@@ -193,7 +193,7 @@ type inspectAnswer struct {
 	} `json:"NetworkSettings"`
 }
 
-// status is the computed summary that earns container://{name}/status a place
+// status is the computed summary that earns docker-container://{name}/status a place
 // next to /inspect: state, health, exit code, restart count, uptime, image,
 // ports and resource limits, rather than several hundred lines of raw config.
 func status(c *docker.Client, id string) (string, error) {
