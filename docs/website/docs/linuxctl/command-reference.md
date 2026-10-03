@@ -268,7 +268,7 @@ linuxctl disable system services nginx.service --privileged true
 
 Note: `get system release`/`get system uname` are the `os://release`/`os://uname` *resources*; `get system os-release` is the separate `system/os-release` *tool* (combined kernel+distro text) - both stay reachable since neither is purely redundant with the other.
 
-### timers
+## timers
 
 systemd timers - what runs on a schedule, and when next (read-only; `services/list` does not show them):
 
@@ -284,7 +284,7 @@ $ linuxctl get timers --active_state inactive --output json
 
 Inside a container add `--privileged true` (it joins the host to reach systemd).
 
-### crontabs
+## crontabs
 
 Read, list and replace crontabs (`cron/manage`). **Writing a crontab schedules commands as that user and outlives your token** - see the [risks](../configuration/permissions-and-risks#crontabs).
 
