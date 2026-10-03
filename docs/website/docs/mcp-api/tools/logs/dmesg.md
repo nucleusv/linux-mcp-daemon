@@ -4,6 +4,14 @@
 
 Reads the kernel ring buffer (wraps `dmesg --human`, relative timestamps). Read-only. Output is cut to the LAST 30 KiB with a `[WARNING: Output truncated to last 30KB]` prefix and cannot be paged; narrow it with `level`, a comma list of emerg, alert, crit, err, warn, notice, info, debug (`err,warn`). On hosts with `kernel.dmesg_restrict=1` an unprivileged call fails (dmesg's error is returned); use `privileged: true` (needs a grant). `output_format` is accepted and ignored: the reply is always plain text. For older history or service logs use `logs/journal-control`, for login records `logs/logins`, for drive faults `disks/health`.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `level` | string | no | Comma-separated levels from emerg, alert, crit, err, warn, notice, info, debug (e.g. 'err,warn') |
+| `output_format` | string | no | Ignored - the reply is always plain text |
+| `privileged` | boolean | no | Run as root - needed when kernel.dmesg_restrict=1. Needs a grant for this tool in mcp-sudo.yaml |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

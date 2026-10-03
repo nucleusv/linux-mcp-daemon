@@ -6,6 +6,14 @@ Lists mounted filesystems (device, mount point, type, options) from /proc/thread
 
 When `mcpd` runs containerized, passing `privileged: true` automatically shows the real host's mount table instead of the daemon's own container's - see [Master Daemon Configuration](../../../configuration/daemon.md)'s `worker.containerized` setting.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `fs_type` | string | no | Exact filesystem type, no globs (e.g. 'ext4', 'overlay', 'tmpfs') |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `privileged` | boolean | no | Run as root. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

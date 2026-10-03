@@ -4,15 +4,17 @@
 
 Reports space on the ONE filesystem holding `path` (statfs, like `df` for a single path): total, used and free bytes and use percent (`human_readable` for GiB). Read-only; `path` must be absolute. It does not name the device or mount point: use `disks/mounts` for that, `disks/list` for block devices, `disks/usage` to see which folders use the space. There is no all-filesystems mode; call it once per mount point. `free` is what non-root users can use, and `used` is total minus that. `inodes: true` returns inode counts as plain text and ignores `output_format` and `human_readable`. Text output is three lines; `output_format: json` returns an object (path, total_bytes, used_bytes, free_bytes, use_percent, plus total_human, used_human, free_human with `human_readable`). `privileged: true` (a grant, and a `paths:` entry for root) only for paths you cannot stat.
 
-| Parameter | Description |
-|---|---|
-| `path` | Absolute path; reports the filesystem it lives on (required) |
-| `human_readable` | Sizes like `53.2 GiB` (`df -h`); default is bytes |
-| `inodes` | Inode counts instead of block usage (`df -i`) |
-| `output_format` | `json`/`yaml`/`table`/`wide`: `total_bytes`, `used_bytes`, `free_bytes`, `use_percent`, plus `*_human` fields with `human_readable` |
-| `privileged` | Run as root (authorized per path in `mcp-sudo.yaml`) |
-
 Sizes are in **bytes** by default; `human_readable: true` prints them in powers of 1024.
+
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | string | yes | Absolute path to check |
+| `human_readable` | boolean | no | Sizes like 53.2 GiB (df -h); default is bytes |
+| `inodes` | boolean | no | Report inode counts instead of block usage (-i); the reply is always plain text and ignores output_format and human_readable |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `privileged` | boolean | no | Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused |
 
 ## Example
 

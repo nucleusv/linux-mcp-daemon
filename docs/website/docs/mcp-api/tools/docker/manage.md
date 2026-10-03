@@ -12,6 +12,14 @@ When `mcpd` itself runs as a container on the same daemon, `["*"]` matches it to
 
 :::
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `action` | string | yes | Action to perform. One of: `start`, `stop`, `restart`, `kill`, `pause`, `unpause`, `remove`. |
+| `container` | string | yes | Container name, full ID or ID prefix |
+| `output_format` | string | no | json returns container, id, action, result; default is text |
+
 ## Actions
 
 `action` is one of seven words. Every one acts on the container's resolved ID (the one that was authorized), so a concurrent `docker rename` cannot point it at another container. In `linuxctl` each action is its own verb: `linuxctl <action> docker container <name>`.

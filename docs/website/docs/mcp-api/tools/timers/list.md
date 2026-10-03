@@ -6,12 +6,12 @@ Lists the systemd timers of the host - systemd's scheduler, the modern counterpa
 
 ## Arguments
 
-| Argument | Type | Description |
-| --- | --- | --- |
-| `pattern` | string | Wildcard on the timer name (e.g. `apt*`, `*.timer`, `*daily*`); no other wildcards |
-| `active_state` | string | Only timers in this active state (e.g. `active`, `inactive`, `failed`) |
-| `output_format` | string | `json` (also `yaml`/`table`/`wide`, which return the same JSON) for an array of objects; default is text |
-| `privileged` | boolean | Run as root (needed inside a container to reach the host's systemd; needs a grant) |
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `active_state` | string | no | Only timers in this active state (e.g. 'active', 'inactive', 'failed') |
+| `output_format` | string | no | 'json' (also yaml/table/wide, which return the same JSON) for an array of objects; default is text |
+| `pattern` | string | no | Wildcard on the timer name (e.g. 'apt*', '*.timer', '*daily*'); no other wildcards |
+| `privileged` | boolean | no | Run as root (needed inside a container to reach the host's systemd; needs a grant) |
 
 ## Example
 

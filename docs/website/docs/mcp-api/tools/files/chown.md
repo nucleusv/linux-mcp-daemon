@@ -6,12 +6,14 @@ Changes a file's or directory's owner and/or group (chown). Mutating and idempot
 
 **Symlinks are never followed** - same guarantee as [`files/chmod`](./chmod): the path is walked component by component with `openat(O_PATH|O_NOFOLLOW)`, any symlink in it is refused, and ownership changes on exactly the verified object (`fchownat(fd, "", AT_EMPTY_PATH)`). With `recursive`, symlinks inside the tree are skipped and reported.
 
-| Parameter | Meaning |
-|---|---|
-| `path` | Absolute path (required) |
-| `owner` | `user`, `user:group`, `:group` (group only), or `user:` (the user's login group); names or numeric ids (required) |
-| `recursive` | Also everything below a directory |
-| `privileged` | Run as root - required to change ownership; authorized per path in `mcp-sudo.yaml` |
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `owner` | string | yes | user, user:group, :group, or user: (the user's login group); names or numeric ids |
+| `path` | string | yes | Absolute path |
+| `privileged` | boolean | no | Run as root - required to change ownership. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path |
+| `recursive` | boolean | no | Also apply to everything below a directory (symlinks are skipped, never followed) |
 
 ## Example
 
@@ -44,7 +46,6 @@ linuxctl chown files /tmp/chown-demo/site/index.html :root --privileged true
 Output:
 ```text
 /tmp/chown-demo/site/index.html: nobody:nogroup -> nobody:root
-
 
 $ linuxctl get files list /tmp/chown-demo/site --privileged true
 total 8

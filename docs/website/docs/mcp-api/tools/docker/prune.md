@@ -4,6 +4,15 @@
 
 Deletes ONE kind of unused Docker object per call: `target` is containers (stopped), images (dangling only), volumes (anonymous, unused only; named volumes are never touched), networks (unused) or build-cache. Mutating and irreversible, and it deletes objects you did not name; call again for the next kind (pruning containers is what makes images dangling). The user's grant needs a `prune:` list containing the target, otherwise the call is refused before anything is deleted. Always runs as root: no `privileged` argument, refused unless the grant has `allowed: true`. The 30 s worker limit can end the call while the Engine keeps pruning. Text is `TARGET: N removed, X MiB reclaimed` plus the removed IDs (networks report no size); `output_format: json` returns target, deleted, count, space_reclaimed_bytes. To remove one named container use `docker/manage` (`remove`); to see what exists first `docker/containers`, `docker/images`, `docker/volumes`, `docker/networks`.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `target` | string | yes | The one kind to reclaim: containers (stopped), images (dangling), volumes (anonymous, unused), networks (unused) or build-cache. One of: `containers`, `images`, `volumes`, `networks`, `build-cache`. |
+| `output_format` | string | no | json returns target, deleted, count, space_reclaimed_bytes; default is text |
+
+Counts are objects affected, not API events: Docker reports a removed image twice (untagged, then deleted) and both lines are listed, but only the deletion is counted. `networks` prints no reclaimed figure because the endpoint reports none - `0.0 B` would read as a measurement.
+
 ## What each target actually removes
 
 | Target | Docker Endpoint | Removes | Never removes | Reports space |
@@ -29,15 +38,6 @@ A container started with `-v /var/lib/postgresql/data` (no name) gets an anonymo
 And because each call is its own decision, the same compounding risk now spans calls instead of one: pruning `containers` and then, in a later call, `volumes` can still delete an anonymous volume that was attached when the first call started - removing the container is what made it unused. Leaving `volumes` out of the grant, or checking what's actually unused before that second call, avoids that.
 
 :::
-
-## Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| `target` | string, **required** | Exactly one of `containers`, `images`, `volumes`, `networks`, `build-cache`. A missing target is an error, never "everything". |
-| `output_format` | string | `json`, `yaml`. Default is text. |
-
-Counts are objects affected, not API events: Docker reports a removed image twice (untagged, then deleted) and both lines are listed, but only the deletion is counted. `networks` prints no reclaimed figure because the endpoint reports none - `0.0 B` would read as a measurement.
 
 ## Example
 

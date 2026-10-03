@@ -10,6 +10,13 @@ Returns a file's MIME type, like `file -b --mime-type`, detected natively from i
 
 `file`'s libmagic knows far more formats (C source, makefiles, office documents, ...); for those this answers the generic `text/plain` or `application/octet-stream`. On 209 system binaries, libraries, configs and compressed docs of Ubuntu 24.04 (amd64 and arm64) the answers are identical to `file`'s.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | string | yes | Absolute path to the file |
+| `privileged` | boolean | no | Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

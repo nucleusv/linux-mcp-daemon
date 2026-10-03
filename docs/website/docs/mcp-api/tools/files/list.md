@@ -4,18 +4,20 @@
 
 Lists the entries of ONE directory like `ls -l` (dotfiles, `.` and `..` are hidden unless `all: true`): type and permissions, link count, owner, group, size, modification time and symlink targets (symlinks are shown, never followed). Read-only, not recursive, no entry cap; `path` must be absolute. For a recursive or filtered search use `files/find`, for a directory's total size `disks/usage`, for a file's MIME type `files/filetype`. On permission denied retry with `privileged: true` if granted (root calls also need a `paths:` entry covering the path). Text output is `ls -l` lines (`Directory is empty.` when empty; `long: false` gives names only, directories suffixed `/`). `output_format: json` returns an array of objects (name, type, mode, mode_octal, links, owner, group, uid, gid, size, modified, is_dir, target), `[]` when empty. Permission strings show setuid/setgid/sticky as `s`/`S`/`t`/`T`; device sizes appear as `major, minor`; the date shows the time for the last six months and the year otherwise.
 
-| Parameter | Meaning |
-|---|---|
-| `path` | Directory to list (required) |
-| `all` | Include dotfiles, `.` and `..` (ls -a) |
-| `long` | Long listing (default `true`); `false` lists names only |
-| `human_readable` | Sizes like `4.0K`, `1.5M` (ls -h) |
-| `sort` | `name` (default), `size` (largest first), `time` (newest first) |
-| `reverse` | Reverse the sort (ls -r) |
-| `dirs_first` | Directories before files |
-| `numeric_ids` | Numeric uid/gid (ls -n) |
-| `output_format` | `json`/`yaml`/`table`/`wide`: entries with `name`, `type`, `mode`, `mode_octal`, `links`, `owner`, `group`, `uid`, `gid`, `size`, `device`, `modified`, `is_dir`, `target` |
-| `privileged` | Run as root (authorized per path in `mcp-sudo.yaml`) |
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | string | yes | Absolute path of the directory to list |
+| `all` | boolean | no | Include dotfiles, . and .. (ls -a) |
+| `dirs_first` | boolean | no | List directories before files |
+| `human_readable` | boolean | no | Sizes like 4.0K, 1.5M (ls -h); default is bytes |
+| `long` | boolean | no | Long listing like ls -l: type+permissions, links, owner, group, size, date, symlink target. Default true; false lists names only |
+| `numeric_ids` | boolean | no | Show numeric uid/gid instead of names (ls -n) |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `privileged` | boolean | no | Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused |
+| `reverse` | boolean | no | Reverse the sort order (ls -r) |
+| `sort` | string | no | Sort by name (default), size (largest first) or time (newest first) One of: `name`, `size`, `time`. |
 
 ## Example
 

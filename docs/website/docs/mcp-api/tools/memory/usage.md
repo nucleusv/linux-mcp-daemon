@@ -4,13 +4,15 @@
 
 Reports memory and swap use from /proc/meminfo. Read-only. `used` is total - free - (buffers + cached + reclaimable slab); `available` is the kernel's MemAvailable. Text output is a `free`-like table with Mem: and Swap: rows (bytes, or e.g. `1.8Gi` with `human_readable`); `detailed: true` returns the raw /proc/meminfo instead, but only for text output (it is ignored with `output_format: json`). JSON (also yaml/table/wide) returns an object (total, used, free, shared, buffCache, available, swap_total, swap_used, swap_free) in bytes; `human_readable` is ignored there. For per-process memory use `processes/top` or `processes/list`, for CPU load `cpu/load-average`.
 
-| Parameter | Description |
-|---|---|
-| `human_readable` | Sizes like `free -h` (`1.8Gi`, `300Mi`); default is bytes, like `free -b` |
-| `detailed` | Return the raw `/proc/meminfo` instead of the summary |
-| `output_format` | `json`/`yaml`/`table`/`wide`: `total`, `used`, `free`, `shared`, `buffCache`, `available`, `swap_total`, `swap_used`, `swap_free` - always in bytes |
-
 Sizes are in **bytes** by default, laid out like `free -b` with a `Swap` row; `human_readable: true` gives `free -h`. Structured output (`json`/`yaml`) is always in bytes.
+
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `detailed` | boolean | no | Return the raw /proc/meminfo instead of the summary (text output only; ignored with output_format json) |
+| `human_readable` | boolean | no | Sizes like free -h (1.8Gi); default is bytes |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
 
 ## Example
 

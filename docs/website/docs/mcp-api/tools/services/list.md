@@ -6,14 +6,14 @@ Lists systemd `.service` units that systemd currently has loaded, with load, act
 
 ## Arguments
 
-| Argument | Type | Description |
-| --- | --- | --- |
-| `pattern` | string | Wildcard pattern to match service names (e.g., `kube*`, `*ssh*`) |
-| `active_state` | string | Filter by active state (e.g., `active`, `failed`, `inactive`) |
-| `load_state` | string | Filter by load state (e.g., `loaded`, `not-found`) |
-| `sub_state` | string | Filter by sub state (e.g., `running`, `exited`, `dead`) |
-| `output_format` | string | Desired output format (e.g. `json`, `table`, `wide`). Defaults to text |
-| `privileged` | boolean | Run as root (may be required depending on policies) |
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `active_state` | string | no | Exact state: 'active', 'failed' or 'inactive' |
+| `load_state` | string | no | Exact state: 'loaded' or 'not-found' |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `pattern` | string | no | Only a leading and/or trailing * is supported ('kube*', '*ssh*'); without * an exact unit name including '.service' |
+| `privileged` | boolean | no | Run as root (may be required depending on policies) |
+| `sub_state` | string | no | Exact state: 'running', 'exited' or 'dead' |
 
 ## Example
 

@@ -12,6 +12,10 @@ Re-reads mcpd's config files (daemon.yaml, users.yaml, mcp-sudo.yaml) and applie
 
 The daemon writes every reload as an audit line - at any log level - with the calling user and the changes, e.g. `2026-09-24T10:41:28.180Z INFO  config reloaded audit=true user=privileged changes=2 detail="user testuser: added; grants testuser: + disks/usage (root; paths [/var])"`; a rejected reload is a `WARN  config reload rejected, keeping the current config` line. Token values and hashes never appear in the reply or the log.
 
+## Arguments
+
+This tool takes no arguments.
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

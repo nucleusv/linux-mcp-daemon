@@ -6,17 +6,19 @@ Snapshot like `top -b -n 1`, read from `/proc`: header (uptime, users, load aver
 
 `%CPU` is measured the way top measures it: CPU time used over a short sampling interval (default 1 second), not an average since the process started. Like top, it is per core, so a busy multi-threaded process can exceed 100%.
 
-| Parameter | Description |
-|---|---|
-| `sort_by` | `cpu` (default, like top), `mem`/`res` (resident memory), `time` (total CPU time), `pid` |
-| `limit` | Maximum processes to list (default: all) |
-| `user` | Only this user's processes |
-| `human_readable` | Memory like top: a `MiB Mem`/`MiB Swap` header and VIRT/RES/SHR in KiB; default is bytes |
-| `interval_ms` | `%CPU` sampling interval in ms (default 1000, max 10000) |
-| `output_format` | `json`/`yaml`/`table`/`wide` return `{"summary": ..., "processes": [...]}`, including each process's full `cmdline`, `ppid` and `threads`; memory in bytes (`mem_bytes`, `swap_bytes`, `virt_bytes`, `res_bytes`, `shr_bytes`) |
-| `privileged` | Run as root |
-
 Use [`processes/list`](./list) for a plain listing, and [`processes/delete`](./delete) to signal a process.
+
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `human_readable` | boolean | no | Memory like top (MiB header, m/g columns); default is bytes |
+| `interval_ms` | integer | no | %CPU sampling interval in milliseconds (default 1000, max 10000) |
+| `limit` | integer | no | Maximum processes to list (default: all) |
+| `output_format` | string | no | Default/table: top's own layout. wide: adds PPID, THR and full command lines (like top -c). json/yaml: structured \{summary, processes\}, memory in bytes (mem_bytes, swap_bytes, virt_bytes, res_bytes, shr_bytes) |
+| `privileged` | boolean | no | Run as root. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused |
+| `sort_by` | string | no | Sort column: cpu (default, like top), mem/res (resident memory), time (total CPU time), pid. One of: `cpu`, `mem`, `res`, `time`, `pid`. |
+| `user` | string | no | Only this user's processes |
 
 ## Example
 

@@ -9,6 +9,19 @@ Two things about the Engine API worth knowing before reading an answer:
 - **`lines` is applied before the stream filter.** Docker tails first, then drops the stream that was turned off, so `lines: 4` with `stdout: false` returns however many of those last four lines came from stderr - not four stderr lines. Ask for a larger tail when filtering one stream.
 - **`since` and `until` take a unix timestamp**, the form Docker's own API accepts. They are declared as strings so a timestamp survives JSON without precision games; `linuxctl --since 1759005000` is coerced for you.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `container` | string | yes | Container name, full ID or ID prefix |
+| `lines` | integer | no | Tail this many lines (default 100) |
+| `output_format` | string | no | json returns container, id, lines, logs; default is raw log text |
+| `since` | string | no | Only entries after this time: unix timestamp (e.g. 1759005000) or RFC3339 |
+| `stderr` | boolean | no | Include stderr (default true) |
+| `stdout` | boolean | no | Include stdout (default true) |
+| `timestamps` | boolean | no | Prefix every line with Docker's own timestamp |
+| `until` | string | no | Only entries before this time: unix timestamp or RFC3339 |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

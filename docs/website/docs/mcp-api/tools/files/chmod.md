@@ -6,14 +6,16 @@ Changes a file's or directory's permission bits (chmod). Mutating and idempotent
 
 **Symlinks are never followed.** The path is resolved one component at a time with `openat(O_PATH|O_NOFOLLOW)`, each step relative to the directory the previous step opened, and the mode is changed on exactly the object that was checked. A symlink anywhere in the path - the target itself or any directory on the way - is refused. With `recursive`, symlinks inside the tree are skipped and listed, never followed. This keeps a `privileged: true` chmod from being redirected by a planted symlink (say `/tmp/x -> /etc/shadow`) to a file outside the user's allowed paths.
 
-| Parameter | Meaning |
-|---|---|
-| `path` | Absolute path (required) |
-| `mode` | Octal (`644`, `0755`, `4755`) or symbolic (`u+x`, `go-w`, `a=r`, `+X`, `u+s`, `+t`, comma-separated) (required) |
-| `recursive` | Also everything below a directory |
-| `privileged` | Run as root - needed for files you don't own; authorized per path in `mcp-sudo.yaml` |
-
 Modes follow GNU chmod exactly (verified in tests across many modes), including its directory rule: a numeric mode of up to four digits keeps a directory's setuid/setgid bits - use five digits (`00755`) to set them exactly. `X` adds execute only to directories and already-executable files.
+
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mode` | string | yes | Octal (644, 0755, 4755) or symbolic (u+x, go-w, a=r, +X, u+s, +t; comma-separated) |
+| `path` | string | yes | Absolute path |
+| `privileged` | boolean | no | Run as root - needed for files you don't own. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path |
+| `recursive` | boolean | no | Also apply to everything below a directory (symlinks are skipped, never followed) |
 
 ## Example
 

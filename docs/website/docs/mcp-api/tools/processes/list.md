@@ -4,17 +4,19 @@
 
 Lists processes (PID, PPID, user, state, RSS, command) read from `/proc`. Read-only. Use it to find a PID, filter by `user` or one `pid`, or sort by memory. For the CPU/memory header and %CPU on every row use `processes/top`; for the process that owns a port `network/connections`; to signal a process `processes/delete`; for deep per-PID metrics the `process://<pid>/<target>` resource. Sorted by PID unless `sort_by` is `mem` (RSS, largest first) or `cpu` (samples for 0.5 s, so the call takes at least that long, and only then does `cpu_percent` appear); `limit` applies after sorting. Kernel threads appear as `[name]`. Command lines can contain secrets passed as arguments. Text output is a table; `output_format: json` returns an array of objects (pid, user, comm, state, ppid, rss_bytes, cmdline, cpu_percent). Sizes are bytes unless `human_readable`.
 
-| Parameter | Description |
-|---|---|
-| `sort_by` | `cpu`, `mem` or `pid` |
-| `limit` | Return at most this many processes |
-| `user` | Only this user's processes |
-| `pid` | Only this PID |
-| `human_readable` | RSS like `158Mi`; default is bytes |
-| `output_format` | `json`/`yaml`/`table`/`wide`: `pid`, `ppid`, `user`, `comm`, `state`, `rss_bytes`, `cmdline` (and `cpu_percent` with `sort_by: cpu`) |
-| `privileged` | Run as root |
-
 Text output is a table like `ps` (`PID PPID USER STAT RSS COMMAND`); RSS is in **bytes** by default, `human_readable: true` prints it in powers of 1024.
+
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `human_readable` | boolean | no | RSS like 10Mi; default is bytes |
+| `limit` | integer | no | Maximum rows returned, applied after sorting |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `pid` | integer | no | Filter to a single specific PID |
+| `privileged` | boolean | no | Run as root. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused |
+| `sort_by` | string | no | pid (default), mem (RSS, largest first) or cpu (samples for 0.5 s) |
+| `user` | string | no | Exact username |
 
 ## Example
 

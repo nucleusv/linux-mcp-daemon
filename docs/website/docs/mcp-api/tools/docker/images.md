@@ -6,6 +6,14 @@ Lists Docker images through the Engine API on the local socket: tags, ID, size, 
 
 Sizes are Docker's own per-image size, which counts shared layers once per image - the numbers do not add up to the disk the images occupy together.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `all` | boolean | no | Include intermediate and untagged images (docker images -a) |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `pattern` | string | no | Only images whose tag or repository matches this glob (e.g. 'nginx*', '*/api:*') |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

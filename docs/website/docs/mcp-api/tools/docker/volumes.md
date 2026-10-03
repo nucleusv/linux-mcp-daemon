@@ -6,6 +6,13 @@ Lists Docker volumes with driver, mountpoint (a host path) and the names of the 
 
 `In use by` is computed from the container list, so it names containers whether they are running or stopped - a stopped container still holds its volume. An empty list means no container mounts it, which is the closest thing to "safe to delete" this tool will tell you; deleting it is still someone else's job.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `pattern` | string | no | Only volumes whose name matches this glob |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

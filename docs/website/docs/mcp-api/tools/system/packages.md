@@ -6,6 +6,14 @@ Lists installed packages by parsing the package database (dpkg on Debian/Ubuntu,
 
 When `mcpd` runs containerized, passing `privileged: true` automatically queries the real host's installed packages instead of the daemon's own container image - see [Master Daemon Configuration](../../../configuration/daemon.md)'s `worker.containerized` setting and [Sudo Privileges](../../../configuration/mcp-sudo.md) for authorizing `privileged` access.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | no | Only packages whose name matches this glob or exact name (e.g. 'openssh-*', '*ssl*', 'curl') |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `privileged` | boolean | no | Run as root. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

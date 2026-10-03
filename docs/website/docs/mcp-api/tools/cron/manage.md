@@ -10,13 +10,13 @@ The job outlives the session and the revocation of the token. Every write is aud
 
 ## Arguments
 
-| Argument | Type | Description |
-| --- | --- | --- |
-| `user` | string | Account whose crontab to read or replace; default is your own. Another account needs `privileged: true` and a rule for it |
-| `content` | string | The complete new crontab; present = write (empty string clears it), absent = read. Standard crontab syntax: `m h dom mon dow command`, `@daily`, and `NAME=value` lines |
-| `if_match` | string | sha256 of the crontab as you read it; the write is refused if it has changed since |
-| `output_format` | string | `json` (the API returns the same JSON for `yaml`/`table`/`wide`; `linuxctl` renders them) returns `{user, exists, lines, jobs, bytes, sha256, content}` for a read; default is the raw text |
-| `privileged` | boolean | Needed to list crontabs or to act on another account (needs a `cron/manage` grant); ignored for your own crontab |
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `content` | string | no | The complete new crontab; present = write (empty string clears it), absent = read. Standard crontab syntax: `m h dom mon dow command`, `@daily`, and NAME=value lines |
+| `if_match` | string | no | sha256 of the crontab as you read it; the write is refused if it has changed since |
+| `output_format` | string | no | 'json' (also yaml/table/wide, which return the same JSON) returns \{user, exists, lines, jobs, bytes, sha256, content\} for a read; default is the raw text |
+| `privileged` | boolean | no | Needed to list crontabs or to act on another account (needs a cron/manage grant); ignored for your own crontab |
+| `user` | string | no | Account whose crontab to read or replace; default is your own. Another account needs privileged: true and a rule for it |
 
 ## Who may do what
 

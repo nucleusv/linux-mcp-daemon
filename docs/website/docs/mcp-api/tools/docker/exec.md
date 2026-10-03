@@ -6,6 +6,17 @@ Runs ONE command inside a running container and returns its stdout, stderr and e
 
 Grant this one narrowly. A container in `docker/exec`'s `containers:` list is a container this user may run arbitrary code in, as whatever user the image runs as - usually root - which is a different thing from being allowed to restart it. Keep the list shorter than `docker/manage`'s, and use `user:` in the call when the command does not need the image's default user.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `command` | array of string | yes | argv array, e.g. ["sh", "-c", "ls /app"] |
+| `container` | string | yes | Container name, full ID or ID prefix |
+| `output_format` | string | no | json returns container, id, command, exit_code, running, stdout, stderr; default is text |
+| `timeout` | integer | no | Seconds to wait (default 30, values above 300 are capped at 300); the worker limit (30 s unless raised in daemon.yaml) ends the call first |
+| `user` | string | no | Run as this user inside the container (name or uid[:gid]); default is the image's user |
+| `working_dir` | string | no | Working directory inside the container |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

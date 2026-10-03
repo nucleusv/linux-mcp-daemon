@@ -4,14 +4,16 @@
 
 Lists TCP and UDP sockets in every state with their owning processes, like `ss -tuanp`, read natively from /proc/net (no ss needed). Read-only; unix and raw sockets are not included. `state` (case-insensitive, `_` and `-` interchangeable) filters by LISTEN (includes unconnected UDP), ESTABLISHED, TIME_WAIT, CLOSE_WAIT, SYN_SENT, ... or the groups connected/synchronized; an invalid state is an error listing the valid names. `port` matches the local OR peer port. The owning process (pid, fd) is shown only for sockets whose /proc/PID/fd you can read; other users' processes need `privileged: true` (needs a grant). Text output has `ss -tuanp` columns; `output_format: json` returns an array of objects (netid, state, recv_q, send_q, local_address, local_port, peer_address, peer_port, uid, inode, processes), `[]` when empty. For the ARP cache use `network/arp`, for interfaces and IPs the `network://interfaces` resource, for process details `processes/list`.
 
-| Argument | Meaning |
-|---|---|
-| `state` | `LISTEN`/`listening` (TCP listeners and unconnected UDP sockets), `ESTABLISHED`, `TIME_WAIT`, `CLOSE_WAIT`, `SYN_SENT`, ... in ss or kernel spelling, any case; or the groups `connected`, `synchronized`, `all`. Omitted: every socket. |
-| `port` | only sockets whose local or peer port is this |
-| `privileged` | run as root, so every socket's owning process is shown - otherwise only the calling user's own processes are |
-| `output_format` | `json`, `yaml`, `table`, `wide`: one object per socket (below); otherwise ss-style text |
-
 Two things only netlink knows, which `/proc/net` doesn't carry, differ from `ss`: a dual-stack IPv6 wildcard socket is shown with its real address `[::]:9091` (ss: `*:9091`), and a socket bound to a device has no `%iface` suffix (ss: `127.0.0.53%lo:53`).
+
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `port` | integer | no | Match sockets whose local or peer port equals this |
+| `privileged` | boolean | no | Run as root to see PIDs of other users. Needs a grant for this tool in mcp-sudo.yaml, otherwise refused |
+| `state` | string | no | Filter by TCP state, case-insensitive (LISTEN/listening, ESTABLISHED, TIME_WAIT, CLOSE_WAIT, SYN_SENT, ...). Omit to list all sockets - active connections and listening ports. |
 
 ## Example
 

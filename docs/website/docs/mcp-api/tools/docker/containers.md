@@ -6,6 +6,16 @@ Lists Docker containers through the Engine API on the local socket (no `docker` 
 
 Every `docker/*` tool needs `allowed: true` in its own grant in [mcp-sudo.yaml](../../../configuration/mcp-sudo.md) - without the grant the tool is still listed, but calling it fails with an error naming the missing grant, the way `daemon/reload-config` does. `docker/containers` is a plain listing, so it has no `containers:` allowlist: a user who may list at all sees every container on the host. When `mcpd` runs containerized, point `worker.docker_socket` in [daemon.yaml](../../../configuration/daemon.md) at the socket as the worker sees it.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `all` | boolean | no | Include stopped containers (docker ps -a) |
+| `limit` | integer | no | Return at most this many containers (newest first) |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `pattern` | string | no | Only containers whose name matches this glob (e.g. 'web-*') |
+| `state` | string | no | Only containers in this state (implies all) One of: `created`, `restarting`, `running`, `removing`, `paused`, `exited`, `dead`. |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

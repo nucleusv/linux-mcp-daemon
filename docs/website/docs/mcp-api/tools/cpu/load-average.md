@@ -4,6 +4,12 @@
 
 Returns the 1, 5 and 15 minute load averages from sysinfo(2). Read-only; the only parameter is `output_format`. Load counts runnable plus uninterruptible tasks, not CPU percent: compare it with the number of logical CPUs from `cpu/list`. Text is `Load Average: 0.52, 0.48, 0.45`; `output_format: json` (also yaml/table/wide) returns an object with numbers `1_min`, `5_min`, `15_min`. For per-process CPU use `processes/top`, for memory `memory/usage`.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

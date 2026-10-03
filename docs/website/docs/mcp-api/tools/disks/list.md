@@ -4,14 +4,16 @@
 
 Lists block devices as a tree (like `lsblk`): disks, partitions, and LVM/dm-crypt/RAID volumes nested under the devices they are built on, with MAJ:MIN, RM, SIZE, RO, TYPE and MOUNTPOINTS, read from /sys/class/block (no lsblk needed). Read-only. Empty devices and RAM disks are hidden unless `all: true`; SIZE is in bytes unless `human_readable`. `output_format: json` (also yaml/table/wide) returns an object `blockdevices`, an array of objects (name, kname, maj:min, rm, size, size_bytes, ro, type, mountpoints) with nested `children`. In containerized deployments use `privileged: true` (needs a grant) to see the host's mount points. For free space or inodes use `disks/free`, for folder sizes `disks/usage`, for the mount table `disks/mounts`, for partition boundaries `disks/partitions`, for I/O counters `disks/performance`, for SMART `disks/health`.
 
-| Parameter | Description |
-|---|---|
-| `human_readable` | SIZE like `lsblk` (`60G`); default is bytes, like `lsblk -b` |
-| `all` | Include empty devices and RAM disks (`lsblk -a`) |
-| `output_format` | `json`/`yaml`: the `blockdevices` tree; each device has `size` (as printed) and `size_bytes` |
-| `privileged` | Run as root - in containerized deployments, reads the host's mount table for MOUNTPOINTS |
-
 SIZE is in **bytes** by default; `human_readable: true` prints it like `lsblk`.
+
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `all` | boolean | no | Include empty devices and RAM disks (lsblk -a) |
+| `human_readable` | boolean | no | SIZE like lsblk (60G); default is bytes (lsblk -b) |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `privileged` | boolean | no | Run as root - in containerized deployments, reads the host's mount table for MOUNTPOINTS |
 
 ## Example
 

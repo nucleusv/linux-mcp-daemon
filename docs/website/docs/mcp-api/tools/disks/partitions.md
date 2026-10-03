@@ -4,10 +4,11 @@
 
 Lists the partitions of a disk with start sector and size in sectors and bytes, read natively from /sys/class/block (no fdisk). Read-only. `device` names the PARENT DISK (`sda`, `nvme0n1`), not a partition; without it every disk's partitions are listed. A sector size of 512 bytes is assumed. It does not report partition type, label, UUID or filesystem: use `disks/list` or `disks/mounts` for those, and `disks/list` to find device names. A named disk without partitions is an error (`no partitions found for device`). Output is a text table; when `output_format` is set to any non-empty value (the parameter is accepted although not listed in the schema) it is an indented JSON array of objects (device, parent_disk, number, start_sector, size_sectors, size_bytes).
 
-## Parameters
+## Arguments
 
-- `device` (optional) - only return partitions belonging to this disk (e.g. `vda`). Omit to list partitions across every disk on the system.
-- `output_format` (optional) - `json` for structured output; omit for a plain text table.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `device` | string | no | Parent disk name such as 'sda' or 'nvme0n1' (not a partition); omit for all disks |
 
 ## Example
 

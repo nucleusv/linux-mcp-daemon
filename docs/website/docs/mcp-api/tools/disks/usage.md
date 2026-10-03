@@ -4,21 +4,23 @@
 
 Measures how much disk space a directory tree uses (native walk, like `du`). Read-only. For the free space of a whole filesystem use `disks/free`; to find individual big files use `files/find` with `size`. By default the reply is one grand total; `max_depth: N` also lists directories up to N levels deep, largest first; `all: true` adds a per-file list (text output only). Sizes are allocated blocks unless `apparent_size: true`; hard links count once, symlinks are never followed. `exclude` patterns containing `/` match the full path (`/proc`, `/var/lib/*`), others the base name. Unreadable directories are skipped silently, so an unprivileged total can under-count: use `privileged: true` (a grant with a `paths:` entry). Results are cached for 60 s per user and arguments. The shipped config allows 300 s, otherwise the default is 30 s. Text ends with `Total size of PATH: N`; `output_format: json` returns an object (path, total_size, human_size with `human_readable`, directory_sizes as a path-to-bytes map only when `max_depth` > 0).
 
-| Parameter | Description |
-|---|---|
-| `path` | Directory to measure (required) |
-| `max_depth` | List subdirectories down to this depth, largest first (`0`: the total only) |
-| `human_readable` | Sizes like `du -h` (`75.8 MiB`); default is bytes |
-| `apparent_size` | Apparent sizes instead of disk usage (`--apparent-size`) |
-| `all` | Count files too, not only directories (`-a`) |
-| `separate_dirs` | Don't include subdirectories in a directory's size (`-S`) |
-| `one_file_system` | Stay on one filesystem (`-x`) |
-| `exclude` | Patterns to skip |
-| `threshold` | Skip entries smaller than this many bytes (negative: larger than) |
-| `output_format` | `json`/`yaml`/`table`/`wide`: sizes in bytes |
-| `privileged` | Run as root to read protected subdirectories (authorized per path in `mcp-sudo.yaml`) |
-
 Sizes are in **bytes** by default; `human_readable: true` prints them like `du -h`.
+
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | string | yes | Absolute path of the directory to measure |
+| `all` | boolean | no | Also list every file, largest first (text output only) |
+| `apparent_size` | boolean | no | Report logical file sizes instead of allocated disk blocks |
+| `exclude` | array of string | no | Patterns to skip: one containing '/' matches the full path (e.g. '/proc', '/var/lib/*'), others the base name (e.g. '*.tmp') |
+| `human_readable` | boolean | no | Sizes like du -h (4.0 KiB); default is bytes |
+| `max_depth` | integer | no | 0 or omitted: grand total only; N: also list directories up to N levels deep, largest first |
+| `one_file_system` | boolean | no | Skip directories on different file systems (-x) |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `privileged` | boolean | no | Run as root. Needs a grant for this tool in mcp-sudo.yaml and a `paths:` entry covering the path, otherwise refused |
+| `separate_dirs` | boolean | no | For directories do not include size of subdirectories (-S) |
+| `threshold` | integer | no | Bytes: a positive value hides entries smaller than this, a negative value hides larger ones (printed lines only) |
 
 ## Example
 

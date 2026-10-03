@@ -6,6 +6,15 @@ Lists login history (wraps `last`) or failed login attempts (`type: "failed"`, w
 
 `type: "failed"` typically requires `privileged: true`, since `btmp` is usually root-only readable. When `mcpd` runs containerized, `privileged: true` also automatically reads the real host's login history - see [Master Daemon Configuration](../../../configuration/daemon.md)'s `worker.containerized` setting.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `limit` | integer | no | Only return this many most recent entries |
+| `privileged` | boolean | no | Run as root - typically required for type "failed". Needs a grant for this tool in mcp-sudo.yaml |
+| `type` | string | no | "success" (default, wraps `last`) or "failed" (wraps `lastb`) One of: `success`, `failed`. |
+| `user` | string | no | Only return entries for this username |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.

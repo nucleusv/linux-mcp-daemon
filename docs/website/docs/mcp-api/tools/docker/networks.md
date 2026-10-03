@@ -8,13 +8,13 @@ Lists Docker networks (not the host's: for host interfaces and routes use the `n
 
 Only the flags that are set are printed - `internal`, `attachable`, `ingress`, `ipv6`. `Internal: false` on every network of every host is noise; the JSON form has all four as booleans.
 
-## Parameters
+## Arguments
 
-| Name | Type | Description |
-|---|---|---|
-| `pattern` | string | Only networks whose name matches this glob (`app*`). |
-| `driver` | string | Only networks on this driver (`bridge`, `host`, `none`, `overlay`, `macvlan`, …), matched case-insensitively. |
-| `output_format` | string | `json`, `yaml`, `table`, `wide`. Default is text. |
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `driver` | string | no | Only networks using this driver (bridge, host, none, overlay, macvlan, ...) |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+| `pattern` | string | no | Only networks whose name matches this glob (e.g. 'app-*') |
 
 ## Example
 

@@ -4,6 +4,12 @@
 
 Returns the Linux distribution and kernel version: the contents of /etc/os-release plus the uname line (system, host name, release, version, machine). Read-only. In a containerized daemon /etc/os-release is the container image's, not the host's. Text has an `OS Release Info:` block with the raw file and a `Kernel Info:` line; `output_format: json` (also yaml/table/wide) returns an object with `os_release` (the raw file text, not parsed into fields) and `kernel` (the uname line). For CPU details use `cpu/list`, for kernel parameters `kernel/system-control`.
 
+## Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `output_format` | string | no | Use json for structured output (yaml, table and wide return the same JSON); default is text |
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.
