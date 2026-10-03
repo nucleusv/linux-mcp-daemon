@@ -38,7 +38,7 @@ An AI agent that helps run a server needs to see it - load, memory, disks, proce
 - **`configs/mcp-sudo.yaml` decides, per user and per tool, whether `privileged: true` is honored.** Two grants exist for resources specifically (see `ARCHITECTURE.md`'s gotcha section) - one for the resource URI itself, one for the internal worker tool name behind it.
 - **When `mcpd` runs containerized** (`configs/daemon.yaml`'s `worker.containerized: true`, this project's actual Kubernetes deployment), a privileged worker also joins the real host's mount namespace (`setns(CLONE_NEWNS)` on `/proc/1/ns/mnt`, no external `nsenter` binary) - so `privileged: true` means root on the real host, not just root inside the daemon's own container image.
 - **Bearer tokens are salted+hashed** in `users.yaml` (`token_salt` + `token_hash`, `sha256`, constant-time compared; the file is `0600`), not stored in plaintext. Users and grants are edited only locally, on the host, via `linuxctl <verb> mcpd user` and `linuxctl edit mcpd config` (validated like `visudo`) - there is no MCP tool that edits them, so nothing with just a bearer token can grant itself anything. The running daemon applies changes without a restart through `daemon/reload-config`, which only re-reads the files and rejects invalid ones (see [Daemon User Administration](docs/website/docs/linuxctl/mcpd-admin.md)).
-- **Every read is schema-driven, not hand-listed.** `linuxctl` fetches `tools/list`/`resources/list`/`resources/templates/list` from the live daemon on every invocation and resolves its `<verb> <group> [keyword]` grammar against that - a new tool added server-side is immediately usable client-side with zero code changes (see [`plan/linuxctl-redesign.md`](plan/linuxctl-redesign.md)).
+- **Every read is schema-driven, not hand-listed.** `linuxctl` fetches `tools/list`/`resources/list`/`resources/templates/list` from the live daemon on every invocation and resolves its `<verb> <group> [keyword]` grammar against that - a new tool added server-side is immediately usable client-side with zero code changes.
 
 ## Features
 
@@ -115,7 +115,7 @@ export MCP_TOKEN="your_token_here"
 linuxctl ping
 ```
 
-`linuxctl` speaks a small verb/group grammar (`linuxctl <verb> <group> [target-keyword] [args]`, design in [`plan/linuxctl-redesign.md`](plan/linuxctl-redesign.md)) and dynamically discovers every tool and resource from the running daemon - there's no separate client-side command list to keep in sync. Full reference: [linuxctl docs](docs/website/docs/linuxctl/overview.md) or `man linuxctl`. Every example below shows both forms: `linuxctl`, and the raw MCP JSON-RPC `curl` call it resolves to - the full per-tool/resource reference with these side by side for every single one lives at [MCP API docs](docs/website/docs/mcp-api/overview.md).
+`linuxctl` speaks a small verb/group grammar (`linuxctl <verb> <group> [target-keyword] [args]`) and dynamically discovers every tool and resource from the running daemon - there's no separate client-side command list to keep in sync. Full reference: [linuxctl docs](docs/website/docs/linuxctl/overview.md) or `man linuxctl`. Every example below shows both forms: `linuxctl`, and the raw MCP JSON-RPC `curl` call it resolves to - the full per-tool/resource reference with these side by side for every single one lives at [MCP API docs](docs/website/docs/mcp-api/overview.md).
 
 ### Calling the API directly with curl
 

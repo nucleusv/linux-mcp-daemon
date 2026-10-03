@@ -50,3 +50,12 @@ docs/website/.docusaurus/
 /wiki-preview/
 /wiki-revert/
 /wiki/
+
+# Private working material: task tracker (tickets carry real test hosts and
+# run output), agent configs with tokens, local Claude Code state, drafts
+/backlog/
+/.agents/
+/.claude/
+/articles/
+/plan/
+/investigations/
