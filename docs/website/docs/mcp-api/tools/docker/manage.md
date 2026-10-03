@@ -12,6 +12,27 @@ When `mcpd` itself runs as a container on the same daemon, `["*"]` matches it to
 
 :::
 
+## Actions
+
+`action` is one of seven words. Every one acts on the container's resolved ID (the one that was authorized), so a concurrent `docker rename` cannot point it at another container. In `linuxctl` each action is its own verb: `linuxctl <action> docker container <name>`.
+
+| Action | `linuxctl` | What it does | Reversible? | Already in that state |
+| --- | --- | --- | --- | --- |
+| `start` | `linuxctl start docker container web-1` | Starts a stopped or created container, like `docker start`. | Yes (`stop`) | Running container: `unchanged`, not an error |
+| `stop` | `linuxctl stop docker container web-1` | Asks the main process to exit (`SIGTERM`); after Docker's default **10 s** grace period it is killed (`SIGKILL`). Like `docker stop`. | Yes (`start`) | Stopped container: `unchanged` |
+| `restart` | `linuxctl restart docker container web-1` | `stop` (same 10 s grace) followed by `start`. A stopped container is just started. Like `docker restart`. | n/a | Always runs |
+| `kill` | `linuxctl kill docker container web-1` | Ends the main process at once with `SIGKILL`, with no grace period. The container stops but still exists. Like `docker kill` with no signal argument; a different signal cannot be chosen. | Yes (`start`), but the process loses any unsaved state | Stopped container: Docker refuses (the container is not running) |
+| `pause` | `linuxctl pause docker container web-1` | Freezes every process in the container with the cgroup freezer. Memory and state are kept; nothing runs and nothing is signalled. Like `docker pause`. | Yes (`unpause`) | Already paused: refused by Docker |
+| `unpause` | `linuxctl unpause docker container web-1` | Resumes a paused container exactly where it stopped. Like `docker unpause`. | n/a | Not paused: refused by Docker |
+| `remove` | `linuxctl remove docker container web-1` | Deletes the container. **Irreversible for the container**, and fenced: it never sends Docker's `force` nor volume removal. A *running* container is refused (`stop or kill it first`), and anonymous volumes stay behind (clean those with [`docker/prune`](./prune)). Like `docker rm`. | **No** | Missing container: Docker's 404 |
+
+How the result is reported:
+- `Container NAME (ID12): ACTION succeeded.` on success; with `output_format: json` you get `{action, container, id, result}` where `result` is `ok` or `unchanged`.
+- `unchanged` (Docker answered `304`) is deliberately not an error: an agent would otherwise retry a `start` that has nothing to do.
+- Anything else from Docker comes back as `docker API returned <status>: <Docker's own message>`.
+
+Typical orderings: `stop` then `remove` to delete a running container; `kill` instead of `stop` only when a process ignores `SIGTERM`; `pause`/`unpause` to freeze a workload without losing its memory. To check the state first use [`docker/containers`](./containers); to run a command inside use [`docker/exec`](./exec).
+
 ## Example
 
 Every example below shows the equivalent `linuxctl` command and the raw MCP JSON-RPC call it resolves to. The raw call always follows the same two-step pattern (see [MCP API overview](../../overview) for the full explanation): open an SSE stream to get a one-time POST endpoint, then POST the JSON-RPC request there - the result streams back on the SSE connection.
