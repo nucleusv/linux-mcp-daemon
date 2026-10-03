@@ -27,10 +27,10 @@ var containerViews = map[string]bool{"inspect": true, "status": true, "stats": t
 // Every scheme carries the docker- prefix: network:// is already the host's own
 // networking (network://interfaces, network://routes), so the bare nouns stay free.
 var schemes = map[string]string{
-	"container":      "docker-container://",
-	"image":          "docker-image://",
-	"volume":         "docker-volume://",
-	"docker-network": "docker-network://",
+	"docker-container": "docker-container://",
+	"docker-image":     "docker-image://",
+	"docker-volume":    "docker-volume://",
+	"docker-network":   "docker-network://",
 }
 
 // Handle reads one of the docker templates. uri is
@@ -48,7 +48,7 @@ func Handle(uri string, sessionUser string, sudoConfig *config.SudoConfig) (stri
 
 	var name, view string
 	switch kind {
-	case "container":
+	case "docker-container":
 		// Split off the view from the right: a container name never contains
 		// "/", so anything after the last one is the view.
 		name, view = rest, "inspect"
@@ -58,7 +58,7 @@ func Handle(uri string, sessionUser string, sudoConfig *config.SudoConfig) (stri
 		if !containerViews[view] {
 			return "", "", fmt.Errorf("unknown view %q for %s: use docker-container://%s/status, /inspect, /stats or /top", view, uri, name)
 		}
-	default: // image, volume, docker-network
+	default: // docker-image, docker-volume, docker-network
 		// An image reference legitimately contains "/" (ghcr.io/org/img), so
 		// only the /inspect suffix is trimmed.
 		name = strings.TrimSuffix(rest, "/inspect")
@@ -84,7 +84,7 @@ func Handle(uri string, sessionUser string, sudoConfig *config.SudoConfig) (stri
 	if docker.SocketPath != "" {
 		args["_docker_socket"] = docker.SocketPath
 	}
-	if kind == "container" {
+	if kind == "docker-container" {
 		args["_containers"] = sudoConfig.GetAllowedContainers(sessionUser, "docker/inspect")
 	}
 	argsJSON, _ := json.Marshal(args)
