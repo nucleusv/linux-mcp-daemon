@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Permissions and Risks
 
-:::danger Read this before granting anything
+:::danger[Read this before granting anything]
 A grant in `mcp-sudo.yaml` gives **an AI agent** root on your host - an agent that follows instructions found in the files, web pages and logs it reads. Several grants that look narrow are, in practice, **full root**: write access to `/etc`, `services/manage`, unrestricted sysctl writes. Grant the least a task needs, limit it with `paths:`, `network:` and `sysctl:`, and assume that anything an agent may do, someone who controls its input may make it do.
 :::
 

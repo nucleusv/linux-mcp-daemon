@@ -31,7 +31,7 @@ The tool sends **no filters at all**, and that is the safety margin rather than 
 
 Docker's `--force`, `--all` and `--filter until=…/label=…` are therefore not exposed. The knob is the `prune:` list in the grant, not an argument the caller picks.
 
-:::warning Anonymous is not the same as worthless
+:::warning[Anonymous is not the same as worthless]
 
 A container started with `-v /var/lib/postgresql/data` (no name) gets an anonymous volume holding real data. Once that container is gone the volume is unused, and `volumes` will delete it. Named volumes are the ones that are structurally safe here.
 

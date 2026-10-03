@@ -4,7 +4,7 @@
 
 Reads or replaces a user's crontab, the list of commands cron runs for that account on a schedule, and lists which accounts have one. Without `content` it reads: your own crontab as raw text exactly as `crontab -l` prints it (empty when you have none), or with `privileged: true` and no `user`, a table of the accounts that have a crontab and that your grant lets you view. With `content` it writes: the WHOLE crontab is replaced (an empty string clears it); the `crontab` command rejects a file it cannot parse and then the old crontab is unchanged; a missing final newline is added; the limit is 64 KiB. For systemd timers use [`timers/list`](../timers/list). Needs the `crontab` command on the host; inside a container a call sees the container's own crontabs.
 
-:::danger Writing a crontab schedules commands as that user
+:::danger[Writing a crontab schedules commands as that user]
 The job outlives the session and the revocation of the token. Every write is audit-logged (size, lines, hash, never the content). Read the [crontab risks](../../../configuration/permissions-and-risks#crontabs) before you grant `edit` on any account.
 :::
 

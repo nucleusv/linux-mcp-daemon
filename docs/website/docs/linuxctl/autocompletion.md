@@ -33,7 +33,7 @@ export MCP_SERVER="https://my-host:9091"
 export MCP_TOKEN="your_token_here"
 ```
 
-:::tip Keep the token out of your shell rc file
+:::tip[Keep the token out of your shell rc file]
 Rather than hard-coding the token in `~/.bashrc`/`~/.zshrc` (often world-readable), store it in a private file and read it at startup:
 
 ```bash

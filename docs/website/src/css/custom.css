@@ -53,3 +53,18 @@
 html .theme-doc-sidebar-container {
   border-right: none;
 }
+
+/* Danger boxes: a muted red to match the amber warnings. */
+.alert--danger {
+  --ifm-alert-background-color: #fbefee;
+  --ifm-alert-border-color: #dfb1ae;
+  --ifm-alert-foreground-color: #5a2523;
+  --ifm-code-background: rgba(140, 40, 36, 0.08);
+}
+
+[data-theme='dark'] .alert--danger {
+  --ifm-alert-background-color: rgba(224, 98, 90, 0.09);
+  --ifm-alert-border-color: rgba(224, 98, 90, 0.45);
+  --ifm-alert-foreground-color: #f0cfcc;
+  --ifm-code-background: rgba(224, 98, 90, 0.14);
+}

@@ -6,7 +6,7 @@ sidebar_position: 3
 
 Unlike traditional API servers, the Linux MCP Daemon implements a secure Privilege Escalation mechanism similar to Unix `sudoers`. This is controlled entirely by `configs/mcp-sudo.yaml`.
 
-:::warning
+:::warning[Some narrow-looking grants are full root]
 Some grants that look narrow amount to full root on the host (writes to `/etc`, `services/manage`, sysctl writes without `write_keys`). Before granting anything, read [Permissions and Risks](./permissions-and-risks): what a user can do with no grant, what each grant adds, and least-privilege recipes.
 :::
 
@@ -165,7 +165,7 @@ users:
 
 `["*"]` means every container; a grant with **no** `containers:` list refuses everything rather than allowing it. Each tool has its own list on purpose: `docker/exec` runs arbitrary code inside a container as whatever user the image runs as - usually root - so its list should be shorter than `docker/manage`'s, and reading a container's full `inspect` (env vars, mounts, labels) is why `docker/inspect` is granted separately from `docker/containers`.
 
-:::warning `containers: ["*"]` includes mcpd's own container
+:::warning[A wildcard grant can take down mcpd itself]
 
 When mcpd itself runs as a container on the same Docker daemon, `["*"]` matches it: a granted user can `stop` or `remove` the container serving the call, which succeeds and takes the answer with it. `docker/exec` into it is worse - it is a shell as root inside mcpd, next to its configs. List the containers the user is meant to manage, or a glob that cannot match mcpd's own name.
 

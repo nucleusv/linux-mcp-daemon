@@ -23,7 +23,7 @@ mcpd stdio [--user NAME] [--config-dir DIR]
 
 When **not** to use it: several people or agents sharing one host, a separate identity per agent, root for specific tools, one audit log for everyone. That is what the [network daemon](../installation) is for.
 
-:::caution Over SSH, it limits the agent - not the key
+:::caution[Over SSH, it limits the agent - not the key]
 `ssh host mcpd stdio` gives the *agent* only mcpd's tools. The SSH key it uses still opens a full shell for anyone who has it. Keep that key for this purpose only, or restrict it on the server with `command="mcpd stdio"` in `authorized_keys`.
 :::
 
