@@ -47,15 +47,78 @@ The same data is available as the [`crontab://{user}/{view}`](../../resource-tem
 <details>
 <summary><b>linuxctl</b></summary>
 
-```bash
-linuxctl get crontabs                                   # my own crontab, as `crontab -l` prints it
-linuxctl get crontabs --output json                     # {user, exists, lines, jobs, bytes, sha256, content}
-linuxctl update crontabs --content "$(cat mycron.txt)"  # replace my whole crontab
-linuxctl edit crontabs                                  # open in $EDITOR; refused if it changed meanwhile
+Your own crontab needs no grant (output from an Ubuntu 24.04 VPS, as `testuser`):
 
-linuxctl get crontabs --privileged true                 # accounts I may view that have a crontab
-linuxctl get crontabs test_user --privileged true
-linuxctl update crontabs test_user --privileged true --content "$(cat test_user.cron)"
+```bash
+linuxctl update crontabs --content "$(cat mycron.txt)"
+```
+```text
+Crontab of testuser replaced: 4 lines, sha256 8448591d0f0be91fef72f7b0068a96c0c0c7c743c47472b02b2ee94ce6398858 (was e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)
+```
+`e3b0c442...` is the hash of an empty crontab, so this account had none before.
+
+```bash
+linuxctl get crontabs
+```
+```text
+# FR-026 live test - removed by the script
+MAILTO=ops@example.com
+30 2 * * * /usr/local/bin/backup.sh
+*/15 * * * * /usr/local/bin/healthcheck.sh
+```
+
+```bash
+linuxctl get crontabs --output json
+```
+```json
+{
+  "user": "testuser",
+  "exists": true,
+  "lines": 4,
+  "jobs": 2,
+  "bytes": 145,
+  "sha256": "8448591d0f0be91fef72f7b0068a96c0c0c7c743c47472b02b2ee94ce6398858",
+  "content": "# FR-026 live test - removed by the script\nMAILTO=ops@example.com\n30 2 * * * /usr/local/bin/backup.sh\n*/15 * * * * /usr/local/bin/healthcheck.sh\n"
+}
+```
+`jobs` counts the lines cron runs: not comments, not `NAME=value` lines.
+
+A write with a stale `if_match` is refused and nothing changes:
+```bash
+linuxctl update crontabs --content "# other" --if_match 0000000000000000000000000000000000000000000000000000000000000000
+```
+```text
+the crontab changed since you read it (its sha256 is now 8448591d0f0be91fef72f7b0068a96c0c0c7c743c47472b02b2ee94ce6398858, you passed 0) - read it again
+```
+
+Another account's crontab, as a user whose `cron/manage` grant has `testuser: {view, edit}`, `unpriviliged: {view}` and `root: {view}`:
+```bash
+linuxctl get crontabs --privileged true          # accounts with a crontab that you may view
+```
+```text
+USER             LINES  MODIFIED
+testuser         2      2026-10-03T13:08:22Z
+```
+```bash
+linuxctl update crontabs testuser --privileged true --content "$(cat testuser.cron)"
+```
+```text
+Crontab of testuser replaced: 2 lines, sha256 c81476659b4f3988d850cb8ed1d4e3cd8b0fd8f3f136604b50eb2fb5ffee3bbb (was 0a12fac05663da5bf57a142703afa5b3249857f837a3cdbd64d0dcdb4b0117e3)
+```
+
+What is refused, and what the message says:
+```text
+$ linuxctl update crontabs root --privileged true --content "* * * * * /bin/true"
+user privileged may not edit root's crontab: the cron/manage grant gives root view only
+
+$ linuxctl update crontabs unpriviliged --privileged true --content "* * * * * /bin/true"
+user privileged may not edit unpriviliged's crontab: the cron/manage grant gives unpriviliged view only
+
+$ linuxctl get crontabs testuser          # another account without --privileged true
+another account's crontab needs privileged: true and a rule for testuser in your cron/manage grant (users: {testuser: {view: true}})
+
+$ linuxctl get crontabs root --privileged true      # as a user with no rule for root
+user testuser is not authorized to run cron/manage on another account: it needs `allowed: true` and a users: rule for root in your grant in mcp-sudo.yaml
 ```
 
 </details>
