@@ -28,6 +28,9 @@ on:
       version:
         description: "Release tag to (re)publish, e.g. v0.3.3 - empty publishes main as /next/"
         required: false
+      docs_ref:
+        description: "With a version: build that release's docs from this ref (e.g. main) instead of its tag. For a docs-only refresh of a release whose code is unchanged; empty uses the tag."
+        required: false
 
 permissions:
   contents: write # push to gh-pages
@@ -44,6 +47,7 @@ jobs:
         id: which
         env:
           INPUT_VERSION: ${{ inputs.version }}
+          INPUT_DOCS_REF: ${{ inputs.docs_ref }}
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then
             v="$GITHUB_REF_NAME"
@@ -53,7 +57,13 @@ jobs:
           if [ -n "$v" ]; then
             [[ "$v" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release tag: $v"; exit 1; }
             echo "version=$v" >> "$GITHUB_OUTPUT"
-            echo "ref=refs/tags/$v" >> "$GITHUB_OUTPUT"
+            # A tag push always builds its own tag; a manual run may build the
+            # release's docs from another ref (docs_ref), e.g. main.
+            if [ "$GITHUB_REF_TYPE" != tag ] && [ -n "$INPUT_DOCS_REF" ]; then
+              echo "ref=$INPUT_DOCS_REF" >> "$GITHUB_OUTPUT"
+            else
+              echo "ref=refs/tags/$v" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "version=next" >> "$GITHUB_OUTPUT"
             echo "ref=$GITHUB_REF" >> "$GITHUB_OUTPUT"
