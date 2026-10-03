@@ -48,3 +48,8 @@
   --ifm-alert-foreground-color: #e6dcb4;
   --ifm-code-background: rgba(214, 180, 70, 0.14);
 }
+
+/* No vertical rule between the left menu and the page. */
+html .theme-doc-sidebar-container {
+  border-right: none;
+}
