@@ -134,6 +134,12 @@ const config = {
             position: 'left',
             label: 'Documentation',
           },
+          // Search sits left of the version switcher: right-hand items
+          // render in this order.
+          {
+            type: 'search',
+            position: 'right',
+          },
           {
             type: 'custom-versionSwitcher',
             position: 'right',
