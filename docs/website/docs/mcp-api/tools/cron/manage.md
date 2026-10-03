@@ -47,13 +47,13 @@ The same data is available as the [`crontab://{user}/{view}`](../../resource-tem
 <details>
 <summary><b>linuxctl</b></summary>
 
-Your own crontab needs no grant (output from an Ubuntu 24.04 VPS, as `testuser`):
+Your own crontab needs no grant (output from an Ubuntu 24.04 VPS, as `fr-test`):
 
 ```bash
 linuxctl update crontabs --content "$(cat mycron.txt)"
 ```
 ```text
-Crontab of testuser replaced: 4 lines, sha256 8448591d0f0be91fef72f7b0068a96c0c0c7c743c47472b02b2ee94ce6398858 (was e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)
+Crontab of fr-test replaced: 4 lines, sha256 9703f4a065f38cb417e1cf8040dc24eb25332c0f919155869e2f2fc894e6bb77 (was e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)
 ```
 `e3b0c442...` is the hash of an empty crontab, so this account had none before.
 
@@ -61,7 +61,7 @@ Crontab of testuser replaced: 4 lines, sha256 8448591d0f0be91fef72f7b0068a96c0c0
 linuxctl get crontabs
 ```
 ```text
-# FR-026 live test - removed by the script
+# nightly backup
 MAILTO=ops@example.com
 30 2 * * * /usr/local/bin/backup.sh
 */15 * * * * /usr/local/bin/healthcheck.sh
@@ -72,13 +72,13 @@ linuxctl get crontabs --output json
 ```
 ```json
 {
-  "user": "testuser",
+  "user": "fr-test",
   "exists": true,
   "lines": 4,
   "jobs": 2,
-  "bytes": 145,
-  "sha256": "8448591d0f0be91fef72f7b0068a96c0c0c7c743c47472b02b2ee94ce6398858",
-  "content": "# FR-026 live test - removed by the script\nMAILTO=ops@example.com\n30 2 * * * /usr/local/bin/backup.sh\n*/15 * * * * /usr/local/bin/healthcheck.sh\n"
+  "bytes": 119,
+  "sha256": "9703f4a065f38cb417e1cf8040dc24eb25332c0f919155869e2f2fc894e6bb77",
+  "content": "# nightly backup\nMAILTO=ops@example.com\n30 2 * * * /usr/local/bin/backup.sh\n*/15 * * * * /usr/local/bin/healthcheck.sh\n"
 }
 ```
 `jobs` counts the lines cron runs: not comments, not `NAME=value` lines.
@@ -117,7 +117,7 @@ A write with a stale `if_match` is refused and nothing changes:
 linuxctl update crontabs --content "# other" --if_match 0000000000000000000000000000000000000000000000000000000000000000
 ```
 ```text
-the crontab changed since you read it (its sha256 is now 8448591d0f0be91fef72f7b0068a96c0c0c7c743c47472b02b2ee94ce6398858, you passed 0) - read it again
+the crontab changed since you read it (its sha256 is now 9703f4a065f38cb417e1cf8040dc24eb25332c0f919155869e2f2fc894e6bb77, you passed 0) - read it again
 ```
 
 Another account's crontab, as a user whose `cron/manage` grant has `testuser: {view, edit}`, `unpriviliged: {view}` and `root: {view}`:

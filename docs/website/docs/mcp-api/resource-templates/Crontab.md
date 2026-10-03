@@ -12,26 +12,26 @@ There is **no separate `resources:` grant**. A read goes through the same prepar
 <summary><b>linuxctl</b></summary>
 
 ```bash
-linuxctl resource crontab://testuser/info
+linuxctl resource crontab://fr-test/info
 ```
 
 Output (Ubuntu 24.04 VPS):
 ```json
 {
-  "user": "testuser",
+  "user": "fr-test",
   "exists": true,
   "lines": 4,
   "jobs": 2,
-  "bytes": 145,
-  "sha256": "8448591d0f0be91fef72f7b0068a96c0c0c7c743c47472b02b2ee94ce6398858"
+  "bytes": 119,
+  "sha256": "9703f4a065f38cb417e1cf8040dc24eb25332c0f919155869e2f2fc894e6bb77"
 }
 ```
 
 ```bash
-linuxctl resource crontab://testuser/text
+linuxctl resource crontab://fr-test/text
 ```
 ```text
-# FR-026 live test - removed by the script
+# nightly backup
 MAILTO=ops@example.com
 30 2 * * * /usr/local/bin/backup.sh
 */15 * * * * /usr/local/bin/healthcheck.sh
@@ -43,7 +43,7 @@ MAILTO=ops@example.com
 <summary><b>curl (raw MCP JSON-RPC)</b></summary>
 
 ```json
-{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "crontab://testuser/info"}}
+{"jsonrpc": "2.0", "id": "1", "method": "resources/read", "params": {"uri": "crontab://fr-test/info"}}
 ```
 
 </details>
