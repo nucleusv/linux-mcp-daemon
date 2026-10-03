@@ -7,6 +7,18 @@ sidebar_label: 'Release Notes'
 
 What changed in each release, and what to do when upgrading. Every release, with its binaries, packages and the full commit list, is on [GitHub Releases](https://github.com/nucleusv/linux-mcp-daemon/releases).
 
+## 0.5.1
+
+A bug-fix release; upgrading from 0.5.0 needs no changes to your configs.
+
+### Fixed: `linuxctl exec docker <container> -- <command>`
+
+In 0.5.0 this failed with `docker API returned 404: No such container: <command>`. The crontab work taught `linuxctl` to take a username as a positional word, and `docker/exec` also has an optional `user` argument ("run as this user inside the container"), so the container name was taken as the user and the first word of the command as the container. A required argument is now always filled first. The raw `docker/exec` tool and `linuxctl exec docker <container> --user root -- <command>` were not affected, and only 0.5.0 had the bug. See [`docker/exec`](./mcp-api/tools/docker/exec).
+
+### Docs
+
+Six warning, danger, caution and tip boxes (among them the one on [`cron/manage`](./mcp-api/tools/cron/manage)) showed as plain text with literal `:::` in the 0.5.0 documentation. They render as boxes now, and danger boxes have a matching muted red.
+
 ## 0.5.0
 
 **One breaking change: the Docker resource templates were renamed.** Everything else in this release needs no changes to your configs.

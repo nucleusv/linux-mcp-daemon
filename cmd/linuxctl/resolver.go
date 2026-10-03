@@ -472,6 +472,20 @@ func fillTemplate(uriTemplate string, positional []string) (string, []string) {
 // param this schema surface actually uses.
 var positionalFieldPriority = []string{"path", "pid", "device", "host", "url", "key", "value", "service", "name", "user", "content"}
 
+// hasUnsetRequired reports whether a required property of the schema has no
+// value in args yet.
+func hasUnsetRequired(schema, args map[string]interface{}) bool {
+	reqRaw, _ := schema["required"].([]interface{})
+	for _, r := range reqRaw {
+		if name, ok := r.(string); ok {
+			if _, set := args[name]; !set {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func mapPositionalArgs(schema map[string]interface{}, args map[string]interface{}, positional []string) []string {
 	if len(positional) == 0 || schema == nil {
 		return positional
@@ -485,6 +499,13 @@ func mapPositionalArgs(schema map[string]interface{}, args map[string]interface{
 			continue
 		}
 		if _, alreadySet := args[field]; alreadySet {
+			continue
+		}
+		// "user" is an optional filter or target on several tools, and for
+		// docker/exec it is "run as this user inside the container": it must
+		// not take the first word ahead of a required argument that is still
+		// unset (the container), which the fill-in-order pass below handles.
+		if field == "user" && hasUnsetRequired(schema, args) {
 			continue
 		}
 		prop, _ := props[field].(map[string]interface{})

@@ -82,3 +82,31 @@ func TestPositionalUserDoesNotStealOtherTools(t *testing.T) {
 		t.Errorf("get processes 1234 must fill pid, got %v", args)
 	}
 }
+
+// 0.5.0 regression: adding "user" to the positional priority list made
+// `exec docker web-1 -- echo hello` put web-1 into docker/exec's optional
+// `user` and treat "echo" as the container.
+func TestExecDockerKeepsContainerAheadOfUser(t *testing.T) {
+	schema := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"container": map[string]interface{}{"type": "string"},
+			"command":   map[string]interface{}{"type": "array"},
+			"user":      map[string]interface{}{"type": "string"},
+		},
+		"required": []interface{}{"container", "command"},
+	}
+	args := map[string]interface{}{}
+	rest := mapPositionalArgs(schema, args, []string{"web-1", "echo", "hello"})
+	if len(rest) != 0 || args["container"] != "web-1" || !reflect.DeepEqual(args["command"], []interface{}{"echo", "hello"}) {
+		t.Errorf("args %v rest %v", args, rest)
+	}
+	if _, set := args["user"]; set {
+		t.Errorf("user must stay unset: %v", args)
+	}
+	// an explicit --user is kept and the positionals still fill the required ones
+	args = map[string]interface{}{"user": "root"}
+	mapPositionalArgs(schema, args, []string{"web-1", "id"})
+	if args["container"] != "web-1" || args["user"] != "root" {
+		t.Errorf("explicit user: %v", args)
+	}
+}
