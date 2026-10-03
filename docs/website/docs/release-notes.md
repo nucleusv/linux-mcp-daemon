@@ -23,6 +23,10 @@ Six warning, danger, caution and tip boxes (among them the one on [`cron/manage`
 
 **One breaking change: the Docker resource templates were renamed.** Everything else in this release needs no changes to your configs.
 
+:::warning[Known issue in 0.5.0, fixed in 0.5.1]
+`linuxctl exec docker <container> -- <command>` fails in 0.5.0 with `docker API returned 404: No such container: <command>`: the container name is taken as `--user`. Upgrade to 0.5.1, or pass `--user` explicitly (`linuxctl exec docker <container> --user root -- <command>`). The raw `docker/exec` tool is not affected.
+:::
+
 ### Breaking: Docker resource templates are prefixed with `docker-`
 
 `container://`, `image://` and `volume://` are now `docker-container://`, `docker-image://` and `docker-volume://`. `docker-network://` already had the prefix, so all four now match, and the bare nouns stay free. **There are no aliases**: the old names are `unknown resource`, and a user whose `resources:` grant in `mcp-sudo.yaml` still lists them cannot read the new ones.
