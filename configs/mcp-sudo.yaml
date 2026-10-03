@@ -260,6 +260,11 @@ users:
           allowed: true
         timers/list:  # systemd's private socket instead of the system bus
           allowed: true
+        cron/manage:  # ⚠ writing a crontab schedules commands as that account; rules name accounts one by one
+          allowed: true
+          users:
+            root: {view: true}  # root's crontab can be viewed, never edited
+            test_user: {view: true, edit: true}
         services/manage:  # ⚠ start, stop, restart, enable any unit
           allowed: true
         # These three are never callable directly via tools/call (they're

@@ -116,7 +116,7 @@ func prepareCronCall(sudoCfg *config.SudoConfig, caller string, raw json.RawMess
 // cronTools is the cron/manage schema.
 func cronTools() []interface{} {
 	return []interface{}{map[string]interface{}{
-		"name":          config.CronTool,
+		"name":          "cron/manage",
 		"tools_group":   "crontabs",
 		"linuxctl_verb": "get",
 		"description":   "Reads or replaces a user's crontab, the list of commands cron runs for that account on a schedule, and lists which accounts have one. Without `content` it reads: your own crontab as raw text exactly as `crontab -l` prints it (empty when you have none), or with `privileged: true` and no `user`, a table of the accounts that have a crontab and that your grant lets you view. With `content` it writes: the WHOLE crontab is replaced (an empty string clears it); the `crontab` command rejects a file it cannot parse and then the old crontab is unchanged; a missing final newline is added; the limit is 64 KiB. Your own crontab needs no grant and runs as you. Another account's needs `privileged: true` and a rule naming that account in your cron/manage grant (`users: {name: {view: true, edit: true}}`); `edit` implies `view`, root's crontab can be viewed but never edited, and cron.allow/cron.deny still apply to that account. WARNING: writing a crontab schedules commands as that user, and the job outlives this session and the revocation of your token; every write is audit-logged (size, lines, hash, never the content). To avoid overwriting a change made meanwhile, pass `if_match` with the sha256 you read (`output_format: json` returns it). For systemd timers use `timers/list`. Needs the `crontab` command on the host; inside a container a call sees the container's own crontabs.",

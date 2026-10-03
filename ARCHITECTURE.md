@@ -47,12 +47,16 @@ The config directory holds `daemon.yaml` (server/worker/limits), `users.yaml` (u
 
 ### Disks & Storage
 - **`disks/list` (Tool)**: Lists block devices, partitions, and their trees natively by parsing `/proc/partitions` and `/sys/block`. **Do not attempt to implement `lsblk`**, as this tool already natively replaces it.
-- **`disks/iostat` (Tool)**: Parses `/proc/diskstats` for granular I/O metrics.
-- **`disks://{name}/stats` (Resource Template)**: Exposes the `disks/iostat` tool as an instantiated JSON resource for a specific block device.
-- **`disks/fdisk` & `disks/smartctl` (Tools)**: These require root execution via `privileged: true` and execute external binaries (`fdisk -l` and `smartctl -j -a`) because reading partition tables and SMART data directly from raw block devices in Go is too complex and brittle.
+- **`disks/performance` (Tool)**: Parses `/proc/diskstats` for granular I/O metrics.
+- **`disks://{name}/stats` (Resource Template)**: Exposes the `disks/performance` tool as an instantiated JSON resource for a specific block device.
+- **`disks/health` (Tool)**: Requires root (`privileged: true`) and executes the external binary `smartctl -j -a`, because reading SMART data directly from raw block devices in Go is too complex and brittle.
 
 ### Network
-- **`network/traceroute` (Tool)**: Native wrapper around the `traceroute` binary.
+- **`network/trace-path` (Tool)**: Native wrapper around the `traceroute` binary.
+
+### Scheduling
+- **`timers/list` (Tool)**: systemd timers via DBus (`ListUnitsContext` plus each `Timer` unit's properties); no `systemctl` is run.
+- **`cron/manage` (Tool) and `crontab://{user}/{view}` (Resource Template)**: Read, list and replace crontabs. A documented CLI exception, like `smartctl`/`traceroute`: a user cannot write their own spool file and the `crontab` command checks the syntax, applies `cron.allow`/`cron.deny` and tells cron. The master (`internal/rpc/cron.go`, `prepareCronCall`) decides whose crontab a call touches and hands the worker reserved `_mode`/`_target_user`/`_view_users` arguments; the caller's own crontab runs as the caller, another account's is a root worker that starts `crontab` as the target (never `crontab -u`), root's is view-only. The worker resolves the target name itself, in its own namespace: a master in a container numbers accounts differently from the host. The template has no `resources:` grant; the tool's `users:` rules decide.
 
 ### Services
 - We use `go-systemd/v22/dbus` for native systemd service management.

@@ -7,7 +7,7 @@
 #
 # Sources of truth (code):
 #   tools            "name": "<group>/<command>"   in internal/rpc/tools.go
-#                    and internal/rpc/docker.go (the docker schemas live apart)
+#                    and internal/rpc/docker.go, internal/rpc/cron.go (those schemas live apart)
 #   resources        "uri": "scheme://..."          in internal/rpc/resources.go
 #   templates        "uriTemplate": "scheme://..."  in internal/rpc/resources.go
 #   template grants  what each template handler in internal/resources/templates/
@@ -41,7 +41,7 @@ missing() { comm -23 "$1" "$2" > "$tmp/x"; report "$3" "$tmp/x"; }  # in $1, not
 stale()   { comm -13 "$1" "$2" > "$tmp/x"; report "$3" "$tmp/x"; }  # in $2, not in $1
 
 # ------------------------------------------------------------------ code
-grep -ho '"name": *"[a-z-]*/[a-z-]*"' internal/rpc/tools.go internal/rpc/docker.go \
+grep -ho '"name": *"[a-z-]*/[a-z-]*"' internal/rpc/tools.go internal/rpc/docker.go internal/rpc/cron.go \
     | grep -o '[a-z-]*/[a-z-]*' | sort -u > "$tmp/code_tools"
 grep -o '"uri": *"[^"]*"' internal/rpc/resources.go \
     | sed -E 's/.*"uri": *"([^"]*)"/\1/' | sort -u > "$tmp/code_res"

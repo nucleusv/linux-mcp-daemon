@@ -104,11 +104,7 @@ Each of these lets an agent turn its grant into unrestricted root - by writing a
 
 ## Crontabs
 
-:::caution Planned - not released yet
-The crontab tools (`get`, `update` and `edit` for `crontabs`, tracked as FR-026) are not in a release. This section is the risk assessment they are being built against, so you can decide about them in advance.
-:::
-
-A crontab is a list of commands the system runs as a user, on a schedule. Reading one is a read; **writing one is scheduling code**. The design: your own crontab is free (like any other unprivileged call - the worker runs as your account, and `crontab` acts on it); another user's crontab needs `privileged: true` (meaning "act on another account", not root: the worker runs as that account) and a rule naming it, `view` or `edit`, in the `cron/manage` grant ([rules](./mcp-sudo)); the privileged listing shows only the crontabs of accounts you have `view` on. Whichever way you use it, know these risks:
+A crontab is a list of commands the system runs as a user, on a schedule. Reading one is a read; **writing one is scheduling code**. How it works: your own crontab is free (like any other unprivileged call - the worker runs as your account, and `crontab` acts on it); another user's crontab needs `privileged: true` (meaning "act on another account", not root: the worker runs as that account) and a rule naming it, `view` or `edit`, in the `cron/manage` grant ([rules](./mcp-sudo)); the privileged listing shows only the crontabs of accounts you have `view` on. Whichever way you use it, know these risks:
 
 | Risk | What can happen | What mcpd does, and what is left to you |
 |---|---|---|

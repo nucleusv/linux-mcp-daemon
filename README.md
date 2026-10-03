@@ -249,6 +249,7 @@ linuxctl get docker containers --all true          # running and stopped
 linuxctl get docker images
 linuxctl get docker network bridge                 # one network's full configuration
 linuxctl get docker container web-1 status         # computed runtime summary (state, health, uptime, limits)
+linuxctl resource docker-container://web-1/stats   # the same templates by URI: docker-container://, docker-image://, docker-volume://, docker-network://
 linuxctl get docker logs web-1 --lines 50
 
 # needs docker/manage and docker/exec grants that list web-1
@@ -257,9 +258,9 @@ linuxctl exec docker web-1 ls /usr/share/nginx/html
 linuxctl exec docker web-1 -- ls --color /etc      # after `--` everything goes to the container as-is
 ```
 
-### Crontabs (planned - not in a release yet)
+### Crontabs
 
-> Reading and writing crontabs is being built (see FR-026 in `backlog/`). **Writing a crontab schedules commands as that user, and the job survives the end of the session and the revocation of the token** - read the [crontab risks](https://nucleusv.github.io/linux-mcp-daemon/next/configuration/permissions-and-risks#crontabs) before you plan to grant it. The commands below are the intended interface and may change before release.
+Read, list and replace crontabs with the `crontab` command's own rules (`cron.allow`/`cron.deny` still apply). **Writing a crontab schedules commands as that user, and the job survives the end of the session and the revocation of the token** - read the [crontab risks](https://nucleusv.github.io/linux-mcp-daemon/next/configuration/permissions-and-risks#crontabs) before you grant it.
 
 ```bash
 linuxctl get crontabs                                  # my own crontab, exactly as `crontab -l` prints it

@@ -165,6 +165,14 @@ net.ipv4.ip_forward = 1
 .IP
 .B linuxctl update kernel sysctl net.ipv4.ip_forward 1 --privileged true
 .PP
+Read and replace crontabs (writing one schedules commands as that user; another account needs \fB\-\-privileged true\fR and a rule in \fBmcp\-sudo.yaml\fR):
+.IP
+.B linuxctl get crontabs
+.br
+.B linuxctl edit crontabs
+.br
+.B linuxctl update crontabs test_user --privileged true --content "$(cat t.cron)"
+.PP
 Query the systemd journal for the current boot only (requires \fB\-\-privileged true\fR in containerized deployments, since journalctl only exists on the host):
 .IP
 .B linuxctl get logs journal --unit kubelet.service --boot true --privileged true

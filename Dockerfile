@@ -53,6 +53,7 @@ RUN apt-get update && apt-get install -y \
     net-tools \
     smartmontools \
     traceroute \
+    cron \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -s /bin/bash testuser \
     && useradd -m -s /bin/bash unpriviliged \

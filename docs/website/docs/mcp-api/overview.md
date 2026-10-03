@@ -71,10 +71,6 @@ Every resource, tool, and resource template, grouped exactly as the sidebar grou
 
 ### Tools, by group
 
-:::caution Crontab tools are planned
-Reading and writing crontabs (`linuxctl get|update|edit crontabs`) is being built and is not in a release yet. Writing a crontab schedules commands as that user, so read the [risks](../configuration/permissions-and-risks#crontabs) before you plan to grant it.
-:::
-
 **files**
 - [`files/list`](./tools/files/list) - Lists one directory like `ls -l` (permissions, owner, size, dates, symlink targets; dotfiles with `all`).
 - [`files/read`](./tools/files/read) - Reads a text file as raw text: by line range or byte range, default cap 10 KiB, binary refused.
@@ -106,6 +102,9 @@ Reading and writing crontabs (`linuxctl get|update|edit crontabs`) is being buil
 - [`network/ping`](./tools/network/ping) - Measure TCP reachability and latency to a host.
 - [`network/connections`](./tools/network/connections) - TCP and UDP sockets with their owning processes, like `ss -tuanp`, read natively from /proc.
 - [`network/trace-path`](./tools/network/trace-path) - Traces the network path to a host (equivalent to traceroute).
+
+**cron**
+- [`cron/manage`](./tools/cron/manage) - Reads, lists or replaces crontabs. Writing schedules commands as that user: read the [risks](../configuration/permissions-and-risks#crontabs) before granting it.
 
 **timers**
 - [`timers/list`](./tools/timers/list) - Lists systemd timers with the unit they start, schedule, and next and last run (read-only).
@@ -174,4 +173,5 @@ Reading and writing crontabs (`linuxctl get|update|edit crontabs`) is being buil
 - [`docker-container://{name}/{view}`](./resource-templates/Docker Container Introspection) - One Docker container's own view of itself (status, inspect, stats, top).
 - [`docker-image://{name}/inspect`](./resource-templates/Docker Image Inspect) - Full configuration of one Docker image (layers, env, entrypoint, labels, digests).
 - [`docker-volume://{name}/inspect`](./resource-templates/Docker Volume Inspect) - Driver, mountpoint, options and labels of one Docker volume.
+- [`crontab://{user}/{view}`](./resource-templates/Crontab) - A user's crontab as raw text or metadata (read-only; the same rules as `cron/manage`).
 - [`docker-network://{name}/inspect`](./resource-templates/Docker Network Inspect) - IPAM, options, labels and every attached container's address and MAC for one Docker network. Prefixed on purpose: `network://` is the host's own networking.
