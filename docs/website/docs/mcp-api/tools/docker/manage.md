@@ -6,9 +6,26 @@ Changes a container's lifecycle: start, stop, restart, kill, pause, unpause or r
 
 The `containers:` list in the grant is the whole authorization boundary - it is matched in the worker, against both the name and the resolved ID, before anything is sent to the socket. A grant with no `containers:` list refuses everything.
 
-:::warning `containers: ["*"]` includes mcpd's own container
+:::danger[A wildcard grant can take down mcpd itself]
 
-When `mcpd` itself runs as a container on the same daemon, `["*"]` matches it too - so a granted user can `stop` or `remove` the very container serving the call. The stop succeeds and the answer never arrives. List the containers the user is meant to manage, or a glob that cannot match mcpd's own name. The same caution applies to the Docker daemon's own infrastructure containers. See [Permissions and risks](../../../configuration/permissions-and-risks.md).
+When `mcpd` runs as a container on the same Docker daemon, `containers: ["*"]` matches **its own container** too.
+
+**What goes wrong**
+
+1. A granted user calls `stop`, `kill`, `pause` or `restart` on a container the wildcard matched: the one serving the call.
+2. Docker obeys. The call never gets an answer, because the daemon that would send it is stopped or frozen.
+3. Every session on that daemon ends with it until someone starts it again.
+
+**Grant it like this instead**
+
+```yaml
+docker/manage:
+  allowed: true
+  containers: ["web-*", "db-*"]   # exactly the containers this user is meant to manage
+  # not: containers: ["*"]
+```
+
+List the containers by name, or use a glob that cannot match mcpd's own name. The same caution applies to the Docker daemon's own infrastructure containers. See [Permissions and risks](../../../configuration/permissions-and-risks.md).
 
 :::
 
