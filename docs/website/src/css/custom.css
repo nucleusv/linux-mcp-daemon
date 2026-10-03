@@ -68,3 +68,34 @@ html .theme-doc-sidebar-container {
   --ifm-alert-foreground-color: #f0cfcc;
   --ifm-code-background: rgba(224, 98, 90, 0.14);
 }
+
+/* Desktop: the search field is 30% wider (200px -> 260px) and centred over
+   the middle column of the docs layout: the area right of the left menu
+   (--doc-sidebar-width) that holds the page (9 of 12 columns; the table of
+   contents takes the last 3), i.e. its centre is at menu + 37.5% of the rest.
+   On narrow screens the field stays in the menu. The theme wraps the field in
+   a box that is in the flow on desktop, so the wrapper is what moves; the
+   navbar is the reference box for the position. */
+@media (min-width: 997px) {
+  .navbar__inner,
+  .navbar__items--right {
+    position: static;
+  }
+
+  .navbar__items--right > div:has(> .navbar__search) {
+    position: absolute;
+    right: auto;
+    top: 50%;
+    left: calc(var(--doc-sidebar-width) + (100% - var(--doc-sidebar-width)) * 0.375);
+    transform: translate(-50%, -50%);
+    padding: 0;
+  }
+
+  .navbar__items--right .navbar__search {
+    margin-left: 0;
+  }
+
+  .navbar__search .navbar__search-input {
+    width: 260px;
+  }
+}
