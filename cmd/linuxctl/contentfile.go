@@ -6,6 +6,11 @@ import (
 	"os"
 )
 
+// maxContentFile bounds what --content-file will read, so a stray path (or a
+// stream that never ends) cannot fill memory. The daemon applies its own,
+// tighter limit per tool (64 KiB for a crontab).
+const maxContentFile = 16 << 20
+
 // applyContentFlags handles the client-side flags around a tool's `content`
 // argument, so text never has to pass through the caller's shell:
 //
@@ -32,15 +37,28 @@ func applyContentFlags(tool string, schema map[string]interface{}, flags map[str
 		if path == "true" {
 			return fmt.Errorf("--content-file needs a path (or - for stdin)")
 		}
-		var b []byte
-		var err error
-		if path == "-" {
-			b, err = io.ReadAll(stdin)
-		} else {
-			b, err = os.ReadFile(path)
+		var src io.Reader = stdin
+		if path != "-" {
+			fi, err := os.Stat(path)
+			if err != nil {
+				return fmt.Errorf("--content-file: %v", err)
+			}
+			if !fi.Mode().IsRegular() { // not a device, pipe or directory
+				return fmt.Errorf("--content-file: %s is not a regular file", path)
+			}
+			f, err := os.Open(path)
+			if err != nil {
+				return fmt.Errorf("--content-file: %v", err)
+			}
+			defer f.Close()
+			src = f
 		}
+		b, err := io.ReadAll(io.LimitReader(src, maxContentFile+1))
 		if err != nil {
 			return fmt.Errorf("--content-file: %v", err)
+		}
+		if len(b) > maxContentFile {
+			return fmt.Errorf("--content-file: more than %d MiB; the text is not sent", maxContentFile>>20)
 		}
 		flags["content"] = string(b)
 	}

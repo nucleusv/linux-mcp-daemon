@@ -47,6 +47,23 @@ func TestContentFileErrors(t *testing.T) {
 	}
 }
 
+func TestContentFileRefusesNonRegularAndOversize(t *testing.T) {
+	if err := applyContentFlags("files/create", contentSchema, map[string]interface{}{"content-file": t.TempDir()}, nil); err == nil {
+		t.Error("a directory must be refused")
+	}
+	if err := applyContentFlags("files/create", contentSchema, map[string]interface{}{"content-file": "/dev/null"}, nil); err == nil {
+		t.Error("a device must be refused")
+	}
+	big := strings.NewReader(strings.Repeat("x", maxContentFile+1))
+	if err := applyContentFlags("files/create", contentSchema, map[string]interface{}{"content-file": "-"}, big); err == nil {
+		t.Error("an oversize stdin must be refused")
+	}
+	ok := strings.NewReader(strings.Repeat("x", maxContentFile))
+	if err := applyContentFlags("files/create", contentSchema, map[string]interface{}{"content-file": "-"}, ok); err != nil {
+		t.Errorf("exactly the limit is fine: %v", err)
+	}
+}
+
 func TestEmptyCrontabNeedsClear(t *testing.T) {
 	// the accident: --content "$(cat missing.txt)" arrives as an empty string
 	if err := applyContentFlags("cron/manage", contentSchema, map[string]interface{}{"content": ""}, nil); err == nil {
