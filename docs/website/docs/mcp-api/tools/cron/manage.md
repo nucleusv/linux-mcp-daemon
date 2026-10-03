@@ -15,7 +15,7 @@ The job outlives the session and the revocation of the token. Every write is aud
 | `user` | string | Account whose crontab to read or replace; default is your own. Another account needs `privileged: true` and a rule for it |
 | `content` | string | The complete new crontab; present = write (empty string clears it), absent = read. Standard crontab syntax: `m h dom mon dow command`, `@daily`, and `NAME=value` lines |
 | `if_match` | string | sha256 of the crontab as you read it; the write is refused if it has changed since |
-| `output_format` | string | `json` (also `yaml`/`table`/`wide`, which return the same JSON) returns `{user, exists, lines, jobs, bytes, sha256, content}` for a read; default is the raw text |
+| `output_format` | string | `json` (the API returns the same JSON for `yaml`/`table`/`wide`; `linuxctl` renders them) returns `{user, exists, lines, jobs, bytes, sha256, content}` for a read; default is the raw text |
 | `privileged` | boolean | Needed to list crontabs or to act on another account (needs a `cron/manage` grant); ignored for your own crontab |
 
 ## Who may do what
@@ -82,6 +82,35 @@ linuxctl get crontabs --output json
 }
 ```
 `jobs` counts the lines cron runs: not comments, not `NAME=value` lines.
+
+`--output table` and `--output wide` print the same fields one per line, `--output yaml` as YAML (output from the same host, as `fr-test`):
+
+```text
+$ linuxctl get crontabs --output table
+USER      fr-test
+EXISTS    true
+LINES     4
+JOBS      2
+BYTES     119
+SHA256    9703f4a065f38cb417e1cf8040dc24eb25332c0f919155869e2f2fc894e6bb77
+CONTENT   # nightly backup
+MAILTO=ops@example.com
+30 2 * * * /usr/local/bin/backup.sh
+*/15 * * * * /usr/local/bin/healthcheck.sh
+
+$ linuxctl get crontabs --output yaml
+user: fr-test
+exists: true
+lines: 4
+jobs: 2
+bytes: 119
+sha256: 9703f4a065f38cb417e1cf8040dc24eb25332c0f919155869e2f2fc894e6bb77
+content: |
+    # nightly backup
+    MAILTO=ops@example.com
+    30 2 * * * /usr/local/bin/backup.sh
+    */15 * * * * /usr/local/bin/healthcheck.sh
+```
 
 A write with a stale `if_match` is refused and nothing changes:
 ```bash
